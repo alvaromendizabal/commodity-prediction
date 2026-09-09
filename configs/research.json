@@ -1,0 +1,18 @@
+{
+  "seed": 42,
+  "holdout_dates": 252,
+  "validation_dates": 180,
+  "n_folds": 3,
+  "purge_dates": 5,
+  "min_train_dates": 600,
+  "max_features": 96,
+  "max_missing_fraction": 0.4,
+  "max_abs_correlation": 0.98,
+  "ridge_alpha": 100.0,
+  "min_target_observations": 80,
+  "heartbeat_seconds": 15,
+  "threads": 4,
+  "bootstrap_repetitions": 500,
+  "bootstrap_block_dates": 20,
+  "feature_gate": "open"
+}

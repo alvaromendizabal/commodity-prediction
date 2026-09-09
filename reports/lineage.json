@@ -1,0 +1,44 @@
+{
+  "config": {
+    "bootstrap_block_dates": 20,
+    "bootstrap_repetitions": 500,
+    "feature_gate": "open",
+    "heartbeat_seconds": 15,
+    "holdout_dates": 252,
+    "max_abs_correlation": 0.98,
+    "max_features": 96,
+    "max_missing_fraction": 0.4,
+    "min_target_observations": 80,
+    "min_train_dates": 600,
+    "n_folds": 3,
+    "purge_dates": 5,
+    "ridge_alpha": 100.0,
+    "seed": 42,
+    "threads": 4,
+    "validation_dates": 180
+  },
+  "environment": {
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scikit-learn": "1.9.0",
+    "scipy": "1.18.1"
+  },
+  "files": {
+    "data/raw/lagged_test_labels/test_labels_lag_1.csv": "bacdbb2fe64fbd3bab32053f8d87b933890234834edc9b81808c88c8dde33c2d",
+    "data/raw/lagged_test_labels/test_labels_lag_2.csv": "fb5b0deb2e18a006a139070e744184d30170fef5fb7cd616c3dfe7defc4f9412",
+    "data/raw/lagged_test_labels/test_labels_lag_3.csv": "2346fd3403b20bdaabd36002ae2cdf70033be23223873df40050e77076a960cf",
+    "data/raw/lagged_test_labels/test_labels_lag_4.csv": "da9c52948191cf61d5816bf595df9b739869eab0b34325c6e45084ab0feddd0e",
+    "data/raw/target_pairs.csv": "06de5c4a9babcd0aef150e68d0a1b8e6ab1ddabf24406f7326f595ead84ad1e1",
+    "data/raw/test.csv": "009db5b195b54ef8c1a352d82deca8834329ca3f1b2e3a852125e9dfbcaaa00b",
+    "data/raw/train.csv": "6b0cb8794921494c01b187295046160aec18e9957e733e547b3c98cb80195c9c",
+    "data/raw/train_labels.csv": "65c89598c5d9a45ca7b6c1df2a0420aaf3cba05f46916aa66682977502b243b1",
+    "src/commodity_prediction/__init__.py": "9134c20a4b6831a4474b9a0c82e9a5d3e2be9cad10f59feedc8964628bd5ec64",
+    "src/commodity_prediction/cli.py": "24495da914c2b601971767ca8662df04070c1803001b988849b29124588767cc",
+    "src/commodity_prediction/cloud.py": "21d910847d608b54cfd54da3505c181df49d2ee66804821336a1be99f1b8e7a1",
+    "src/commodity_prediction/data.py": "6f72bfa29d026a7889f29b4819cccbdb590f1351c3f9f0832d20f4dd4d7f9f03",
+    "src/commodity_prediction/features.py": "82b4b16a3285a78af6484e43a9b01a3905f3ffad6102cb2b25b17070dcfa64bf",
+    "src/commodity_prediction/metrics.py": "1b17c29899db408190e4e19eef33d25c7a28cbdb6ebbeded6c1daf90613ac12f",
+    "src/commodity_prediction/research.py": "181e865279a763837a8412869f051244c0d5900b37245d0f607602567ac4f924",
+    "src/commodity_prediction/runtime.py": "841fd93ec599648103ab08e15e3aed5d7d1c05f0fa76cce42c7b86174bb97e05"
+  }
+}
