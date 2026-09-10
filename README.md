@@ -4,11 +4,13 @@ Domain-driven feature engineering for multi-horizon commodity return prediction,
 
 **Current phase: domain feature research. Feature gate: open.** The project studies 424 return targets across LME, JPX, US equities, and FX. A nonlinear domain model improves the development point estimate, but uncertainty and uneven temporal gains do not justify final-model promotion. Final optimization and the one-time final test remain gated.
 
-## Latest draft research checkpoint
+## Latest verified research checkpoint
 
 The [conditional risk-state study](docs/risk-state-research.md) adds **24 executed fits and 34 candidate templates**. Its best development score is **0.309186**, versus **0.309088** previously: **+0.000098**, with no meaningful improvement established. All **255 joint comparison bounds** include zero at the tested block settings. The 24 interaction products lower their matched point estimate; the best new panel retains 79 of 79 columns. Feature engineering remains open.
 
-**Publication is pending:** 25 new local stages pass integrity checks and all 24 models replay exactly, but automatic approval review blocked private checkpoint upload. The new notebook chapter is prepared but has not executed; the three notebooks below still present the previous verified checkpoint. No AWS compute was started. [Execution evidence](reports/risk_state_execution.json).
+**Publication completed:** the 24 models, validation predictions and 25 manifests are private, checksum verified in S3, and independently replayed in AWS with maximum difference **0.0**. All three notebooks were re-executed, with **31 Plotly/static figure pairs**. The publication run took **151.3 seconds** and performed **zero training fits**. [Execution evidence](reports/risk_state_execution.json).
+
+The final historical [Kaggle leaderboard](https://www.kaggle.com/competitions/mitsui-commodity-prediction-challenge/leaderboard) lists **anonemaus, 0.63834, first of 1,126 teams**. Our development dates differ: this is a research target, not a measured performance gap or evidence that our model would have won. The [competitive research audit](docs/competitive-research.md) verifies leading writeups, identifies misleading public score calculations, and prioritizes the next feature experiments.
 
 ## Start with the notebooks
 
@@ -18,7 +20,7 @@ The [conditional risk-state study](docs/risk-state-research.md) adds **24 execut
 | [01 · Exploratory analysis](notebooks/01_eda.ipynb) | How do availability, risk scales, and market relationships shape the features? |
 | [02 · Feature research](notebooks/02_feature_research.ipynb) | Which domain families help under matched tests, and what survives uncertainty? |
 
-The three canonical notebooks execute in fresh AWS kernels. **28 Plotly figures** include static GitHub previews. The [domain ledger](docs/domain-feature-research.md) connects each hypothesis to its implementation, primary sources, timing assumptions, and limitations.
+The three canonical notebooks execute in fresh AWS kernels. **31 Plotly figures** include static GitHub previews. The [domain ledger](docs/domain-feature-research.md) connects each hypothesis to its implementation, primary sources, timing assumptions, and limitations.
 
 ## Extensive features with controlled attribution
 
@@ -35,6 +37,7 @@ The controlled design completed:
 - **78 additional tree fits**: 13 family additions and 13 removals across the same outer folds, with fixed model settings and residual weight one.
 - **36 further tree fits**: screening budgets, redundancy, additional information delays, metadata-conditioned priors, bounded economic interactions, and compact feature combinations. This adds **68 distinct interaction templates** (28,832 target assignments); the largest individual candidate panel has 436 templates.
 - **36 compact-mechanism fits**: matched tail/freshness components, an admission-policy control, four information-delay stresses, ten usable economic products, and 42 admitted FX-state interactions. These add 42 distinct templates; the research-wide union is 490 pooled templates.
+- **24 risk-state fits**: six risk states, four risk-normalized priors and 24 interactions. The research-wide union is **524 domain templates**, with **453 domain fitted models** preserved across five phases.
 - Paired block uncertainty, matched additions/removals, frozen-model family permutation, horizon diagnostics, temporal blocks, and selection stability. All **99 earlier fold experiments** remain preserved.
 
 ## Results on the same 535 validation dates
@@ -50,10 +53,11 @@ The controlled design completed:
 | Compact priors + tail risk + freshness, unshrunk | 0.297055 | 0.379097 | 0.161987 | 0.377367 |
 | Compact priors + tail risk, screened | **0.309088** | 0.405901 | 0.154856 | 0.400172 |
 | Compact joint panel, both information delays +1 | 0.308814 | 0.336684 | 0.148136 | 0.467707 |
+| Tail risk + risk-state and normalized-prior main effects | **0.309186** | 0.386784 | 0.178534 | 0.383185 |
 
-The latest point-estimate leader is **reference + released priors + tail risk**, scoring **0.309088**, up **0.012033** from the previous compact joint lead. It improves on historical means by **+0.091349**, with conditional 95% interval **[−0.005212, +0.181874]** at block length 20. Against the compact-priors control, its gain is **+0.027851**, with interval **[−0.015024, +0.068518]**. The middle fold still trails historical means. This is an exploratory lead; no final model is promoted.
+The previous compact-phase point-estimate leader was **reference + released priors + tail risk**, scoring **0.309088**, up **0.012033** from the previous compact joint lead. It improves on historical means by **+0.091349**, with conditional 95% interval **[−0.005212, +0.181874]** at block length 20. Against the compact-priors control, its gain is **+0.027851**, with interval **[−0.015024, +0.068518]**. The middle fold still trails historical means. This is an exploratory lead; no final model is promoted.
 
-**No positive comparison survives the joint simultaneous bounds** over **233 comparisons across four domain phases**, at any of the 10-, 20-, or 40-date block settings. The bootstrap uses 2,000 paired resamples within folds. Only the 40-date conditional historical-mean comparison excludes zero for the new leader; the 10- and 20-date comparisons do not. These bounds condition on fitted models and do not undo the full adaptive research history or represent independent confirmation.
+**No positive comparison survives the joint simultaneous bounds** over **255 comparisons across five domain phases**, at any of the 10-, 20-, or 40-date block settings. The bootstrap uses 2,000 paired resamples within folds. Only the 40-date conditional historical-mean comparison excludes zero for the new leader; the 10- and 20-date comparisons do not. These bounds condition on fitted models and do not undo the full adaptive research history or represent independent confirmation.
 
 ![Compact feature mechanisms](reports/figures/compact_scores.png)
 
@@ -79,10 +83,11 @@ Each full pooled model evaluates **380 templates**, retains **64**, and rejects 
 | Nonlinear attribution | Same feature panel; 78 additional fits and reused controls |
 | Feature robustness | 12 variants; 36 additional fits, 68 new templates, and reused controls |
 | Compact mechanisms | 12 variants; 36 additional fits, 42 new templates, and reused controls |
+| Conditional risk states | 8 variants; 24 additional fits, 34 new templates, and reused controls |
 
-The domain study completed in **13.9 minutes** and verified a complete no-refit resume in **3.0 seconds**. The nonlinear follow-up completed in **8.8 minutes**. Across the four domain phases, **429 new fitted models** are preserved. Checksum-pinned private snapshots and per-stage S3 manifests preserve the results. The [latest AWS verification](reports/aws_feature_research.json) checks **554 stage manifests**, preserves exact replay evidence for 471 unchanged models/controls, and adds 36 independent model replays: **507 total**, with maximum difference **0.0**.
+The domain study completed in **13.9 minutes** and verified a complete no-refit resume in **3.0 seconds**. The nonlinear follow-up completed in **8.8 minutes**. Across the five domain phases, **453 fitted models** are preserved. Checksum-pinned private snapshots and per-stage manifests preserve the results. The [latest AWS verification](reports/aws_risk_state_publication.json) checks **579 stage manifests**, adds **24 independent exact model replays**, and preserves the earlier 507 replay checks: **531 cumulative models/controls with replay evidence**, maximum difference **0.0**.
 
-**96 automated tests** cover causal timing, release boundaries, economic identities, date-balanced fitting, screening, model serialization, no-refit reuse, tampering, subgroup coverage, cloud preflight, supervisor failure/timeout behavior, public CI without restricted data, and earlier research contracts. Ruff, formatting, type checks, and aggregate/notebook publication checks are CI gates. New studies have independent dependency fingerprints; previous source and model lineages remain intact.
+**109 automated tests** cover causal timing, release boundaries, economic identities, date-balanced fitting, screening, model serialization, no-refit reuse, tampering, subgroup coverage, cloud preflight, supervisor failure/timeout behavior, public CI without restricted data, and earlier research contracts. Ruff, formatting, type checks, and aggregate/notebook publication checks are CI gates. New studies have independent dependency fingerprints; previous source and model lineages remain intact.
 
 Subgroup reporting excludes dates with fewer than two observed subgroup targets and explicitly preserves undefined scores, including single-target horizons. The global metric uses all 535 validation dates. This diagnostic correction has its own analysis fingerprint and reuses the original 36 fitted checkpoints. A [supervised publication runner](scripts/feature_publication.py) verifies cloud access before fitting and saves stage status every 30 seconds. Its [lifecycle entry point](scripts/start_feature_research.sh) preserves the managed role-provider environment. An exclusive lock prevents duplicate runs, and a 45-minute process budget bounds execution.
 
@@ -107,6 +112,7 @@ uv run --frozen python -m commodity_prediction.domain.run
 uv run --frozen python -m commodity_prediction.domain.attribution.run
 uv run --frozen python -m commodity_prediction.domain.robustness.reporting.run
 uv run --frozen python -m commodity_prediction.domain.compact.run
+uv run --frozen python -m commodity_prediction.domain.risk_state.run
 uv run --frozen python scripts/make_notebooks.py
 uv run --frozen python -m ipykernel install --user --name commodity
 uv run --frozen kaleido_get_chrome
@@ -119,7 +125,7 @@ The authorized AWS workflow adds `--sync-s3` and restores verified snapshots. Us
 
 Private SageMaker JupyterLab space **`commodity-prediction-dev`**, **`us-west-2`**, **`ml.m5.xlarge` (4 vCPU, 16 GiB)**, **50 GB persistent EBS**, and a **60-minute idle timeout**. CPU compute was priced at **$0.23 per active hour** by AWS Pricing on 2026-09-09; storage and transfer are additional. Compute stops between work sessions while EBS and encrypted, versioned S3 artifacts persist. [AWS settings](configs/aws.json) · [Pinned snapshots](configs/bootstrap.json).
 
-Feature engineering remains open. The new component study favors tail risk in point estimates, resolves the prior screen's exclusion of usable products, and tests information delays inside the joint compact representation. It does not resolve the weak middle fold or establish a statistically robust gain. Further conditional risk-state and temporal-stability research must use matched controls and respect the existing adaptive history.
+Feature engineering remains open. The new component study favors tail risk in point estimates, resolves the prior screen's exclusion of usable products, and tests information delays inside the joint compact representation. It does not resolve the weak middle fold or establish a statistically robust gain. The conditional risk-state expansion has now been tested: its gain is negligible, its interactions underperform, and the middle period remains weak. The next priority is a matched study of short released-history context and cross-target information suggested by verified leading solutions, with no final-test access.
 
 True futures carry requires delivery curves and expiries; inventories and positioning require release histories; seasonality and weather require a verified calendar; fundamentals require historical classifications; options and news require suitable as-of data and rights. These prerequisites have been investigated and documented, but the external histories have not been validly joined to this panel. Price proxies cannot substitute for them. The [domain ledger](docs/domain-feature-research.md) records tested hypotheses, failed mechanisms, and the remaining research gate.
 
