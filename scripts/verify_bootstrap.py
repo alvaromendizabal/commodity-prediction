@@ -116,6 +116,10 @@ def main() -> None:
         "holdout_evaluated": False,
     }
     atomic_json(root / "reports/aws_execution.json", evidence)
+    publish_bundle(root, evidence)
+
+
+def publish_bundle(root: Path, evidence: dict) -> None:
     bundle = root / "artifacts/verified-notebooks.tar.gz"
     with tarfile.open(bundle, "w:gz") as archive:
         for directory in ["notebooks", "reports", "logs", "configs"]:

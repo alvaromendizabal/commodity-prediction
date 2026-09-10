@@ -32,3 +32,4 @@ uv run --frozen kaleido_get_chrome
 uv run --frozen python scripts/make_notebooks.py
 uv run --frozen python scripts/execute_notebooks.py
 uv run --frozen python scripts/verify_bootstrap.py
+uv run --frozen python scripts/verify_feature_research.py
