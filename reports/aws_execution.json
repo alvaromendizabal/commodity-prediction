@@ -1,0 +1,17 @@
+{
+  "candidate_count": 9418,
+  "checkpoint_count": 31,
+  "development_dates": 1709,
+  "feature_gate": "open",
+  "fold_experiments": 30,
+  "holdout_evaluated": false,
+  "lineage": "c8c77b70ad535423bc9c003671fe7eceec754e20f493db39f50561bf4e9cc24d",
+  "notebooks": [
+    "00_data_audit.ipynb",
+    "01_eda.ipynb",
+    "02_feature_research.ipynb"
+  ],
+  "source_commit": "8763226bff5f1fb3a30d89bb33703049b22a7425",
+  "status": "completed",
+  "verified_utc": "2026-09-10T00:06:43.108439+00:00"
+}

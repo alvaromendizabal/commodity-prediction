@@ -1,0 +1,62 @@
+"""Shared presentation defaults and strict lineage checks for canonical notebooks."""
+
+import base64
+import json
+import os
+from pathlib import Path
+
+from IPython.display import display
+
+from commodity_prediction.runtime import digest, fingerprint
+
+
+def project_root() -> Path:
+    root = Path(os.environ.get("COMMODITY_ROOT", Path.cwd())).resolve()
+    if not (root / "pyproject.toml").exists():
+        root = root.parent
+    if not (root / "pyproject.toml").exists():
+        raise FileNotFoundError("Open this notebook within the commodity-prediction repository")
+    return root
+
+
+def checked_reports(root: Path) -> tuple[dict, dict]:
+    audit = json.loads((root / "reports/data_audit.json").read_text())
+    report = json.loads((root / "reports/research.json").read_text())
+    lineage = json.loads((root / "reports/lineage.json").read_text())
+    if audit["lineage"] != report["lineage"] or fingerprint(lineage) != report["lineage"]:
+        raise ValueError("Reports do not share the same verified lineage")
+    if lineage["config"] != json.loads((root / "configs/research.json").read_text()):
+        raise ValueError("Research configuration has changed; rerun the experiment")
+    for name, sha in lineage["files"].items():
+        if digest(root / name) != sha:
+            raise ValueError(f"Stale source/data artifact: {name}")
+    return audit, report
+
+
+def show_figure(fig, root: Path, name: str, height: int = 540) -> None:
+    fig.update_layout(
+        template="plotly_white",
+        height=height,
+        width=1120,
+        font={"family": "Arial", "size": 15, "color": "#20334D"},
+        title={"font": {"size": 23}, "x": 0.035},
+        margin={"l": 85, "r": 45, "t": 90, "b": 80},
+        paper_bgcolor="#FAFBFD",
+        plot_bgcolor="#FAFBFD",
+        colorway=["#1F6C99", "#27A394", "#EDAF43", "#D76C64", "#8070A6"],
+    )
+    fig.update_xaxes(showgrid=False, zeroline=False)
+    fig.update_yaxes(gridcolor="#E3E9F0", zerolinecolor="#9EAFBF")
+    output = root / "reports/figures"
+    output.mkdir(parents=True, exist_ok=True)
+    png = fig.to_image(format="png", scale=1.5)
+    (output / f"{name}.png").write_bytes(png)
+    fig.write_html(output / f"{name}.html", include_plotlyjs="cdn")
+    display(
+        {
+            "application/vnd.plotly.v1+json": json.loads(fig.to_json()),
+            "image/png": base64.b64encode(png).decode(),
+            "text/plain": str(fig.layout.title.text),
+        },
+        raw=True,
+    )

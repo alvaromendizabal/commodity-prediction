@@ -1,0 +1,4 @@
+*.ipynb linguist-language=Jupyter\ Notebook
+*.html linguist-generated=true
+uv.lock linguist-generated=true
+reports/*.json linguist-generated=true
