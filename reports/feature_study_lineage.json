@@ -1,0 +1,225 @@
+{
+  "config": {
+    "bootstrap_block_dates": [
+      10,
+      20,
+      40
+    ],
+    "bootstrap_repetitions": 2000,
+    "feature_gate": "open",
+    "heartbeat_seconds": 15,
+    "histogram_iterations": 48,
+    "histogram_l2_regularization": 10.0,
+    "histogram_learning_rate": 0.06,
+    "histogram_max_leaf_nodes": 7,
+    "histogram_min_samples_leaf": 40,
+    "max_abs_correlation": 0.98,
+    "max_features_per_output": 24,
+    "max_missing_fraction": 0.4,
+    "minimum_half_observations": 40,
+    "minimum_output_observations": 80,
+    "parent_lineage": "c8c77b70ad535423bc9c003671fe7eceec754e20f493db39f50561bf4e9cc24d",
+    "permutation_block_dates": 20,
+    "permutation_repetitions": 5,
+    "ridge_alpha": 100.0,
+    "seed": 42,
+    "terminal_embargo_dates": 5,
+    "threads": 4
+  },
+  "experiments": [
+    {
+      "algorithm": "ridge",
+      "drop_family": "",
+      "name": "historical_mean",
+      "representation": "historical_mean",
+      "scope": "control",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "",
+      "name": "released_mean",
+      "representation": "released_mean",
+      "scope": "control",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "",
+      "name": "target_reference",
+      "representation": "reference",
+      "scope": "global",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "",
+      "name": "target_all",
+      "representation": "original",
+      "scope": "global",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "",
+      "name": "target_stable",
+      "representation": "original",
+      "scope": "global",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "",
+      "name": "aligned_reference",
+      "representation": "reference",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "",
+      "name": "aligned_original",
+      "representation": "original",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "",
+      "name": "aligned_extended",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "momentum",
+      "name": "drop_momentum",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "volatility",
+      "name": "drop_volatility",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "reversion",
+      "name": "drop_reversion",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "missingness",
+      "name": "drop_missingness",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "liquidity",
+      "name": "drop_liquidity",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "ohlc",
+      "name": "drop_ohlc",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "cross_market",
+      "name": "drop_cross_market",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "pairs",
+      "name": "drop_pairs",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "regime",
+      "name": "drop_regime",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "interactions",
+      "name": "drop_interactions",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "release_history",
+      "name": "drop_release_history",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "",
+      "name": "structural_reference",
+      "representation": "reference",
+      "scope": "structural",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop_family": "",
+      "name": "structural_extended",
+      "representation": "extended",
+      "scope": "structural",
+      "stable": true
+    },
+    {
+      "algorithm": "histogram",
+      "drop_family": "",
+      "name": "hist_reference",
+      "representation": "reference",
+      "scope": "aligned",
+      "stable": true
+    },
+    {
+      "algorithm": "histogram",
+      "drop_family": "",
+      "name": "hist_extended",
+      "representation": "extended",
+      "scope": "aligned",
+      "stable": true
+    }
+  ],
+  "files": {
+    "src/commodity_prediction/studies/__init__.py": "4e94c6129c473c5346b7a4891e4f7fe53cc7efae027a9539b18404f1d91b979f",
+    "src/commodity_prediction/studies/evaluation.py": "3c2986e6253c501565ade19c82b80f87634d85623c150a6134a8d5c5327f34c6",
+    "src/commodity_prediction/studies/models.py": "6af47cfcfbed37e97ca10610d6337c21f2c0645913566bd0dc26c31b52764805",
+    "src/commodity_prediction/studies/representation.py": "30e280a911804ddfc9671d5f14fd6a631c9b817dc360f5caa1d99fd3080cb728",
+    "src/commodity_prediction/studies/run.py": "73665a729af17def8280a1195e853b244e694bcc2bed8dfaa3bbb5a931370856",
+    "src/commodity_prediction/studies/screening.py": "3ce8c76e7fe1ab021deb89570d3b14ccd203cec2be6ad04b024d14174bebdd86",
+    "src/commodity_prediction/studies/storage.py": "b0447c20fa94df00f32e05a8f63fcb0a21714f39142efb5fad6d6ed0138c35af"
+  },
+  "parent_lineage": "c8c77b70ad535423bc9c003671fe7eceec754e20f493db39f50561bf4e9cc24d"
+}
