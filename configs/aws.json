@@ -12,5 +12,11 @@
   "raw_archive_key": "raw/mitsui-commodity-prediction-challenge.zip",
   "price_usd_per_active_hour": 0.23,
   "price_verified_utc": "2026-09-09T23:37:00Z",
-  "price_excludes": ["EBS", "S3", "data transfer"]
+  "price_excludes": [
+    "EBS",
+    "S3",
+    "data transfer"
+  ],
+  "automatic_research_on_workspace_open": false,
+  "default_lifecycle_config_arn": null
 }
