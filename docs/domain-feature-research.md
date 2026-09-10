@@ -73,3 +73,11 @@ These are research prerequisites, not invitations to invent unavailable data. Th
 ## Reproduction and evidence
 
 Run `uv run --frozen python -m commodity_prediction.domain.run --sync-s3` in the authorized AWS workspace after restoring the earlier study. Every feature panel, inner fit, outer fit, permutation stage, and summary has a SHA-256 manifest; a valid complete resume verifies artifacts and performs no fitting or preprocessing. The dependency fingerprint includes the new domain modules, configuration, final-evaluation boundary, and the preserved parent lineage. Numerical summaries appear in `reports/domain_study.json`; the canonical `02_feature_research.ipynb` presents the executed evidence.
+
+## Adaptive nonlinear attribution
+
+The executed domain tree improved its point estimate to 0.270612 (nested calibration), versus 0.217739 for historical means. The conditional 20-date-block interval for that difference is −0.049773 to +0.153154; simultaneous bounds also include zero. The unshrunk tree scores 0.276887. These observations motivate **an explicitly exploratory follow-up**, not model promotion.
+
+The follow-up holds the parent tree configuration, feature panel, 64-template screening budget, outer folds, and residual weight one fixed. It adds each of the 13 families to the reference and removes each from the full representation: **78 new tree fits** across three folds. It reuses the parent reference/full/mean controls and repeats family permutation on the saved full tree. No parent feature generation or fitting is repeated, and no residual-weight or model hyperparameter selection is added.
+
+Uncertainty is computed jointly over the parent domain study's 122 comparisons and the follow-up's 55 comparisons (**177 total**, including repeated controls). This broader bound still does not correct for every earlier adaptive research decision or represent independent confirmation. The child package under `domain/attribution/` has a separate fingerprint and preserves the completed parent source lineage. Its aggregate evidence is `reports/tree_attribution.json`.

@@ -1,0 +1,271 @@
+{
+  "config": {
+    "bootstrap_block_dates": [
+      10,
+      20,
+      40
+    ],
+    "bootstrap_repetitions": 2000,
+    "feature_gate": "open",
+    "heartbeat_seconds": 15,
+    "histogram_iterations": 64,
+    "histogram_l2_regularization": 20.0,
+    "histogram_learning_rate": 0.05,
+    "histogram_max_leaf_nodes": 15,
+    "histogram_min_samples_leaf": 200,
+    "inner_folds": 2,
+    "inner_validation_dates": 126,
+    "max_abs_correlation": 0.98,
+    "max_features": 64,
+    "max_missing_fraction": 0.85,
+    "parent_lineage": "a904250065ff1ebb93b8f0163dd85cfddd8625058f5d22ca53054fb882f3308c",
+    "permutation_block_dates": 20,
+    "permutation_repetitions": 5,
+    "purge_dates": 5,
+    "residual_weights": [
+      0.0,
+      0.05,
+      0.1,
+      0.25,
+      0.5,
+      1.0
+    ],
+    "ridge_penalty": 0.05,
+    "seed": 42,
+    "standardized_clip": 8.0,
+    "threads": 4,
+    "warmup_dates": 252
+  },
+  "experiments": [
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "reference",
+      "name": "pooled_reference",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "trend_shape",
+      "name": "add_trend_shape",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "tail_risk",
+      "name": "add_tail_risk",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "trading_activity",
+      "name": "add_trading_activity",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "intraday_path",
+      "name": "add_intraday_path",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "asynchrony",
+      "name": "add_asynchrony",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "factor_relative",
+      "name": "add_factor_relative",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "macro_links",
+      "name": "add_macro_links",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "currency_graph",
+      "name": "add_currency_graph",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "contract_basis",
+      "name": "add_contract_basis",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "pair_dynamics",
+      "name": "add_pair_dynamics",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "released_priors",
+      "name": "add_released_priors",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "horizon_structure",
+      "name": "add_horizon_structure",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "latent_factors",
+      "name": "add_latent_factors",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "all",
+      "name": "pooled_all",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "",
+      "include": "all",
+      "name": "pooled_stable",
+      "stable": true
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "trend_shape",
+      "include": "all",
+      "name": "drop_trend_shape",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "tail_risk",
+      "include": "all",
+      "name": "drop_tail_risk",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "trading_activity",
+      "include": "all",
+      "name": "drop_trading_activity",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "intraday_path",
+      "include": "all",
+      "name": "drop_intraday_path",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "asynchrony",
+      "include": "all",
+      "name": "drop_asynchrony",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "factor_relative",
+      "include": "all",
+      "name": "drop_factor_relative",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "macro_links",
+      "include": "all",
+      "name": "drop_macro_links",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "currency_graph",
+      "include": "all",
+      "name": "drop_currency_graph",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "contract_basis",
+      "include": "all",
+      "name": "drop_contract_basis",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "pair_dynamics",
+      "include": "all",
+      "name": "drop_pair_dynamics",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "released_priors",
+      "include": "all",
+      "name": "drop_released_priors",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "horizon_structure",
+      "include": "all",
+      "name": "drop_horizon_structure",
+      "stable": false
+    },
+    {
+      "algorithm": "ridge",
+      "drop": "latent_factors",
+      "include": "all",
+      "name": "drop_latent_factors",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "reference",
+      "name": "tree_reference",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "all",
+      "name": "tree_all",
+      "stable": false
+    }
+  ],
+  "files": {
+    "src/commodity_prediction/domain/__init__.py": "54207e0ffe5a412626dd5385c98e43a2bc6596e7beec0b5912ad1808b6a697cb",
+    "src/commodity_prediction/domain/catalog.py": "8afc1270b1cb497ae4ba5393d4caef2c524379ba67299c5b392722f6fde7503e",
+    "src/commodity_prediction/domain/diagnostics.py": "c89a3a6946676db94d206bd86baaa55612a0e8ba742ae27098411c3133982115",
+    "src/commodity_prediction/domain/experiment.py": "01d7aa2a1da2cc6517010fbbabbb5e736f57d53ca0dfb7d91cb272c96a0377bc",
+    "src/commodity_prediction/domain/features.py": "55b2df33edc61682455a56fd7b580891c5a5071eb890806f4c580582da0cc951",
+    "src/commodity_prediction/domain/market.py": "9bd209298767ef5235ded33c48a4d4acd44e79e62834f9a6512f17eafb200b9f",
+    "src/commodity_prediction/domain/model.py": "57223e0d6a71b3e3ea7b02965eeb2be927b2659d5947ce6676813ffb1ee103b2",
+    "src/commodity_prediction/domain/relationships.py": "be2fe09e9f9abbe6a288932b2b79d6aa75a89df40ac2f614a74ebab8993dec1b",
+    "src/commodity_prediction/domain/run.py": "b9e7599584684f1a14c11ddc933e2560baa443bcfb2e1ecb2639c3c106cfe7f2"
+  },
+  "final_evaluation_sha256": "cedbf47de0f6d142e405044b5ebb76d80dc95bb83f159fcfcce5ba97a619b1ba",
+  "parent_lineage": "a904250065ff1ebb93b8f0163dd85cfddd8625058f5d22ca53054fb882f3308c"
+}

@@ -312,3 +312,40 @@ def test_resumed_experiments_never_refit_or_prepare_and_tampering_fails(
             lambda _: None,
             plan,
         )
+
+
+def test_tree_attribution_replays_and_reuses_parent_statistics(tmp_path, config, monkeypatch):
+    from commodity_prediction.domain.attribution.run import fit_stage
+
+    panel, y, pairs = example_panel()
+    fold = Fold(0, 200, 205, 235)
+    stats = prepare(panel, y, fold.train_stop, config)
+    experiment = Experiment("drop_trend_shape", drop="trend_shape", algorithm="histogram")
+    with threadpool_limits(limits=1):
+        result = fit_stage(panel, y, pairs, fold, experiment, config, stats, tmp_path, "child")
+    assert result["selected_weight"] == 1
+    assert not any(
+        name.startswith("trend_shape__") for name in result["selection"]["selected_names"]
+    )
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Completed tree attribution must not refit")
+
+    monkeypatch.setattr("commodity_prediction.domain.attribution.run.fit", forbidden)
+    assert fit_stage(panel, y, pairs, fold, experiment, config, None, tmp_path, "child") == result
+    (tmp_path / "predictions.parquet").write_bytes(b"corrupt")
+    with pytest.raises(ValueError, match="integrity"):
+        fit_stage(panel, y, pairs, fold, experiment, config, None, tmp_path, "child")
+
+
+def test_child_source_does_not_invalidate_completed_domain_fingerprint():
+    from commodity_prediction.runtime import digest, fingerprint
+
+    root = Path(__file__).resolve().parents[1]
+    evidence = json.loads((root / "reports/domain_lineage.json").read_text())
+    assert (
+        fingerprint(evidence) == "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba"
+    )
+    for name, expected in evidence["files"].items():
+        assert digest(root / name) == expected
+    assert all("/attribution/" not in name for name in evidence["files"])
