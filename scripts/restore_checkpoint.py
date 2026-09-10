@@ -21,7 +21,12 @@ def restore(root: Path, bundle: Path, expected: str) -> None:
             if member.issym() or member.islnk():
                 raise ValueError("Bootstrap links are prohibited")
         archive.extractall(root, filter="data")
-    for filename in ["research.json", "feature_study.json", "domain_study.json"]:
+    for filename in [
+        "research.json",
+        "feature_study.json",
+        "domain_study.json",
+        "tree_attribution.json",
+    ]:
         report_path = root / "reports" / filename
         if report_path.exists():
             report = json.loads(report_path.read_text())
@@ -45,12 +50,16 @@ def main() -> None:
         if not bundle.exists() or digest(bundle) != study["sha256"]:
             s3.download_file(aws["bucket"], study["key"], str(bundle))
         restore(root, bundle, study["sha256"])
-    if "domain_study_snapshot" in settings:
-        study = settings["domain_study_snapshot"]
-        bundle = root / "data/domain-study-checkpoint.tar.gz"
-        if not bundle.exists() or digest(bundle) != study["sha256"]:
-            s3.download_file(aws["bucket"], study["key"], str(bundle))
-        restore(root, bundle, study["sha256"])
+    for name, filename in [
+        ("domain_study_snapshot", "domain-study-checkpoint.tar.gz"),
+        ("tree_attribution_snapshot", "tree-attribution-checkpoint.tar.gz"),
+    ]:
+        if name in settings:
+            study = settings[name]
+            bundle = root / "data" / filename
+            if not bundle.exists() or digest(bundle) != study["sha256"]:
+                s3.download_file(aws["bucket"], study["key"], str(bundle))
+            restore(root, bundle, study["sha256"])
     print("Verified bootstrap snapshot and all stage manifests", flush=True)
 
 

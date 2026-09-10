@@ -32,6 +32,8 @@ def main() -> None:
             notebook.metadata["study_lineage"] = report["lineage"]
             domain = json.loads((root / "reports/domain_study.json").read_text())
             notebook.metadata["domain_lineage"] = domain["lineage"]
+            attribution = json.loads((root / "reports/tree_attribution.json").read_text())
+            notebook.metadata["attribution_lineage"] = attribution["lineage"]
             temporary = path.with_suffix(".ipynb.tmp")
             nbformat.write(notebook, temporary)
             temporary.replace(path)

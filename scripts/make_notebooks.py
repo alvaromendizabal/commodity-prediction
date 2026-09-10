@@ -4,6 +4,7 @@ from pathlib import Path
 
 import nbformat as nbf
 from domain_notebook import cells as domain_cells
+from domain_notebook import tree_cells
 from feature_notebook import cells as feature_cells
 
 
@@ -21,14 +22,15 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from IPython.display import display, Markdown
-from scripts.notebook_support import project_root, checked_reports, checked_study, checked_domain, show_figure
+from scripts.notebook_support import project_root, checked_reports, checked_study, checked_domain, checked_attribution, show_figure
 root = project_root()
 audit, research = checked_reports(root)
 study = checked_study(root)
 domain = checked_domain(root)
+attribution = checked_attribution(root)
 study_config = json.loads((root / "configs/feature_study.json").read_text())
 config = json.loads((root / "configs/research.json").read_text())
-display(Markdown(f"**Verified domain study:** `{domain['lineage'][:16]}` · **Feature gate:** open · Previous studies preserved"))"""
+display(Markdown(f"**Verified domain attribution:** `{attribution['lineage'][:16]}` · **Feature gate:** open · Previous studies preserved"))"""
     definitions = {
         "00_data_audit.ipynb": [
             (
@@ -142,7 +144,27 @@ show_figure(fig, root, "target_coverage", 460)""",
             ),
         ],
     }
-    definitions["02_feature_research.ipynb"] = feature_cells(setup) + domain_cells()
+    definitions["01_eda.ipynb"][-1:-1] = [
+        (
+            "md",
+            "## Risk scales and shared market movements\n\nTarget assets have different return scales. These descriptive development-only plots motivate volatility normalization and common-factor residuals; their full-window estimates are never used as model preprocessing. Basket correlations average currently observed assets within each market, so changing coverage and asynchronous closes can affect them. Correlation does not establish transmission or causality.",
+        ),
+        (
+            "code",
+            """target_assets = sorted({asset for pair in pairs.pair for asset in pair.split(" - ")})
+asset_returns = np.log(x[target_assets].where(x[target_assets] > 0)).diff()
+risk = asset_returns.std(ddof=0).mul(100).rename("Observed return standard deviation (%)").rename_axis("Asset").reset_index()
+risk["Market"] = risk.Asset.str.split("_").str[0]
+fig = px.box(risk,x="Market",y="Observed return standard deviation (%)",color="Market",points="all",title="Target assets differ in return risk and measurement scale")
+fig.update_layout(showlegend=False)
+show_figure(fig,root,"domain_eda_risk_scales",500)
+baskets = pd.DataFrame({market:asset_returns[[a for a in target_assets if a.startswith(market+"_")]].mean(axis=1) for market in sorted(risk.Market.unique())})
+fig = px.imshow(baskets.corr(),text_auto=".2f",zmin=-1,zmax=1,color_continuous_scale="RdBu",aspect="auto",title="Observed market baskets share some return variation",labels={"color":"Correlation"})
+show_figure(fig,root,"domain_eda_market_correlations",510)
+display(pd.Series({"Distinct target assets":len(target_assets),"Directed target-pair strings":pairs.pair.nunique(),"Unordered target-asset sets":len({tuple(sorted(p.split(" - "))) for p in pairs.pair})},name="Prediction graph").to_frame())""",
+        ),
+    ]
+    definitions["02_feature_research.ipynb"] = feature_cells(setup) + domain_cells() + tree_cells()
     for filename, cells in definitions.items():
         notebook = nbf.v4.new_notebook()
         notebook.metadata = {

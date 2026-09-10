@@ -14,12 +14,14 @@ from commodity_prediction.runtime import RunLog, verify_checkpoint
 
 def replay(root: Path, report: dict, log: RunLog) -> dict:
     directory = root / "artifacts" / report["lineage"]
+    feature_lineage = report.get("feature_lineage", report["lineage"])
+    features = root / "artifacts" / feature_lineage / "features"
     maximum = 0.0
     models = sorted(directory.rglob("model.joblib"))
     with log.stage("cloud_domain_model_replay"), threadpool_limits(limits=4):
-        if not verify_checkpoint(directory / "features", report["lineage"]):
+        if not verify_checkpoint(features, feature_lineage):
             raise ValueError("Missing domain feature checkpoint")
-        panel = load_panel(directory / "features")
+        panel = load_panel(features)
         for number, path in enumerate(models, start=1):
             if not verify_checkpoint(path.parent, report["lineage"]):
                 raise ValueError("Missing domain model manifest")

@@ -113,3 +113,59 @@ display(domain_rows.sort_values("Metric",ascending=False).head(12).round(5))""",
             "### Research decision and remaining stones\n\nThis is evidence about the tested representations under fixed models, not a claim that every economic avenue is exhausted. Examine conditional target groups, nonlinear interactions, alternative normalization and robust priors only where the measured weaknesses justify them. Preserve failed hypotheses and matched comparisons; do not promote a family because of its name or column count.\n\nTrue futures carry needs dated delivery curves; inventories and positioning need publication vintages; seasonality and weather need a verified calendar; fundamentals need historical classifications; options and news need appropriately licensed as-of records. These prerequisites are explicit in the [domain ledger](../docs/domain-feature-research.md). Feature engineering remains open until major feasible avenues, stability, and diminishing returns have sufficient evidence. **No final optimization, final-test evaluation, or competition submissions were performed.**",
         ),
     ]
+
+
+def tree_cells() -> list[tuple[str, str]]:
+    return [
+        (
+            "md",
+            "## Follow the nonlinear signal with matched family attribution\n\nThe parent tree improved its point estimate, while uncertainty remained wide. This explicitly exploratory follow-up tests **13 additions and 13 removals with the fixed tree** across the same three folds. All 78 fits reuse the existing feature panel; the reference, full, and historical-mean controls are preserved. Residual weight stays at one to assess unshrunk feature contributions. No hyperparameter search or additional validation dates are introduced.\n\nThe bounds now cover **177 comparisons jointly across both domain phases**. They still cannot turn adaptive development research into independent confirmation.",
+        ),
+        (
+            "code",
+            """tree_rows = pd.DataFrame([{"Variant":name,"Metric":m["official_metric"],"Fold scores":m["fold_scores"]} for name,m in attribution["summaries"].items()])
+matched_tree = []
+for r in attribution["comparisons"]:
+    if r["block_dates"] != 20:
+        continue
+    if r["variant"].startswith("add_") and r["reference"] == "reference_control":
+        matched_tree.append({**r,"Family":r["variant"].removeprefix("add_"),"Test":"Add to reference"})
+    elif r["variant"] == "all_control" and r["reference"].startswith("drop_"):
+        matched_tree.append({**r,"Family":r["reference"].removeprefix("drop_"),"Test":"Remove from full"})
+matched_tree = pd.DataFrame(matched_tree)
+fig = go.Figure()
+for label,color,symbol in [("Add to reference","#1F6C99","circle"),("Remove from full","#D58A29","diamond")]:
+    group = matched_tree.loc[matched_tree.Test == label]
+    lo=group.simultaneous_95_interval.map(lambda v:v[0]); hi=group.simultaneous_95_interval.map(lambda v:v[1])
+    fig.add_trace(go.Scatter(x=group.delta,y=group.Family,mode="markers",name=label,marker={"color":color,"symbol":symbol,"size":10},error_x={"type":"data","symmetric":False,"array":hi-group.delta,"arrayminus":group.delta-lo}))
+fig.add_vline(x=0,line_dash="dash",line_color="#9EAFBF")
+fig.update_layout(title="Which families explain the nonlinear point-estimate gain?",xaxis_title="Metric benefit from inclusion · joint simultaneous 95% bounds",legend={"orientation":"h","y":-0.15})
+show_figure(fig,root,"tree_matched_families",780)
+display(tree_rows.sort_values("Metric",ascending=False).head(15).round(5))""",
+        ),
+        (
+            "md",
+            "### Test reliance in the model that showed the gain\n\nThe original domain permutation diagnosed the pooled linear model. This follow-up perturbs each selected family in the **saved full tree** using shared date blocks across targets, without refitting. Addition, removal, and permutation address different questions; agreement across them is more useful than a single importance ranking.",
+        ),
+        (
+            "code",
+            """tree_permuted = [{"Family":family,"Metric drop":v} for record in attribution["group_permutation"] for family,m in record["families"].items() for v in m["metric_drop_repetitions"]]
+importance = pd.DataFrame(tree_permuted).groupby("Family")["Metric drop"].mean().sort_values().reset_index()
+fig = px.bar(importance,x="Metric drop",y="Family",orientation="h",title="Frozen full-tree reliance on domain families")
+fig.update_traces(marker_color="#27A394")
+fig.add_vline(x=0,line_dash="dash",line_color="#9EAFBF")
+show_figure(fig,root,"tree_group_permutation",620)
+display(matched_tree[["Family","Test","delta","conditional_95_interval","simultaneous_95_interval"]].sort_values(["Test","delta"],ascending=[True,False]))""",
+        ),
+        (
+            "code",
+            """tree_best = tree_rows.sort_values("Metric",ascending=False).iloc[0]
+positive_tree = matched_tree.loc[matched_tree.simultaneous_95_interval.map(lambda v:v[0]>0)]
+joint_positive = [r for r in attribution["joint_comparisons"] if r["block_dates"]==20 and r["simultaneous_95_interval"][0]>0]
+display(Markdown(f"**Tree attribution point-estimate leader:** `{tree_best.Variant}` at **{tree_best.Metric:.5f}**. **{len(positive_tree)} of 26 matched tree-family comparisons** have positive simultaneous lower bounds at the 20-date setting. Across both domain phases, **{len(joint_positive)} of {attribution['joint_comparison_count']} comparisons** have positive lower bounds.\\n\\nThe study completed **{domain['new_fitted_models'] + attribution['new_fitted_models']} new fitted models** across both domain phases, plus nine mean-control evaluations. All earlier 99 fold experiments are preserved. Feature engineering remains **open**; final evaluation has not run."))""",
+        ),
+        (
+            "md",
+            "### Decision after the matched nonlinear tests\n\nUse this evidence to identify conditional mechanisms worth further scrutiny, not to pick a winner from a leaderboard of development scores. A positive pooled estimate needs adequate uncertainty bounds, consistent temporal behavior, and robustness to alternative representations before promotion. No family is established merely by a high point estimate or a low permutation score.\n\nRemaining research includes defensible conditional interactions and target-group behavior, plus data-dependent carry, physical supply, positioning, calendar, option, and event features. The domain ledger states the prerequisites for each. The final test and final optimization remain gated. [Complete tree evidence](../reports/tree_attribution.json) · [Domain ledger](../docs/domain-feature-research.md).",
+        ),
+    ]

@@ -82,10 +82,43 @@ def main() -> None:
             len(daily) == 535
             and abs(daily.mean() / daily.std(ddof=0) - summary["official_metric"]) < 1e-12
         )
-    assert cloud["lineage"] == domain["lineage"]
-    assert cloud["model_checkpoints_replayed"] == 357
+    attribution = json.loads((root / "reports/tree_attribution.json").read_text())
+    attr_evidence = json.loads((root / "reports/tree_attribution_lineage.json").read_text())
+    assert fingerprint(attr_evidence) == attribution["lineage"]
+    assert attribution["parent_lineage"] == domain["lineage"]
+    assert attr_evidence["config"] == json.loads(
+        (root / "configs/tree_attribution.json").read_text()
+    )
+    for name, expected in attr_evidence["files"].items():
+        assert digest(root / name) == expected, f"Stale tree-attribution source: {name}"
+    assert attribution["new_fitted_models"] == len(attr_evidence["experiments"]) * 3 == 78
+    assert attribution["joint_comparison_count"] == 177
+    assert len(attribution["joint_comparisons"]) == 177 * 3
+    assert attribution["feature_gate"] == "open" and not attribution["holdout_evaluated"]
+    for result in attribution["results"]:
+        assert result["train_stop"] - 1 + 5 < result["validation_start"]
+        assert result["validation_stop"] - 1 + 5 < 1709
+        daily = np.asarray(result["metrics"]["daily_rank_correlations"])
+        assert abs(daily.mean() / daily.std(ddof=0) - result["metrics"]["official_metric"]) < 1e-12
+        audit = result["selection"]
+        assert (
+            audit["candidate_templates"]
+            == audit["retained_templates"] + audit["rejected_templates"]
+        )
+    for name, parent_name in [
+        ("all_control", "raw__tree_all"),
+        ("reference_control", "raw__tree_reference"),
+        ("historical_mean", "historical_mean"),
+    ]:
+        assert (
+            attribution["summaries"][name]["official_metric"]
+            == domain["summaries"][parent_name]["official_metric"]
+        )
+    assert cloud["lineage"] == attribution["lineage"]
+    assert cloud["model_checkpoints_replayed"] == 435
     assert cloud["domain_model_checkpoints_replayed"] == 288
-    assert cloud["checkpoint_count"] == 398
+    assert cloud["attribution_model_checkpoints_replayed"] == 78
+    assert cloud["checkpoint_count"] == 480
     assert cloud["maximum_prediction_replay_error"] <= 1e-12
     for result in study["results"]:
         values = np.asarray(result["daily_rank_correlations"])
@@ -104,6 +137,7 @@ def main() -> None:
         nbformat.validate(notebook)
         assert notebook.metadata["study_lineage"] == study["lineage"], path.name
         assert notebook.metadata["domain_lineage"] == domain["lineage"], path.name
+        assert notebook.metadata["attribution_lineage"] == attribution["lineage"], path.name
         for cell in notebook.cells:
             if cell.cell_type == "code":
                 assert cell.execution_count is not None, path.name
@@ -113,7 +147,7 @@ def main() -> None:
                     and "image/png" in o.get("data", {})
                     for o in cell.outputs
                 )
-    assert figures >= 18, "Interactive figures need static GitHub fallbacks"
+    assert figures >= 22, "Interactive figures need static GitHub fallbacks"
     print(
         f"Verified source/result lineage, {len(paths)} executed notebooks, and {figures} Plotly/static figure pairs"
     )

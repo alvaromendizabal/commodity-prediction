@@ -10,7 +10,7 @@ import joblib
 import nbformat
 import numpy as np
 import pandas as pd
-from notebook_support import checked_domain, checked_reports, checked_study
+from notebook_support import checked_attribution, checked_domain, checked_reports, checked_study
 from threadpoolctl import threadpool_limits
 from verify_domain import replay as replay_domain
 
@@ -23,9 +23,10 @@ def main() -> None:
     audit, report = checked_reports(root)
     study = checked_study(root)
     domain = checked_domain(root)
+    attribution = checked_attribution(root)
     final_evaluation = json.loads((root / "configs/final_evaluation.json").read_text())
     stages = []
-    for lineage in [report["lineage"], study["lineage"], domain["lineage"]]:
+    for lineage in [report["lineage"], study["lineage"], domain["lineage"], attribution["lineage"]]:
         run = root / "artifacts" / lineage
         for manifest in sorted(run.rglob("manifest.json")):
             verify_checkpoint(manifest.parent, lineage)
@@ -61,6 +62,7 @@ def main() -> None:
                 log.event("cloud_replay_progress", completed=number, total=len(study["results"]))
     del features
     domain_replay = replay_domain(root, domain, log)
+    attribution_replay = replay_domain(root, attribution, log)
     notebooks = []
     for path in sorted((root / "notebooks").glob("*.ipynb")):
         notebook = nbformat.read(path, as_version=4)
@@ -68,6 +70,8 @@ def main() -> None:
             raise ValueError(f"Notebook belongs to a different study: {path.name}")
         if notebook.metadata.get("domain_lineage") != domain["lineage"]:
             raise ValueError(f"Notebook belongs to a different domain study: {path.name}")
+        if notebook.metadata.get("attribution_lineage") != attribution["lineage"]:
+            raise ValueError(f"Notebook belongs to a different tree attribution: {path.name}")
         for cell in notebook.cells:
             if cell.cell_type == "code":
                 if cell.execution_count is None or any(
@@ -80,22 +84,28 @@ def main() -> None:
         "verified_utc": datetime.now(UTC).isoformat(),
         "status": "completed",
         "source_commit": commit,
-        "lineage": domain["lineage"],
-        "parent_lineage": study["lineage"],
+        "lineage": attribution["lineage"],
+        "parent_lineage": domain["lineage"],
+        "target_aware_lineage": study["lineage"],
         "initial_lineage": report["lineage"],
         "checkpoint_count": len(stages),
         "notebooks": notebooks,
         "pooled_templates": domain["templates"],
         "domain_fitted_models": domain["new_fitted_models"],
+        "attribution_fitted_models": attribution["new_fitted_models"],
         "domain_outer_evaluations": domain["outer_evaluations"],
         "previous_fold_experiments_preserved": study["experiments_completed"],
         "initial_fold_experiments_preserved": report["experiments_completed"],
         "model_checkpoints_replayed": len(study["results"])
-        + domain_replay["model_checkpoints_replayed"],
+        + domain_replay["model_checkpoints_replayed"]
+        + attribution_replay["model_checkpoints_replayed"],
         "previous_model_checkpoints_replayed": len(study["results"]),
         "domain_model_checkpoints_replayed": domain_replay["model_checkpoints_replayed"],
+        "attribution_model_checkpoints_replayed": attribution_replay["model_checkpoints_replayed"],
         "maximum_prediction_replay_error": max(
-            maximum_replay_error, domain_replay["maximum_prediction_replay_error"]
+            maximum_replay_error,
+            domain_replay["maximum_prediction_replay_error"],
+            attribution_replay["maximum_prediction_replay_error"],
         ),
         "validation_dates": study["validation_dates"],
         "terminal_embargo_dates": study["terminal_embargo_dates"],
