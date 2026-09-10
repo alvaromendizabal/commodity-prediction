@@ -5,7 +5,7 @@ def cells(setup: str) -> list[tuple[str, str]]:
     return [
         (
             "md",
-            "# Commodity forecasting | Target-aware feature research\n\n**Feature gate: OPEN.** A feature-rich model has to beat credible simple controls. This study tests target-specific screening, economic routing, longer risk regimes, nonlinear interactions, and released-label history.\n\nAll comparisons use the corrected **535-date** development window. The original reservation contains a five-date permanent boundary buffer and **247 untouched final-test dates**. The original experiments are preserved; no leaderboard or trading-profit claims are made.",
+            "# Commodity forecasting | Domain feature research\n\n**Feature gate: OPEN.** A feature-rich model has to beat credible simple controls. This notebook preserves the earlier target-aware study, then develops 13 domain families and tests pooled residual forecasts with nested temporal calibration.\n\nAll comparisons use the corrected **535-date** development window. The original reservation contains a five-date permanent boundary buffer and **247 untouched final-test dates**. Earlier experiments remain intact. The domain section below presents the latest executed evidence.",
         ),
         ("code", setup),
         (

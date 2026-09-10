@@ -43,8 +43,49 @@ def main() -> None:
     )
     assert "247 untouched" in study["limitations"][0]
     cloud = json.loads((root / "reports/aws_execution.json").read_text())
-    assert cloud["lineage"] == study["lineage"]
-    assert cloud["model_checkpoints_replayed"] == 69
+    domain = json.loads((root / "reports/domain_study.json").read_text())
+    domain_evidence = json.loads((root / "reports/domain_lineage.json").read_text())
+    assert fingerprint(domain_evidence) == domain["lineage"]
+    assert domain["parent_lineage"] == study["lineage"]
+    assert domain_evidence["config"] == json.loads((root / "configs/domain_study.json").read_text())
+    assert domain_evidence["final_evaluation_sha256"] == digest(
+        root / "configs/final_evaluation.json"
+    )
+    for name, expected in domain_evidence["files"].items():
+        assert digest(root / name) == expected, f"Stale domain source: {name}"
+    assert domain["new_fitted_models"] == len(domain_evidence["experiments"]) * 9 == 279
+    assert domain["outer_evaluations"] == (len(domain_evidence["experiments"]) + 3) * 3 == 102
+    assert domain["validation_dates"] == 535 and domain["untouched_final_test_dates"] == 247
+    assert domain["feature_gate"] == "open" and not domain["holdout_evaluated"]
+    assert domain["templates"] == sum(domain["inventory"]["family_templates"].values()) == 380
+    assert domain["inventory"]["target_template_assignments"] == domain["templates"] * 424
+    assert len(domain["comparisons"]) == domain["declared_comparison_count"] * 3
+    for result in domain["results"]:
+        assert result["train_stop"] - 1 + 5 < result["validation_start"]
+        assert result["validation_stop"] - 1 + 5 < 1709
+        counts = result["selection"]
+        if counts is not None:
+            assert (
+                counts["candidate_templates"]
+                == counts["retained_templates"] + counts["rejected_templates"]
+            )
+            assert counts["retained_templates"] <= 64
+        for key in ["metrics", "raw_metrics"]:
+            if key in result:
+                daily = np.asarray(result[key]["daily_rank_correlations"])
+                assert (
+                    abs(daily.mean() / daily.std(ddof=0) - result[key]["official_metric"]) < 1e-12
+                )
+    for summary in domain["summaries"].values():
+        daily = np.asarray(summary["daily_rank_correlations"])
+        assert (
+            len(daily) == 535
+            and abs(daily.mean() / daily.std(ddof=0) - summary["official_metric"]) < 1e-12
+        )
+    assert cloud["lineage"] == domain["lineage"]
+    assert cloud["model_checkpoints_replayed"] == 357
+    assert cloud["domain_model_checkpoints_replayed"] == 288
+    assert cloud["checkpoint_count"] == 398
     assert cloud["maximum_prediction_replay_error"] <= 1e-12
     for result in study["results"]:
         values = np.asarray(result["daily_rank_correlations"])
@@ -62,6 +103,7 @@ def main() -> None:
         notebook = nbformat.read(path, as_version=4)
         nbformat.validate(notebook)
         assert notebook.metadata["study_lineage"] == study["lineage"], path.name
+        assert notebook.metadata["domain_lineage"] == domain["lineage"], path.name
         for cell in notebook.cells:
             if cell.cell_type == "code":
                 assert cell.execution_count is not None, path.name
@@ -71,7 +113,7 @@ def main() -> None:
                     and "image/png" in o.get("data", {})
                     for o in cell.outputs
                 )
-    assert figures >= 11, "Interactive figures need static GitHub fallbacks"
+    assert figures >= 18, "Interactive figures need static GitHub fallbacks"
     print(
         f"Verified source/result lineage, {len(paths)} executed notebooks, and {figures} Plotly/static figure pairs"
     )

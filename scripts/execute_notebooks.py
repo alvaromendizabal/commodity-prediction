@@ -30,6 +30,8 @@ def main() -> None:
             notebook.metadata["execution_engine"] = "nbclient_ipc_kernel"
             report = json.loads((root / "reports/feature_study.json").read_text())
             notebook.metadata["study_lineage"] = report["lineage"]
+            domain = json.loads((root / "reports/domain_study.json").read_text())
+            notebook.metadata["domain_lineage"] = domain["lineage"]
             temporary = path.with_suffix(".ipynb.tmp")
             nbformat.write(notebook, temporary)
             temporary.replace(path)

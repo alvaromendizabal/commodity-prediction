@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import nbformat as nbf
+from domain_notebook import cells as domain_cells
 from feature_notebook import cells as feature_cells
 
 
@@ -20,13 +21,14 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from IPython.display import display, Markdown
-from scripts.notebook_support import project_root, checked_reports, checked_study, show_figure
+from scripts.notebook_support import project_root, checked_reports, checked_study, checked_domain, show_figure
 root = project_root()
 audit, research = checked_reports(root)
 study = checked_study(root)
+domain = checked_domain(root)
 study_config = json.loads((root / "configs/feature_study.json").read_text())
 config = json.loads((root / "configs/research.json").read_text())
-display(Markdown(f"**Verified experiment:** `{study['lineage'][:16]}` · **Feature gate:** open"))"""
+display(Markdown(f"**Verified domain study:** `{domain['lineage'][:16]}` · **Feature gate:** open · Previous studies preserved"))"""
     definitions = {
         "00_data_audit.ipynb": [
             (
@@ -140,7 +142,7 @@ show_figure(fig, root, "target_coverage", 460)""",
             ),
         ],
     }
-    definitions["02_feature_research.ipynb"] = feature_cells(setup)
+    definitions["02_feature_research.ipynb"] = feature_cells(setup) + domain_cells()
     for filename, cells in definitions.items():
         notebook = nbf.v4.new_notebook()
         notebook.metadata = {
