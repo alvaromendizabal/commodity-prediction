@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import base64
-import hashlib
 import json
 import tarfile
 import urllib.request
@@ -15,7 +13,7 @@ from commodity_prediction.runtime import atomic_json, digest, verify_checkpoint
 
 
 class ArchivePublisher:
-    """Persist a sealed stage; Content-MD5 makes S3 reject corrupted transfer bytes."""
+    """Persist sealed stages using only the headers authorized by each signed URL."""
 
     def __init__(self, root: Path, lineage: str, plan: list[dict]):
         self.root, self.lineage = root, lineage
@@ -32,14 +30,11 @@ class ArchivePublisher:
         with tarfile.open(bundle, "w:gz") as archive:
             archive.add(stage, arcname=str(stage.relative_to(self.root)))
         data = bundle.read_bytes()
-        content_md5 = base64.b64encode(hashlib.md5(data, usedforsecurity=False).digest()).decode()
         request = urllib.request.Request(
             item["url"],
             data=data,
             method="PUT",
-            headers={
-                "Content-MD5": content_md5,
-            },
+            headers=item.get("headers", {}),
         )
         with urllib.request.urlopen(request, timeout=60) as response:
             if response.status != 200:

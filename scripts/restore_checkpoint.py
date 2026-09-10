@@ -28,6 +28,7 @@ def restore(root: Path, bundle: Path, expected: str) -> None:
         "tree_attribution.json",
         "domain_robustness.json",
         "compact_study.json",
+        "risk_state_study.json",
     ]:
         report_path = root / "reports" / filename
         if report_path.exists():
@@ -61,6 +62,7 @@ def main() -> None:
         ("tree_attribution_snapshot", "tree-attribution-checkpoint.tar.gz"),
         ("domain_robustness_snapshot", "domain-robustness-checkpoint.tar.gz"),
         ("compact_study_snapshot", "compact-study-checkpoint.tar.gz"),
+        ("risk_state_study_snapshot", "risk-state-checkpoint.tar.gz"),
     ]:
         if name in settings:
             study = settings[name]

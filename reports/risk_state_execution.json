@@ -8,7 +8,7 @@
   "local_notebook_rendering": "blocked_by_local_socket_restriction_and_unavailable_sandbox_escalation",
   "local_stage_manifests_verified": 579,
   "maximum_prediction_replay_error": 0.0,
-  "new_cloud_stage_uploads": 0,
+  "new_cloud_stage_uploads": 25,
   "new_fitted_models": 24,
   "new_model_replays": 24,
   "new_stage_manifests": 25,
@@ -16,11 +16,15 @@
   "previous_plotly_static_pairs": 28,
   "private_checkpoint_archive_bytes": 17660744,
   "private_checkpoint_archive_sha256": "d4be97574aec10a74adea733b4dced6b6750fb71b7955181c8d2711ffd983ada",
-  "private_checkpoint_upload": "blocked_by_automatic_approval_review_pending_explicit_payload_and_destination_authorization",
+  "private_checkpoint_s3_encryption": "AES256",
+  "private_checkpoint_s3_key": "bootstrap/risk-state-checkpoint.tar.gz",
+  "private_checkpoint_s3_version": "f8QelmSR_QWOeFkNZBOyrN5zenEOAKEU",
+  "private_checkpoint_upload": "uploaded_and_verified_by_full_download_sha256",
   "project_aws_app_status": "Deleted",
   "quality_tests_passed": 108,
   "source_parent_commit": "78c4fb82d68960ab39180103bc9d82c6777bf4ab",
-  "status": "local_experiments_complete_publication_blocked",
+  "status": "private_checkpoints_verified_notebook_publication_pending",
   "untouched_final_origins": 247,
-  "verified_utc": "2026-09-10T17:42:10.161597+00:00"
+  "upload_transport_correction": "Removed unsigned Content-MD5 header; full downloaded SHA256 and sealed inventory verified.",
+  "verified_utc": "2026-09-10T18:03:52.853224+00:00"
 }

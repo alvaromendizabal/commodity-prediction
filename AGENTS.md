@@ -19,3 +19,15 @@
 - Use connected AWS/GitHub access and minimize manual user steps. Keep compute bounded and stop idle resources while preserving EBS and S3 artifacts.
 - Report exact candidate/retained/rejected counts, official-metric results, uncertainty, failed hypotheses, notebook/test status, cloud verification, and remaining research gaps.
 - Do not declare state-of-the-art performance or project completion without evidence. The user's desired research-grade standard is the goal, not a self-assigned badge.
+
+## Execution discipline and competitive objective
+
+- Follow research → hypothesis → implementation → tests → bounded experiment → inspection → decision → checkpoint → report → continue. Diagnose an unsuccessful stage before another large experiment.
+- Before spending substantial compute, verify schemas, required artifacts, small-scale correctness, checkpoint resume, the question answered, and explicit continue/stop criteria. Use smoke → sample → single fold → representative validation → full evaluation when justified.
+- Give every substantial stage a wall-time budget, heartbeat and progress counters. Stop invalid, duplicate, clearly weaker or low-information directions promptly. Preserve every valid intermediate result and never refit it merely because publication failed.
+- After each bounded milestone, report attempted/completed work, passes, failures, exact metrics, saved artifacts, GitHub status, the conclusion, the next action and why its expected information justifies compute.
+- Feature research remains the priority. Compare plausible families with primary domain literature, academic methods, leading competition solutions, point-in-time external sources and actual expert information needs. Generic feature volume is insufficient.
+- For every important family, document mechanism and information timing, test leakage explicitly, screen within training, measure matched additions/removals and temporal stability, and retain only with supporting evidence. Distinguish tested negative evidence from untested prerequisites or screening exclusions.
+- Treat historical leading performance as a research target. Investigate the feature, validation, model and ensemble gaps separately. Historical CV on different dates does not establish a likely leaderboard win; no submission or unsupported record claim is permitted.
+- Standing user authorization covers necessary project work in connected services. On 2026-09-10 the user explicitly authorized these 24 risk-state models, validation predictions and checkpoint manifests in s3://sagemaker-commodity-prediction-560403859723-us-west-2/ and notebook publication in the existing commodity-prediction-dev AWS space. Do not request this authorization again.
+- Continue through manageable, measurable increments. Keep the final evaluation gate closed while major plausible high-value feature avenues remain unresolved. An employer-facing 9.9/10 standard is a delivery goal, never a self-certified claim.
