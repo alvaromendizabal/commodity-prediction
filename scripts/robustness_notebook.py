@@ -37,14 +37,15 @@ display(Markdown(f"Joint comparison count: **{robustness['joint_comparison_count
         ),
         (
             "md",
-            "### Subgroup diagnostics and unresolved mechanisms\n\nMarket-involved target groups overlap. Single/pair and within-market rankings change which targets are compared, so these descriptive scores are not substitutes for the global metric and are not independently significant findings. Compare a variant with its control within the same subgroup. Horizons remain reported in the aggregate summaries.\n\nTrue delivery-curve carry, physical inventories, positioning, macro surprises, filings, options, and text still require verified dated inputs. Current website access does not establish historical data availability. The [domain research ledger](../docs/domain-feature-research.md) records source-specific timing, applicability, and the remaining evidence needed before feature-gate closure.",
+            "### Subgroup diagnostics and unresolved mechanisms\n\nMarket-involved target groups overlap. Single/pair and within-market rankings change which targets are compared, so these descriptive scores are not substitutes for the global metric and are not independently significant findings. Compare a variant with its control within the same subgroup. Dates with fewer than two observed subgroup targets are excluded by a truth-only rule, and coverage is reported. Undefined subgroup scores remain null. The single-asset group has one target per horizon, so its individual horizon ranking scores are undefined. The global metric continues to use all 535 dates.\n\nTrue delivery-curve carry, physical inventories, positioning, macro surprises, filings, options, and text still require verified dated inputs. Current website access does not establish historical data availability. The [domain research ledger](../docs/domain-feature-research.md) records source-specific timing, applicability, and the remaining evidence needed before feature-gate closure.",
         ),
         (
             "code",
             """groups = []
 for n,s in robustness["summaries"].items():
     for group,g in s["subgroups"].items():
-        groups.append({"Variant":n,"Group":group,"Targets":g["targets"],"Metric":g["official_metric"]})
+        groups.append({"Variant":n,"Group":group,"Targets":g["targets"],"Eligible dates":g["eligible_dates"],"Excluded dates":g["excluded_dates"],"Undefined":g["undefined_reason"],"Metric":g["official_metric"]})
+display(pd.DataFrame(groups).query("Variant == 'all_control'")[["Group","Targets","Eligible dates","Excluded dates","Undefined"]].set_index("Group"))
 group_table = pd.DataFrame(groups).pivot(index="Variant",columns="Group",values="Metric")
 display(group_table.round(4))
 control_groups = group_table.loc["all_control"]

@@ -75,11 +75,11 @@ def checked_attribution(root: Path) -> dict:
 
 
 def checked_robustness(root: Path) -> dict:
-    from commodity_prediction.domain.robustness.run import robustness_lineage
+    from commodity_prediction.domain.robustness.reporting.run import analysis_lineage
 
     report = json.loads((root / "reports/domain_robustness.json").read_text())
     evidence = json.loads((root / "reports/domain_robustness_lineage.json").read_text())
-    actual, _ = robustness_lineage(root)
+    actual, _ = analysis_lineage(root)
     if report["lineage"] != actual or fingerprint(evidence) != actual:
         raise ValueError("Feature robustness results have stale dependencies")
     if report["feature_gate"] != "open" or report["holdout_evaluated"]:

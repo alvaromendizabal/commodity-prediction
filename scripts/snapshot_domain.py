@@ -12,8 +12,14 @@ from commodity_prediction.runtime import atomic_json, digest, verify_checkpoint
 
 def pin(root: Path, report: dict, stem: str, filenames: list[str], setting: str) -> None:
     directory = root / "artifacts" / report["lineage"]
-    for manifest in directory.rglob("manifest.json"):
-        verify_checkpoint(manifest.parent, report["lineage"])
+    directories = [(directory, report["lineage"])]
+    if "fitting_lineage" in report:
+        directories.append(
+            (root / "artifacts" / report["fitting_lineage"], report["fitting_lineage"])
+        )
+    for folder, lineage in directories:
+        for manifest in folder.rglob("manifest.json"):
+            verify_checkpoint(manifest.parent, lineage)
     settings = json.loads((root / "configs/bootstrap.json").read_text())
     s3, aws = client(root)
     key = f"bootstrap/{stem}-checkpoint.tar.gz"
@@ -29,7 +35,8 @@ def pin(root: Path, report: dict, stem: str, filenames: list[str], setting: str)
         return
     bundle = root / "artifacts" / f"{stem}-checkpoint.tar.gz"
     with tarfile.open(bundle, "w:gz") as archive:
-        archive.add(directory, arcname=str(directory.relative_to(root)))
+        for folder, _ in directories:
+            archive.add(folder, arcname=str(folder.relative_to(root)))
         for name in filenames:
             archive.add(root / "reports" / name, arcname="reports/" + name)
     sha = digest(bundle)

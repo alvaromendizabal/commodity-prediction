@@ -137,3 +137,27 @@ def test_parent_fingerprints_and_fixed_experiment_budget_are_preserved():
     config = json.loads((root / "configs/domain_robustness.json").read_text())
     assert config["parent_lineage"] == fingerprint(attr)
     assert len(experiment_plan()) * 3 == config["max_new_fits"] == 36
+
+
+def test_subgroup_coverage_excludes_missing_dates_and_single_target_horizons():
+    from commodity_prediction.domain.robustness.reporting.run import subgroup_score
+
+    truth = pd.DataFrame({"a": [1.0, 3.0, np.nan, 4.0], "b": [2.0, 1.0, np.nan, 3.0]})
+    prediction = pd.DataFrame({"a": [1.0, 3.0, 2.0, 2.0], "b": [2.0, 1.0, 1.0, 3.0]})
+    result = subgroup_score(truth, prediction)
+    assert result["eligible_dates"] == 3 and result["excluded_dates"] == 1
+    assert result["official_metric"] == pytest.approx(
+        np.mean([1.0, 1.0, -1.0]) / np.std([1.0, 1.0, -1.0])
+    )
+    unavailable = subgroup_score(truth[["a"]], prediction[["a"]])
+    assert unavailable["official_metric"] is None
+    assert unavailable["eligible_dates"] == 0 and unavailable["excluded_dates"] == 4
+
+
+def test_subgroup_constant_predictions_are_explicitly_undefined():
+    from commodity_prediction.domain.robustness.reporting.run import subgroup_score
+
+    truth = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [3.0, 1.0, 2.0]})
+    result = subgroup_score(truth, truth * 0)
+    assert result["official_metric"] is None
+    assert result["undefined_reason"] == "constant_daily_target_or_prediction"

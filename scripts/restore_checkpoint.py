@@ -34,6 +34,10 @@ def restore(root: Path, bundle: Path, expected: str) -> None:
             run = root / "artifacts" / report["lineage"]
             for manifest in run.rglob("manifest.json"):
                 verify_checkpoint(manifest.parent, report["lineage"])
+            if "fitting_lineage" in report:
+                run = root / "artifacts" / report["fitting_lineage"]
+                for manifest in run.rglob("manifest.json"):
+                    verify_checkpoint(manifest.parent, report["fitting_lineage"])
 
 
 def main() -> None:

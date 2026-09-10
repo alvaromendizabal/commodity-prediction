@@ -129,6 +129,10 @@ def main() -> None:
     )
     for name, expected in robust_evidence["files"].items():
         assert digest(root / name) == expected, f"Stale robustness source: {name}"
+    fitting = robust_evidence["fitting_evidence"]
+    assert fingerprint(fitting) == robustness["fitting_lineage"]
+    for name, expected in fitting["files"].items():
+        assert digest(root / name) == expected, f"Stale robustness fitting source: {name}"
     assert robustness["new_fitted_models"] == robustness["model_checkpoints_replayed"] == 36
     assert robustness["checkpoint_count"] == 37
     assert robustness["maximum_prediction_replay_error"] <= 1e-12
