@@ -4,6 +4,8 @@
 - The project is an offline research and portfolio workflow. Kaggle submissions are out of scope.
 - Feature engineering is a completion gate. It remains open until major plausible families have been tested for leakage, screened on training data, ablated, and evaluated for stability and diminishing returns.
 - Keep the final 252 dates untouched for selection. Use the purged chronological folds in configs/research.json. Targets for horizon h span t+1 through t+h+1 and are released at t+h+1.
+- Current feature comparisons additionally apply configs/feature_study.json's five-date terminal embargo: 535 validation dates, ending at date 1703. Rescore preserved initial predictions on this same window; do not directly compare their old 540-date metrics.
+- Keep the original core-module fingerprint and completed study checkpoints intact. Follow-up study modules carry their own dependency fingerprint. Target-specific screening counts are feature/output assignments, distinct from unique feature counts.
 - Never use random splits, full-data preprocessing, backward filling, hidden notebook state, or the overlapping mock test set as validation.
 - Target-derived features must use explicit historical release times. Do not apply ordinary cross-fold target encoding to this temporal panel.
 - Use the official daily Spearman correlation Sharpe metric with population standard deviation. Historical CV is not a leaderboard score or realized trading performance.

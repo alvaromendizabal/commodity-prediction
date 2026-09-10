@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import nbformat
-from notebook_support import checked_reports
+from notebook_support import checked_reports, checked_study
 
 from commodity_prediction.cloud import client
 from commodity_prediction.runtime import atomic_json, digest, verify_checkpoint
@@ -16,14 +16,18 @@ from commodity_prediction.runtime import atomic_json, digest, verify_checkpoint
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
     audit, report = checked_reports(root)
-    run = root / "artifacts" / report["lineage"]
+    study = checked_study(root)
     stages = []
-    for manifest in sorted(run.rglob("manifest.json")):
-        verify_checkpoint(manifest.parent, report["lineage"])
-        stages.append(str(manifest.parent.relative_to(root)))
+    for lineage in [report["lineage"], study["lineage"]]:
+        run = root / "artifacts" / lineage
+        for manifest in sorted(run.rglob("manifest.json")):
+            verify_checkpoint(manifest.parent, lineage)
+            stages.append(str(manifest.parent.relative_to(root)))
     notebooks = []
     for path in sorted((root / "notebooks").glob("*.ipynb")):
         notebook = nbformat.read(path, as_version=4)
+        if notebook.metadata.get("study_lineage") != study["lineage"]:
+            raise ValueError(f"Notebook belongs to a different study: {path.name}")
         for cell in notebook.cells:
             if cell.cell_type == "code":
                 if cell.execution_count is None or any(
@@ -36,11 +40,15 @@ def main() -> None:
         "verified_utc": datetime.now(UTC).isoformat(),
         "status": "completed",
         "source_commit": commit,
-        "lineage": report["lineage"],
+        "lineage": study["lineage"],
+        "parent_lineage": report["lineage"],
         "checkpoint_count": len(stages),
         "notebooks": notebooks,
-        "candidate_count": report["candidate_count"],
-        "fold_experiments": report["experiments_completed"],
+        "candidate_count": study["candidate_count"],
+        "fold_experiments": study["experiments_completed"],
+        "initial_fold_experiments_preserved": report["experiments_completed"],
+        "validation_dates": study["validation_dates"],
+        "terminal_embargo_dates": study["terminal_embargo_dates"],
         "development_dates": audit["development_dates"],
         "feature_gate": "open",
         "holdout_evaluated": False,

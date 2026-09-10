@@ -1,5 +1,6 @@
 """Execute canonical notebooks with a fresh kernel, preserving existing filenames."""
 
+import json
 import os
 from pathlib import Path
 
@@ -25,6 +26,8 @@ def main() -> None:
                 resources={"metadata": {"path": str(root)}},
             ).execute()
             notebook.metadata["execution_engine"] = "nbclient_ipc_kernel"
+            report = json.loads((root / "reports/feature_study.json").read_text())
+            notebook.metadata["study_lineage"] = report["lineage"]
             temporary = path.with_suffix(".ipynb.tmp")
             nbformat.write(notebook, temporary)
             temporary.replace(path)
