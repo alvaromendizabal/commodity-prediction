@@ -284,7 +284,7 @@
       "positive_correlation_fraction": 0.5588785046728972,
       "selection_stability": {
         "adjacent_fold_output_comparisons": 848,
-        "mean_jaccard": 0.507502323589873,
+        "mean_jaccard": 0.5075023235898731,
         "median_jaccard": 0.5
       },
       "variant": "hist_extended"
@@ -500,7 +500,7 @@
       "positive_correlation_fraction": 0.5420560747663551,
       "selection_stability": {
         "adjacent_fold_output_comparisons": 848,
-        "mean_jaccard": 0.5273640806261631,
+        "mean_jaccard": 0.527364080626163,
         "median_jaccard": 0.5
       },
       "variant": "drop_regime"
@@ -644,7 +644,7 @@
       "positive_correlation_fraction": 0.5345794392523364,
       "selection_stability": {
         "adjacent_fold_output_comparisons": 848,
-        "mean_jaccard": 0.5134411988838856,
+        "mean_jaccard": 0.5134411988838855,
         "median_jaccard": 0.5
       },
       "variant": "drop_pairs"
@@ -932,7 +932,7 @@
       "positive_correlation_fraction": 0.5196261682242991,
       "selection_stability": {
         "adjacent_fold_output_comparisons": 848,
-        "mean_jaccard": 0.507502323589873,
+        "mean_jaccard": 0.5075023235898731,
         "median_jaccard": 0.5
       },
       "variant": "aligned_extended"
@@ -1004,7 +1004,7 @@
       "positive_correlation_fraction": 0.5158878504672897,
       "selection_stability": {
         "adjacent_fold_output_comparisons": 848,
-        "mean_jaccard": 0.511725752760069,
+        "mean_jaccard": 0.5117257527600692,
         "median_jaccard": 0.5
       },
       "variant": "drop_reversion"
@@ -1436,7 +1436,7 @@
       "positive_correlation_fraction": 0.5065420560747663,
       "selection_stability": {
         "adjacent_fold_output_comparisons": 848,
-        "mean_jaccard": 0.575190947361664,
+        "mean_jaccard": 0.5751909473616641,
         "median_jaccard": 0.6
       },
       "variant": "target_all"
@@ -14888,7 +14888,7 @@
   "publication_review": {
     "correction": "Supersedes the frozen summary's legacy claim of 252 untouched dates; numerical results are unchanged.",
     "final_evaluation_config_sha256": "cedbf47de0f6d142e405044b5ebb76d80dc95bb83f159fcfcce5ba97a619b1ba",
-    "source_summary_sha256": "ffd5c72cca835e0841840f05cae1b47b3c1187d95292dbbc7e680292c0858e5d"
+    "source_summary_sha256": "055ed7528457205189ac162d8a24f22665a29193e5236a8e5eb4eac8549f1fbb"
   },
   "results": [
     {
