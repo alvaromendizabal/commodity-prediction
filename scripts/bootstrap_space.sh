@@ -23,6 +23,7 @@ uv run --frozen python -m commodity_prediction.studies.run --sync-s3
 uv run --frozen python -m commodity_prediction.domain.run --sync-s3
 uv run --frozen python -m commodity_prediction.domain.attribution.run --sync-s3
 uv run --frozen python -m commodity_prediction.domain.robustness.reporting.run --sync-s3
+uv run --frozen python -m commodity_prediction.domain.compact.run --sync-s3
 uv run --frozen kaleido_get_chrome
 uv run --frozen python scripts/make_notebooks.py
 uv run --frozen python scripts/execute_notebooks.py

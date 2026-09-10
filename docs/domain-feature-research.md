@@ -116,6 +116,8 @@ The LME currently distinguishes daily two-day-delayed public stock breakdowns, o
 
 Positioning requires a different release contract for each exchange. CFTC COT generally describes Tuesday positions released Friday at 3:30 p.m. Eastern time, with schedule exceptions. LME COTR generally describes Friday positions released the following Tuesday, with holiday adjustments. Candidate features include category net length divided by open interest, changes, concentration, and trailing crowding percentiles. Category names identify predominant business activity rather than the intent behind each trade; they must not be treated as a perfect separation of speculation and hedging. [CFTC, *Commitments of Traders*](https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm), [LME, *Commitments of traders*](https://www.lme.com/market-data/reports-and-data/commitments-of-traders).
 
+The CFTC FAQ also states that it does not provide a complete historical release-date list; only the recent 13 months of release dates are available on its site. Thus a generic Tuesday-to-Friday shift cannot by itself certify availability over the anonymous multi-year panel. Older holiday and exceptional-release dates require archived publication evidence before any positioning join. This is a documented data prerequisite, not evidence that positioning has no predictive value.
+
 These sources are identified and their timing constraints reviewed. Their histories have not been joined to this project. A verified date mapping, source coverage, suitable usage rights, and a historical publication ledger remain necessary. Do not backdate Friday's CFTC report to Tuesday or Tuesday's LME report to Friday. Do not infer release availability from a report's filename alone.
 
 ### Macro policy, fundamentals, and event information
@@ -216,3 +218,80 @@ The expanded verification checks 517 sealed stage manifests. It preserves zero-e
 5. **Resolve external-data prerequisites:** obtain a verifiable calendar and instrument metadata before attempting carry, inventories, positioning, macro vintages, fundamentals, options, or text. A source's current web availability is not a historical as-of dataset.
 
 These are open research questions, not hidden completed tasks. This checkpoint provides broader executed coverage and a stronger candidate while keeping the feature gate open. Final optimization, the untouched test, and submissions remain outside the current phase.
+
+## Compact mechanism study design
+
+This follow-up addresses the first four questions above through a declared set of 12 variants and 36 fits. It retains the existing dates, fixed histogram-tree settings, unshrunk residual weight, normalization, and train-only preprocessing. It reuses the frozen full-tree, historical-mean, compact-priors, and compact-risk/freshness controls. The design is exploratory because those earlier results motivated it; declaration before this run does not undo earlier adaptation.
+
+| Question | Variants and candidate templates | Matched comparison |
+|---|---|---|
+| Which compact component contributes under the original screen? | Reference + priors + tail risk: 69; reference + priors + freshness: 51. | Frozen reference + priors and frozen joint compact representation. |
+| Does a screening substitution explain the component effect? | Admit usable base 39, tail 69, freshness 51, joint 81. | Four-way component design with identical admission policy. |
+| Does the compact lead depend on immediate information? | Joint 81 with prior delay 1, prior delay 5, market delay 1, or both delays 1. | Frozen screened joint compact control. |
+| Did the relevance screen hide nonlinear products? | Joint 81 plus the same 12 frozen mechanism products: 93. | Admitted joint 81. |
+| Does market-specific state conditioning help? | Joint 81 plus 42 FX-conditioned risk/freshness templates: 123. | Admitted joint 81, with descriptive overlapping subgroup diagnostics. |
+
+Admission removes the feature-budget and near-correlation filters while retaining training missingness, constants, and exact-duplicate safeguards. It admits each usable declared product even if marginal linear relevance is zero. It therefore resolves the earlier screen's failure to expose these hypotheses to the estimator. A fixed small tree can still fail to represent a useful nonlinear relationship; a negative result applies to this feature/model design, not every possible interaction model.
+
+The FX gate is the fraction of a target's legs whose instrument prefix is FX. Each of the 30 tail-risk and 12 freshness templates is multiplied by that fraction. Targets without an FX leg receive structural zero; missing state values for applicable targets stay missing. These are **42 distinct new templates and 17,808 target-template assignments**, not independent signals. The 12 product templates already belong to the prior inventory and are not counted again. The research-wide template union becomes 490, while the largest panel in this study is 123 and the earlier largest panel remains 436.
+
+The economic motivation for this gate is a market-structure distinction, not a discovered causal channel. Schrimpf and Sushko's BIS Quarterly Review article, [“FX trade execution: complex and highly fragmented”](https://www.bis.org/publications/qr-201912/fx-trade-execution-complex-and-highly-fragmented), December 2019, describes fragmented venues, dealer internalisation, and incomplete market-wide visibility of activity. That supports testing different state responses across target groups. It does not show that these daily missingness proxies measure order flow, depth, or executable liquidity, nor that the proposed interaction predicts the challenge's one-to-four-date targets. The subgroup hypothesis was also motivated by an already inspected FX weakness and must remain explicitly exploratory.
+
+The study declares 29 new contrasts, expanding the joint domain comparison family from 204 to 233. Uncertainty uses the existing 2,000 paired block bootstrap repetitions at 10, 20, and 40 dates. Global scores retain all 535 evaluation dates. No favorable block length or subgroup can substitute for the complete results. At declaration, the feature gate remained open pending execution, stability analysis, and information prerequisites; the executed results are recorded below.
+
+### Risk timing is a motivation, not the target metric
+
+Moreira and Muir, [“Volatility-Managed Portfolios”](https://onlinelibrary.wiley.com/doi/10.1111/jofi.12513), *Journal of Finance* 72(4), 2017, report benefits from reducing exposure when volatility is high across several factor portfolios and currency carry. Their publisher abstract attributes those results to expected returns not moving proportionally with volatility. This motivates allowing return signals to depend on risk state. It does not establish that the present tail-risk block improves short-horizon cross-sectional rankings: portfolio risk timing, trading Sharpe, and the challenge's daily-correlation ratio are different objects. The implemented bounded return/trend-by-shock products and the component ablations test a narrow, measurable representation of that motivation. No trading result is inferred from their challenge metric.
+
+## Execution recovery, 2026-09-10
+
+The compact-study launch at 03:32 UTC failed before its first checkpoint. CloudWatch recovered a `botocore.exceptions.NoCredentialsError` in the S3 restore path and the same exception in the failure-log uploader. A process-start message therefore did not establish an executing experiment. Earlier model and notebook evidence remained intact.
+
+The lifecycle entry point now preserves the managed container credential-provider environment across the user switch and avoids a login-shell reset. It never prints or persists credentials. A foreground preflight exercises the actual S3 read and status-write paths before the supervisor starts any fitting. The supervisor records the current stage and elapsed time locally and remotely every 30 seconds, preserves child failure codes, prevents later stages after failure, and enforces a 45-minute process budget. An exclusive publication lock prevents duplicate launches. A successful preflight is recorded as `ready`, distinct from completion of all experiment and notebook stages. Model-source fingerprints and completed study checkpoints are unchanged.
+
+The new regression checks cover failure propagation, failed cloud preflight, progress heartbeats, and runtime-budget termination. The completed experiment, saved-model replay, and notebook verification evidence follows.
+
+## Executed compact mechanism results
+
+All 12 declared variants completed on all three purged folds: **36 fitted models and 37 sealed stages**. Independent replay of every new saved model reproduced predictions with maximum absolute difference **0.0**. A complete resume verified all 37 stages in **0.13 seconds**, without loading the data or refitting. The full supervised pipeline, including quality checks, snapshots, rendering, and notebooks, completed in **13.5 minutes**.
+
+| Representation | Candidates / retained / rejected per fold | Official metric | Fold 1 | Fold 2 | Fold 3 |
+|---|---|---:|---:|---:|---:|
+| Historical means | Reused control | 0.217739 | 0.162550 | 0.182488 | 0.296861 |
+| Screened priors + tail risk | 69 / 64 / 5 | **0.309088** | 0.405901 | 0.154856 | 0.400172 |
+| Screened priors + freshness | 51 / 46 / 5 | 0.278376 | 0.328632 | 0.162123 | 0.349735 |
+| Admitted priors base | 39 / 39 / 0 | 0.280513 | 0.337542 | 0.154580 | 0.352277 |
+| Admitted priors + tail risk | 69 / 69 / 0 | 0.305336 | 0.390579 | 0.152341 | 0.399881 |
+| Admitted priors + freshness | 51 / 51 / 0 | 0.281830 | 0.317206 | 0.190001 | 0.338418 |
+| Admitted joint panel | 81 / 81 / 0 | 0.303001 | 0.363156 | 0.164274 | 0.400578 |
+| Joint panel + products | 93 / 91 / 2 | 0.302211 | 0.355181 | 0.166655 | 0.404485 |
+| Joint panel + FX states | 123 / 123 / 0 | 0.293456 | 0.339210 | 0.173975 | 0.384791 |
+| Screened joint, prior delay +1 | 81 / 64 / 17 | 0.280319 | 0.357210 | 0.142530 | 0.365695 |
+| Screened joint, prior delay +5 | 81 / 64 / 17 | 0.269004 | 0.281077 | 0.132564 | 0.420897 |
+| Screened joint, market delay +1 | 81 / 64 / 17 | 0.303471 | 0.328679 | 0.166455 | 0.436829 |
+| Screened joint, both delays +1 | 81 / 64 / 17 | 0.308814 | 0.336684 | 0.148136 | 0.467707 |
+
+The screened tail-risk panel advances the development point estimate from **0.297055 to 0.309088**. Its gain over the frozen compact-priors control is **+0.027851**, with conditional 20-date-block interval **[−0.015024, +0.068518]**. The admitted tail panel improves on the admitted base by **+0.024823**, interval **[−0.011349, +0.060031]**. Both designs point toward tail risk as the more informative component, but neither matched interval excludes zero.
+
+Freshness contributes little to the pooled admitted estimate (**+0.001317**) and reduces the screened estimate relative to compact priors (**−0.002861**). Its admitted middle-fold score nevertheless improves to **0.190001**, above the historical-mean control there. This is evidence of uneven behavior across periods, not proof that freshness is universally useless or a validated rule for choosing models by regime. The new point leader still trails historical means in the middle fold (**0.154856 versus 0.182488**).
+
+The interaction-admission question is now directly tested. Of the 12 product templates, **two are constant in each training fold** and the remaining **ten all enter the model**. Their matched global difference is **−0.000790**, interval **[−0.013522, +0.009910]**. All **42 FX-state templates** enter each fit; their difference from the admitted joint control is **−0.009545**, interval **[−0.026717, +0.007831]**. Neither block adds measurable global benefit in this fixed representation. These are genuine fitted negative results for the declared mechanisms, while allowing that other representations could behave differently.
+
+Additional prior delays lower the joint-panel point estimate. Delaying market features alone or delaying both dynamic blocks by one date gives higher pooled estimates, concentrated in the third fold. These outcomes do not prove either leakage or robust short-lived predictability. The explicit original release contract and causal perturbation tests remain the timing evidence.
+
+All **233 joint comparisons** have simultaneous intervals including zero at 10, 20, and 40 dates. For the new leader versus historical means, the conditional interval includes zero at 10 and 20 dates, and excludes zero only at 40 dates (**[+0.012591, +0.169405]**). Selecting that favorable block length would overstate the evidence. Conditional uncertainty does not represent independent confirmation after this adaptive research history.
+
+### Remaining feature gate after this checkpoint
+
+| Gate item | Verified status |
+|---|---|
+| Broad domain families | Thirteen families plus the reference have implemented causal features, matched additions/removals, and preserved experiments. |
+| Compact component attribution | Completed under screened and admitted policies; tail risk is the stronger point-estimate lead. |
+| Previously excluded mechanism products | All ten usable products were admitted; two training constants were excluded; no global gain established. |
+| Market-specific FX state interactions | All 42 admitted; no global gain established. |
+| Joint-panel information delays | Completed; mixed temporal outcomes and no robust matched gain. |
+| Temporal stability and conditional risk-state behavior | Open: the middle fold and uncertainty remain unresolved; any new conditional hypothesis needs train-only construction and matched evaluation. |
+| External carry, positioning, macro vintages, fundamentals, options, weather, and text | Open prerequisites: no verified calendar/instrument/release mapping and suitable historical corpus have been joined. |
+| Final test or final-model promotion | Not performed; 247 final origins remain untouched. |
+
+The verified publication contains **three freshly executed canonical notebooks and 28 Plotly figures with static fallbacks**. AWS verified **554 stage manifests and 507 total model/control replays**, including the 36 independently replayed compact models. The public CI quality gate passes **96 tests**. This is a completed research checkpoint, not a claim that feature engineering is exhaustive or that state-of-the-art performance has been demonstrated.

@@ -4,7 +4,12 @@ import json
 import tarfile
 from pathlib import Path
 
-from notebook_support import checked_attribution, checked_domain, checked_robustness
+from notebook_support import (
+    checked_attribution,
+    checked_compact,
+    checked_domain,
+    checked_robustness,
+)
 
 from commodity_prediction.cloud import client
 from commodity_prediction.runtime import atomic_json, digest, verify_checkpoint
@@ -81,6 +86,13 @@ def main() -> None:
         "domain-robustness",
         ["domain_robustness.json", "domain_robustness_lineage.json"],
         "domain_robustness_snapshot",
+    )
+    pin(
+        root,
+        checked_compact(root),
+        "compact-study",
+        ["compact_study.json", "compact_lineage.json"],
+        "compact_study_snapshot",
     )
 
 

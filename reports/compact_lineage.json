@@ -1,0 +1,290 @@
+{
+  "comparisons": [
+    [
+      "screened_tail",
+      "historical_mean"
+    ],
+    [
+      "screened_freshness",
+      "historical_mean"
+    ],
+    [
+      "admitted_base",
+      "historical_mean"
+    ],
+    [
+      "admitted_tail",
+      "historical_mean"
+    ],
+    [
+      "admitted_freshness",
+      "historical_mean"
+    ],
+    [
+      "admitted_joint",
+      "historical_mean"
+    ],
+    [
+      "compact_prior_delay_1",
+      "historical_mean"
+    ],
+    [
+      "compact_prior_delay_5",
+      "historical_mean"
+    ],
+    [
+      "compact_market_delay_1",
+      "historical_mean"
+    ],
+    [
+      "compact_both_delay_1",
+      "historical_mean"
+    ],
+    [
+      "admitted_products",
+      "historical_mean"
+    ],
+    [
+      "admitted_fx_states",
+      "historical_mean"
+    ],
+    [
+      "screened_tail",
+      "compact_control"
+    ],
+    [
+      "screened_freshness",
+      "compact_control"
+    ],
+    [
+      "admitted_base",
+      "compact_control"
+    ],
+    [
+      "joint_control",
+      "screened_tail"
+    ],
+    [
+      "joint_control",
+      "screened_freshness"
+    ],
+    [
+      "admitted_tail",
+      "admitted_base"
+    ],
+    [
+      "admitted_freshness",
+      "admitted_base"
+    ],
+    [
+      "admitted_joint",
+      "admitted_base"
+    ],
+    [
+      "admitted_joint",
+      "admitted_tail"
+    ],
+    [
+      "admitted_joint",
+      "admitted_freshness"
+    ],
+    [
+      "admitted_joint",
+      "joint_control"
+    ],
+    [
+      "compact_prior_delay_1",
+      "joint_control"
+    ],
+    [
+      "compact_prior_delay_5",
+      "joint_control"
+    ],
+    [
+      "compact_market_delay_1",
+      "joint_control"
+    ],
+    [
+      "compact_both_delay_1",
+      "joint_control"
+    ],
+    [
+      "admitted_products",
+      "admitted_joint"
+    ],
+    [
+      "admitted_fx_states",
+      "admitted_joint"
+    ]
+  ],
+  "config": {
+    "feature_gate": "open",
+    "max_new_fits": 36,
+    "new_distinct_templates": 42,
+    "parent_lineage": "d3fb7b5fbbaae6f4bebf387e46a03c842de14f6c7f75185b568016ab195d928a",
+    "residual_weight": 1.0,
+    "reused_product_templates": 12,
+    "selection_contract": "Admitted variants retain every training-usable nonduplicate column; missingness and constant checks remain. Screened variants use the frozen 64-column, 0.98-correlation policy.",
+    "study_kind": "exploratory_matched_feature_mechanisms"
+  },
+  "experiments": [
+    {
+      "admit": false,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk"
+      ],
+      "interactions": "",
+      "market_delay": 0,
+      "name": "screened_tail",
+      "prior_delay": 0
+    },
+    {
+      "admit": false,
+      "families": [
+        "reference",
+        "released_priors",
+        "asynchrony"
+      ],
+      "interactions": "",
+      "market_delay": 0,
+      "name": "screened_freshness",
+      "prior_delay": 0
+    },
+    {
+      "admit": true,
+      "families": [
+        "reference",
+        "released_priors"
+      ],
+      "interactions": "",
+      "market_delay": 0,
+      "name": "admitted_base",
+      "prior_delay": 0
+    },
+    {
+      "admit": true,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk"
+      ],
+      "interactions": "",
+      "market_delay": 0,
+      "name": "admitted_tail",
+      "prior_delay": 0
+    },
+    {
+      "admit": true,
+      "families": [
+        "reference",
+        "released_priors",
+        "asynchrony"
+      ],
+      "interactions": "",
+      "market_delay": 0,
+      "name": "admitted_freshness",
+      "prior_delay": 0
+    },
+    {
+      "admit": true,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk",
+        "asynchrony"
+      ],
+      "interactions": "",
+      "market_delay": 0,
+      "name": "admitted_joint",
+      "prior_delay": 0
+    },
+    {
+      "admit": false,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk",
+        "asynchrony"
+      ],
+      "interactions": "",
+      "market_delay": 0,
+      "name": "compact_prior_delay_1",
+      "prior_delay": 1
+    },
+    {
+      "admit": false,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk",
+        "asynchrony"
+      ],
+      "interactions": "",
+      "market_delay": 0,
+      "name": "compact_prior_delay_5",
+      "prior_delay": 5
+    },
+    {
+      "admit": false,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk",
+        "asynchrony"
+      ],
+      "interactions": "",
+      "market_delay": 1,
+      "name": "compact_market_delay_1",
+      "prior_delay": 0
+    },
+    {
+      "admit": false,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk",
+        "asynchrony"
+      ],
+      "interactions": "",
+      "market_delay": 1,
+      "name": "compact_both_delay_1",
+      "prior_delay": 1
+    },
+    {
+      "admit": true,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk",
+        "asynchrony"
+      ],
+      "interactions": "products",
+      "market_delay": 0,
+      "name": "admitted_products",
+      "prior_delay": 0
+    },
+    {
+      "admit": true,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk",
+        "asynchrony"
+      ],
+      "interactions": "fx_states",
+      "market_delay": 0,
+      "name": "admitted_fx_states",
+      "prior_delay": 0
+    }
+  ],
+  "feature_lineage": "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba",
+  "files": {
+    "src/commodity_prediction/domain/compact/__init__.py": "0feb0c8763c719cae797c303cd864e05ba9c05d6ff4f8e6bdc366bf3d37af47a",
+    "src/commodity_prediction/domain/compact/features.py": "6178ac684cea28794f84d0174b42a37dd64f927fa34f5d4b8933bf6638b375bc",
+    "src/commodity_prediction/domain/compact/run.py": "f70a4efe835c0a740372afcdfa056b2bc855e7318bd29fe8ecbf3fabc0fe86e1"
+  },
+  "parent_fitting_lineage": "8e66a5c3a8fb1c2d99c15f909ce89cf51f2ace2ae9a6c9213dafa2eb0a0bac62",
+  "parent_lineage": "d3fb7b5fbbaae6f4bebf387e46a03c842de14f6c7f75185b568016ab195d928a"
+}
