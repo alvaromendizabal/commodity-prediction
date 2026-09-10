@@ -47,6 +47,33 @@ def checked_study(root: Path) -> dict:
     return report
 
 
+def checked_domain(root: Path) -> dict:
+    from commodity_prediction.domain.run import domain_lineage
+
+    report = json.loads((root / "reports/domain_study.json").read_text())
+    evidence = json.loads((root / "reports/domain_lineage.json").read_text())
+    config = json.loads((root / "configs/domain_study.json").read_text())
+    actual, _ = domain_lineage(root, config)
+    if report["lineage"] != actual or fingerprint(evidence) != actual:
+        raise ValueError("Domain study results have stale source, data, or configuration")
+    if report["feature_gate"] != "open" or report["holdout_evaluated"]:
+        raise ValueError("Unexpected domain research boundary")
+    return report
+
+
+def checked_attribution(root: Path) -> dict:
+    from commodity_prediction.domain.attribution.run import attribution_lineage
+
+    report = json.loads((root / "reports/tree_attribution.json").read_text())
+    evidence = json.loads((root / "reports/tree_attribution_lineage.json").read_text())
+    actual, _ = attribution_lineage(root)
+    if report["lineage"] != actual or fingerprint(evidence) != actual:
+        raise ValueError("Tree attribution results have stale dependencies")
+    if report["feature_gate"] != "open" or report["holdout_evaluated"]:
+        raise ValueError("Unexpected attribution research boundary")
+    return report
+
+
 def show_figure(fig, root: Path, name: str, height: int = 540) -> None:
     fig.update_layout(
         template="plotly_white",

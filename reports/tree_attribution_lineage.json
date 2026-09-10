@@ -1,0 +1,197 @@
+{
+  "config": {
+    "feature_gate": "open",
+    "parent_lineage": "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba",
+    "reason": "Exploratory matched family attribution after the parent study showed a promising but uncertain nonlinear point estimate; no model tuning or new validation dates.",
+    "residual_weight": 1.0
+  },
+  "experiments": [
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "trend_shape",
+      "name": "add_trend_shape",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "tail_risk",
+      "name": "add_tail_risk",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "trading_activity",
+      "name": "add_trading_activity",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "intraday_path",
+      "name": "add_intraday_path",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "asynchrony",
+      "name": "add_asynchrony",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "factor_relative",
+      "name": "add_factor_relative",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "macro_links",
+      "name": "add_macro_links",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "currency_graph",
+      "name": "add_currency_graph",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "contract_basis",
+      "name": "add_contract_basis",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "pair_dynamics",
+      "name": "add_pair_dynamics",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "released_priors",
+      "name": "add_released_priors",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "horizon_structure",
+      "name": "add_horizon_structure",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "",
+      "include": "latent_factors",
+      "name": "add_latent_factors",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "trend_shape",
+      "include": "all",
+      "name": "drop_trend_shape",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "tail_risk",
+      "include": "all",
+      "name": "drop_tail_risk",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "trading_activity",
+      "include": "all",
+      "name": "drop_trading_activity",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "intraday_path",
+      "include": "all",
+      "name": "drop_intraday_path",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "asynchrony",
+      "include": "all",
+      "name": "drop_asynchrony",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "factor_relative",
+      "include": "all",
+      "name": "drop_factor_relative",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "macro_links",
+      "include": "all",
+      "name": "drop_macro_links",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "currency_graph",
+      "include": "all",
+      "name": "drop_currency_graph",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "contract_basis",
+      "include": "all",
+      "name": "drop_contract_basis",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "pair_dynamics",
+      "include": "all",
+      "name": "drop_pair_dynamics",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "released_priors",
+      "include": "all",
+      "name": "drop_released_priors",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "horizon_structure",
+      "include": "all",
+      "name": "drop_horizon_structure",
+      "stable": false
+    },
+    {
+      "algorithm": "histogram",
+      "drop": "latent_factors",
+      "include": "all",
+      "name": "drop_latent_factors",
+      "stable": false
+    }
+  ],
+  "files": {
+    "src/commodity_prediction/domain/attribution/__init__.py": "94c8c8c69c752dfcca30c9d792bbb40f54dbb1f66d6190c24de34d143a72bbf9",
+    "src/commodity_prediction/domain/attribution/run.py": "ffe2d1f70a74a6fa7d3aa88994752612b0ffa8f9d96df88bae124f4021d38e3e"
+  },
+  "parent_lineage": "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba"
+}

@@ -1,0 +1,6 @@
+{
+  "parent_lineage": "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba",
+  "feature_gate": "open",
+  "residual_weight": 1.0,
+  "reason": "Exploratory matched family attribution after the parent study showed a promising but uncertain nonlinear point estimate; no model tuning or new validation dates."
+}

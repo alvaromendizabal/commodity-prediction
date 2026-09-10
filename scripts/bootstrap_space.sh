@@ -25,6 +25,9 @@ uv run --frozen commodity bootstrap
 uv run --frozen python scripts/restore_checkpoint.py
 uv run --frozen commodity research --sync-s3
 uv run --frozen python -m commodity_prediction.studies.run --sync-s3
+uv run --frozen python -m commodity_prediction.domain.run --sync-s3
+uv run --frozen python -m commodity_prediction.domain.attribution.run --sync-s3
 uv run --frozen kaleido_get_chrome
+uv run --frozen python scripts/make_notebooks.py
 uv run --frozen python scripts/execute_notebooks.py
 uv run --frozen python scripts/verify_bootstrap.py
