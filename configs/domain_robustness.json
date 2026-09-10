@@ -1,0 +1,7 @@
+{
+  "parent_lineage": "b6914cbaeb4529841061236aa9b3df651c152d4513bdad5a8aa45abca85dc245",
+  "feature_gate": "open",
+  "residual_weight": 1.0,
+  "study_kind": "exploratory_feature_sensitivity",
+  "max_new_fits": 36
+}
