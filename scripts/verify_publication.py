@@ -34,6 +34,14 @@ def main() -> None:
     )
     assert study["candidate_count"] == sum(study["family_counts"].values())
     assert study["feature_gate"] == "open" and not study["holdout_evaluated"]
+    final_evaluation = json.loads((root / "configs/final_evaluation.json").read_text())
+    assert not final_evaluation["evaluated"]
+    assert final_evaluation["final_test_start_date_id"] > 1708 + 5
+    assert final_evaluation["final_test_dates"] == 247
+    cloud = json.loads((root / "reports/aws_execution.json").read_text())
+    assert cloud["lineage"] == study["lineage"]
+    assert cloud["model_checkpoints_replayed"] == 69
+    assert cloud["maximum_prediction_replay_error"] <= 1e-12
     for result in study["results"]:
         values = np.asarray(result["daily_rank_correlations"])
         assert abs(values.mean() / values.std(ddof=0) - result["official_metric"]) < 1e-12

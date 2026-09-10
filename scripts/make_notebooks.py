@@ -40,8 +40,8 @@ display(Markdown(f"**Verified experiment:** `{study['lineage'][:16]}` · **Featu
 from commodity_prediction.studies.run import study_folds
 x, y, pairs = load_data(root)
 folds, development_stop = study_folds(len(x), config, study_config)
-inventory = pd.DataFrame({"Measure": ["Observed dates", "Input columns", "Return targets", "Development dates", "Reserved holdout dates"],
-                          "Count": [len(x), x.shape[1], y.shape[1], development_stop, len(x) - development_stop]})
+inventory = pd.DataFrame({"Measure": ["Observed dates", "Input columns", "Return targets", "Development dates", "Nominally reserved dates", "Untouched final-test dates"],
+                          "Count": [len(x), x.shape[1], y.shape[1], development_stop, len(x) - development_stop, 247]})
 display(inventory.set_index("Measure"))""",
             ),
             (
@@ -56,7 +56,7 @@ display(Markdown(f"Target reconstruction compared **{audit['target_reconstructio
             ),
             (
                 "md",
-                "## Reserve the final 252 dates\n\nThree expanding walk-forward folds use 180, 180, and 175 validation dates. A five-date terminal embargo ensures every validation target is fully observable before the reserved interval begins. Five dates are purged before every validation block, so all fitting labels were released strictly before its first prediction. The final 252 dates are excluded from feature construction, EDA, screening, and model selection. The downloadable mock test file overlaps training and is not a valid holdout.",
+                "## Protect 247 final-test dates and the boundary buffer\n\nThree expanding walk-forward folds use 180, 180, and 175 validation dates. A five-date terminal embargo ensures every validation target is fully observable before the reserved interval begins. Five dates are purged before every validation block, so all fitting labels were released strictly before its first prediction. All 252 nominally reserved origins remain outside development. The initial evaluation already inspected overlapping forward outcomes through date 1713, so origins 1709–1713 are a permanent buffer. Only origins 1714–1960 (247 dates) qualify for the eventual untouched final test. The downloadable mock test file overlaps training and is not a valid holdout.",
             ),
             (
                 "code",
@@ -67,7 +67,8 @@ for fold in folds:
         ("Train", 0, fold.train_stop, "#1F6C99"),
         ("Purge", fold.train_stop, fold.validation_start - fold.train_stop, "#EDAF43"),
         ("Validation", fold.validation_start, fold.validation_stop - fold.validation_start, "#27A394"),
-        ("Reserved holdout", development_stop, len(x) - development_stop, "#CAD3DE")]:
+        ("Boundary buffer", development_stop, 5, "#D76C64"),
+        ("Untouched final test", development_stop + 5, len(x) - development_stop - 5, "#CAD3DE")]:
         fig.add_trace(go.Bar(x=[length], y=[label], base=start, orientation="h", name=part,
                              marker_color=color, showlegend=fold.number == 0))
 fig.update_layout(barmode="overlay", title="Validation respects prediction-time information", xaxis_title="Date index", legend={"orientation": "h", "y": -0.22})

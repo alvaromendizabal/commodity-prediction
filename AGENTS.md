@@ -5,6 +5,7 @@
 - Feature engineering is a completion gate. It remains open until major plausible families have been tested for leakage, screened on training data, ablated, and evaluated for stability and diminishing returns.
 - Keep the final 252 dates untouched for selection. Use the purged chronological folds in configs/research.json. Targets for horizon h span t+1 through t+h+1 and are released at t+h+1.
 - Current feature comparisons additionally apply configs/feature_study.json's five-date terminal embargo: 535 validation dates, ending at date 1703. Rescore preserved initial predictions on this same window; do not directly compare their old 540-date metrics.
+- The original 540-date evaluation already inspected forward outcomes through date 1713. Follow configs/final_evaluation.json: reserve origins 1709–1713 as a permanent buffer and use only the 247 untouched origins 1714–1960 for the eventual one-time final test. Do not claim all 252 original reserved outcomes are pristine.
 - Keep the original core-module fingerprint and completed study checkpoints intact. Follow-up study modules carry their own dependency fingerprint. Target-specific screening counts are feature/output assignments, distinct from unique feature counts.
 - Never use random splits, full-data preprocessing, backward filling, hidden notebook state, or the overlapping mock test set as validation.
 - Target-derived features must use explicit historical release times. Do not apply ordinary cross-fold target encoding to this temporal panel.

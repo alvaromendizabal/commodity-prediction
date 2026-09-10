@@ -5,12 +5,12 @@ def cells(setup: str) -> list[tuple[str, str]]:
     return [
         (
             "md",
-            "# Commodity forecasting | Target-aware feature research\n\n**Feature gate: OPEN.** A feature-rich model has to beat credible simple controls. This study tests target-specific screening, economic routing, longer risk regimes, nonlinear interactions, and released-label history.\n\nAll comparisons use the corrected **535-date** development window. The final 252 dates remain reserved. The original experiments are preserved; no leaderboard or trading-profit claims are made.",
+            "# Commodity forecasting | Target-aware feature research\n\n**Feature gate: OPEN.** A feature-rich model has to beat credible simple controls. This study tests target-specific screening, economic routing, longer risk regimes, nonlinear interactions, and released-label history.\n\nAll comparisons use the corrected **535-date** development window. The original reservation contains a five-date permanent boundary buffer and **247 untouched final-test dates**. The original experiments are preserved; no leaderboard or trading-profit claims are made.",
         ),
         ("code", setup),
         (
             "md",
-            "## Correct the benchmark and the time boundary\n\nThe first shared-screen Ridge experiment omitted a strong control: each target's historical training mean. We now include frozen training means and expanding means of labels that have actually been released.\n\nA five-date terminal embargo removes development targets whose outcomes reach into the reserved interval. The initial models are rescored on these same 535 dates without refitting. Their old 540-date scores are historical records, not current comparisons.",
+            "## Correct the benchmark and the time boundary\n\nThe first shared-screen Ridge experiment omitted a strong control: each target's historical training mean. We now include frozen training means and expanding means of labels that have actually been released.\n\nA five-date terminal embargo removes development targets whose outcomes reach into the reserved interval. The initial models are rescored on these same 535 dates without refitting. Their old 540-date scores are historical records, not current comparisons. Because those overlapping outcomes were already inspected, origins 1709–1713 remain a permanent buffer; only origins 1714–1960 enter the eventual final test.",
         ),
         (
             "code",
