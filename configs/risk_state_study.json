@@ -1,0 +1,10 @@
+{
+  "parent_lineage": "d8f4fe3423e890ee8440ca14e29ab424a07ddb2f26cc007db5f7b8e967078e46",
+  "feature_gate": "open",
+  "study_kind": "exploratory_matched_conditional_risk_features",
+  "residual_weight": 1.0,
+  "max_new_fits": 24,
+  "max_run_seconds": 1200,
+  "new_distinct_templates": 34,
+  "selection_contract": "Six release-safe risk states, four normalized priors and 24 bounded products. Main effects remain in product variants. Reuse frozen controls; admit all usable nonduplicate features except the declared screened variant."
+}

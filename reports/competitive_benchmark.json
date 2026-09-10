@@ -1,0 +1,44 @@
+{
+  "verified_date": "2026-09-10",
+  "source": "https://www.kaggle.com/competitions/mitsui-commodity-prediction-challenge/leaderboard",
+  "leaderboard": "final_private",
+  "teams": 1126,
+  "leaders": [
+    {
+      "rank": 1,
+      "team": "anonemaus",
+      "score": 0.63834
+    },
+    {
+      "rank": 2,
+      "team": "m1ngka1",
+      "score": 0.61027
+    },
+    {
+      "rank": 3,
+      "team": "AYUSH KHAIRE",
+      "score": 0.60229
+    },
+    {
+      "rank": 5,
+      "team": "ZLF",
+      "score": 0.53231
+    },
+    {
+      "rank": 6,
+      "team": "Poidenko Artem",
+      "score": 0.51444
+    },
+    {
+      "rank": 8,
+      "team": "honkai01031227",
+      "score": 0.49066
+    }
+  ],
+  "project_validation_score": 0.309186181,
+  "project_validation_origins": 535,
+  "direct_score_comparison_valid": false,
+  "probability_of_winning_estimated": false,
+  "reason": "Different evaluation dates; no hidden competition outcomes or submission available",
+  "evidence_document": "docs/competitive-research.md"
+}

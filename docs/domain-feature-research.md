@@ -295,3 +295,8 @@ All **233 joint comparisons** have simultaneous intervals including zero at 10, 
 | Final test or final-model promotion | Not performed; 247 final origins remain untouched. |
 
 The verified publication contains **three freshly executed canonical notebooks and 28 Plotly figures with static fallbacks**. AWS verified **554 stage manifests and 507 total model/control replays**, including the 36 independently replayed compact models. The public CI quality gate passes **96 tests**. This is a completed research checkpoint, not a claim that feature engineering is exhaustive or that state-of-the-art performance has been demonstrated.
+
+
+## Conditional risk-state follow-up
+
+The [risk-state study](risk-state-research.md) completes 24 additional fits over six risk states, four normalized priors, and 24 products. Its 0.309186 point lead differs from the previous lead by only 0.000098. No positive simultaneous bound survives the expanded 255-comparison family. The research-wide domain union is now 524 templates and the five domain phases preserve 453 fitted models. New private checkpoint and notebook publication are pending explicit authorization and execution access; the feature gate remains open.

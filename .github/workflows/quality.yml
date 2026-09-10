@@ -17,3 +17,4 @@ jobs:
       - run: uv sync --frozen --extra dev
       - run: uv run --frozen --extra dev python scripts/quality.py
       - run: uv run --frozen python scripts/verify_publication.py
+      - run: uv run --frozen python scripts/verify_risk_state_publication.py

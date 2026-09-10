@@ -37,6 +37,7 @@ def supervise(
     publish: Callable[[dict[str, Any]], None],
     heartbeat: float = 30,
     max_seconds: float = 2700,
+    status_path: str = "logs/compact-publication-status.json",
 ) -> int:
     started = monotonic()
     state: dict[str, Any] = {"status": "running", "stage": "cloud_preflight", "exit_code": None}
@@ -45,7 +46,7 @@ def supervise(
         state.update(
             utc=datetime.now(UTC).isoformat(), total_elapsed_seconds=round(monotonic() - started, 3)
         )
-        atomic_json(root / "logs/compact-publication-status.json", state)
+        atomic_json(root / status_path, state)
         print(json.dumps(state), flush=True)
         publish(dict(state))
 
@@ -87,8 +88,15 @@ def supervise(
         return 0
     except Exception as error:
         state.update(status="failed", exit_code=1, error=f"{type(error).__name__}: {error}")
-        atomic_json(root / "logs/compact-publication-status.json", state)
+        state.update(
+            utc=datetime.now(UTC).isoformat(), total_elapsed_seconds=round(monotonic() - started, 3)
+        )
+        atomic_json(root / status_path, state)
         print(json.dumps(state), flush=True)
+        try:
+            publish(dict(state))
+        except Exception:
+            pass  # Preserve the original error if cloud access itself failed.
         raise
 
 

@@ -54,13 +54,16 @@ def test_success_follows_all_stages_and_emits_heartbeats(tmp_path):
 
 
 def test_timeout_stops_work_and_records_failure(tmp_path):
+    records = []
     with pytest.raises(TimeoutError, match="runtime budget"):
         supervise(
             tmp_path,
             [("long_work", [sys.executable, "-c", "import time; time.sleep(60)"])],
-            lambda _: None,
+            records.append,
             heartbeat=0.02,
             max_seconds=0.03,
+            status_path="logs/risk-state-publication-status.json",
         )
-    state = json.loads((tmp_path / "logs/compact-publication-status.json").read_text())
+    state = json.loads((tmp_path / "logs/risk-state-publication-status.json").read_text())
     assert state["stage"] == "long_work" and state["status"] == "failed"
+    assert records[-1] == state

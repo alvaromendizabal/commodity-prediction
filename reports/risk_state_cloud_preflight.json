@@ -1,0 +1,11 @@
+{
+  "archive_key": "bootstrap/risk-state-checkpoint.tar.gz",
+  "archive_sha256": "d4be97574aec10a74adea733b4dced6b6750fb71b7955181c8d2711ffd983ada",
+  "holdout_evaluated": false,
+  "independent_cloud_model_replays": 24,
+  "lineage": "bdf288bea624a488e6f72cb512edf1fabacedadcd29d98cd8687bb789faab84e",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 0,
+  "stage_manifests_verified": 579,
+  "verified_utc": "2026-09-10T18:12:02.697789+00:00"
+}

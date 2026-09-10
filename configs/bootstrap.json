@@ -21,6 +21,11 @@
   },
   "lineage": "c8c77b70ad535423bc9c003671fe7eceec754e20f493db39f50561bf4e9cc24d",
   "raw_archive_sha256": "b897830bab3e267a0b2d8f6eb3419a84f71508ee27b22226b762dd7bc0339092",
+  "risk_state_study_snapshot": {
+    "key": "bootstrap/risk-state-checkpoint.tar.gz",
+    "lineage": "bdf288bea624a488e6f72cb512edf1fabacedadcd29d98cd8687bb789faab84e",
+    "sha256": "d4be97574aec10a74adea733b4dced6b6750fb71b7955181c8d2711ffd983ada"
+  },
   "snapshot_key": "bootstrap/research-checkpoint.tar.gz",
   "snapshot_sha256": "27c85ea80d4db85cf1c15ea24584da837739096df8023f37804c7df50623fb31",
   "tree_attribution_snapshot": {

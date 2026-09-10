@@ -1,0 +1,21 @@
+{
+  "files": {
+    "notebooks/02_feature_research.ipynb": {
+      "bytes": 5207385,
+      "key": "bootstrap/risk-state-layout/notebooks/02_feature_research.ipynb",
+      "sha256": "8f51c24d4753ca5e39436941e99de10f1a07c83833a29d17570fd97e9408fa53"
+    },
+    "reports/figures/risk_state_uncertainty.png": {
+      "bytes": 178371,
+      "key": "bootstrap/risk-state-layout/reports/figures/risk_state_uncertainty.png",
+      "sha256": "28a5e4bcac23d665ed7bc6fd0b4f68e6b9c43a8e51f6f2ed87d97b1c4f045961"
+    }
+  },
+  "holdout_evaluated": false,
+  "new_training_fits": 0,
+  "notebooks_reexecuted": 1,
+  "reason": "Anchor the long uncertainty title to the left of its container",
+  "script_sha256": "91c1f81d66170b4ac1b78764869fcd3d20e06120d2e12a1dd8d3e18badc1e3ad",
+  "status": "completed",
+  "verified_utc": "2026-09-10T18:44:38.330416+00:00"
+}
