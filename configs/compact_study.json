@@ -1,0 +1,10 @@
+{
+  "parent_lineage": "d3fb7b5fbbaae6f4bebf387e46a03c842de14f6c7f75185b568016ab195d928a",
+  "feature_gate": "open",
+  "study_kind": "exploratory_matched_feature_mechanisms",
+  "residual_weight": 1.0,
+  "max_new_fits": 36,
+  "new_distinct_templates": 42,
+  "reused_product_templates": 12,
+  "selection_contract": "Admitted variants retain every training-usable nonduplicate column; missingness and constant checks remain. Screened variants use the frozen 64-column, 0.98-correlation policy."
+}

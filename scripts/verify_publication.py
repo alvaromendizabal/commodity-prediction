@@ -5,6 +5,7 @@ from pathlib import Path
 
 import nbformat
 import numpy as np
+from verify_compact import verify as verify_compact
 
 from commodity_prediction.runtime import digest, fingerprint
 
@@ -141,21 +142,30 @@ def main(*, require_aws_evidence: bool = True) -> None:
     assert robustness["new_distinct_interaction_templates"] == 68
     assert robustness["feature_gate"] == "open" and not robustness["holdout_evaluated"]
     assert robustness["validation_dates"] == 535
+    compact = verify_compact(root, robustness)
     if require_aws_evidence:
         latest = json.loads((root / "reports/aws_feature_research.json").read_text())
         assert latest["status"] == "completed"
-        assert latest["lineage"] == robustness["lineage"]
-        assert latest["stage_manifests_verified"] == 517
-        assert latest["model_replays_total"] == 471
-        assert latest["preserved_model_replays"] == cloud["model_checkpoints_replayed"]
+        assert latest["lineage"] == (compact or robustness)["lineage"]
+        assert latest["stage_manifests_verified"] == (554 if compact else 517)
+        assert latest["model_replays_total"] == (507 if compact else 471)
+        assert latest["preserved_model_replays"] == (
+            471 if compact else cloud["model_checkpoints_replayed"]
+        )
         assert latest["latest_model_replays"] == robustness["model_checkpoints_replayed"]
         assert latest["maximum_prediction_replay_error"] <= 1e-12
         assert latest["preserved_replay_report_sha256"] == digest(
             root / "reports/aws_execution.json"
         )
-        assert latest["latest_report_sha256"] == digest(root / "reports/domain_robustness.json")
+        assert latest["latest_report_sha256"] == digest(
+            root / "reports" / ("compact_study.json" if compact else "domain_robustness.json")
+        )
+        if compact:
+            assert latest["preserved_robustness_report_sha256"] == digest(
+                root / "reports/domain_robustness.json"
+            )
         assert latest["notebooks_executed"] == 3
-        assert latest["plotly_static_figure_pairs"] == 25
+        assert latest["plotly_static_figure_pairs"] == (28 if compact else 25)
         assert latest["feature_gate"] == "open" and not latest["holdout_evaluated"]
     for result in robustness["results"]:
         counts = result["selection"]
@@ -188,6 +198,8 @@ def main(*, require_aws_evidence: bool = True) -> None:
         assert notebook.metadata["domain_lineage"] == domain["lineage"], path.name
         assert notebook.metadata["attribution_lineage"] == attribution["lineage"], path.name
         assert notebook.metadata["robustness_lineage"] == robustness["lineage"], path.name
+        if compact:
+            assert notebook.metadata["compact_lineage"] == compact["lineage"], path.name
         for cell in notebook.cells:
             if cell.cell_type == "code":
                 assert cell.execution_count is not None, path.name
@@ -197,7 +209,7 @@ def main(*, require_aws_evidence: bool = True) -> None:
                     and "image/png" in o.get("data", {})
                     for o in cell.outputs
                 )
-    assert figures >= 25, "Interactive figures need static GitHub fallbacks"
+    assert figures >= (28 if compact else 25), "Interactive figures need static GitHub fallbacks"
     print(
         f"Verified source/result lineage, {len(paths)} executed notebooks, and {figures} Plotly/static figure pairs"
     )

@@ -36,6 +36,8 @@ def main() -> None:
             notebook.metadata["attribution_lineage"] = attribution["lineage"]
             robustness = json.loads((root / "reports/domain_robustness.json").read_text())
             notebook.metadata["robustness_lineage"] = robustness["lineage"]
+            compact = json.loads((root / "reports/compact_study.json").read_text())
+            notebook.metadata["compact_lineage"] = compact["lineage"]
             temporary = path.with_suffix(".ipynb.tmp")
             nbformat.write(notebook, temporary)
             temporary.replace(path)

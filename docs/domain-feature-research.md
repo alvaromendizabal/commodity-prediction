@@ -216,3 +216,23 @@ The expanded verification checks 517 sealed stage manifests. It preserves zero-e
 5. **Resolve external-data prerequisites:** obtain a verifiable calendar and instrument metadata before attempting carry, inventories, positioning, macro vintages, fundamentals, options, or text. A source's current web availability is not a historical as-of dataset.
 
 These are open research questions, not hidden completed tasks. This checkpoint provides broader executed coverage and a stronger candidate while keeping the feature gate open. Final optimization, the untouched test, and submissions remain outside the current phase.
+
+## Compact mechanism study design
+
+This follow-up addresses the first four questions above through a declared set of 12 variants and 36 fits. It retains the existing dates, fixed histogram-tree settings, unshrunk residual weight, normalization, and train-only preprocessing. It reuses the frozen full-tree, historical-mean, compact-priors, and compact-risk/freshness controls. The design is exploratory because those earlier results motivated it; declaration before this run does not undo earlier adaptation.
+
+| Question | Variants and candidate templates | Matched comparison |
+|---|---|---|
+| Which compact component contributes under the original screen? | Reference + priors + tail risk: 69; reference + priors + freshness: 51. | Frozen reference + priors and frozen joint compact representation. |
+| Does a screening substitution explain the component effect? | Admit usable base 39, tail 69, freshness 51, joint 81. | Four-way component design with identical admission policy. |
+| Does the compact lead depend on immediate information? | Joint 81 with prior delay 1, prior delay 5, market delay 1, or both delays 1. | Frozen screened joint compact control. |
+| Did the relevance screen hide nonlinear products? | Joint 81 plus the same 12 frozen mechanism products: 93. | Admitted joint 81. |
+| Does market-specific state conditioning help? | Joint 81 plus 42 FX-conditioned risk/freshness templates: 123. | Admitted joint 81, with descriptive overlapping subgroup diagnostics. |
+
+Admission removes the feature-budget and near-correlation filters while retaining training missingness, constants, and exact-duplicate safeguards. It admits each usable declared product even if marginal linear relevance is zero. It therefore resolves the earlier screen's failure to expose these hypotheses to the estimator. A fixed small tree can still fail to represent a useful nonlinear relationship; a negative result applies to this feature/model design, not every possible interaction model.
+
+The FX gate is the fraction of a target's legs whose instrument prefix is FX. Each of the 30 tail-risk and 12 freshness templates is multiplied by that fraction. Targets without an FX leg receive structural zero; missing state values for applicable targets stay missing. These are **42 distinct new templates and 17,808 target-template assignments**, not independent signals. The 12 product templates already belong to the prior inventory and are not counted again. The research-wide template union becomes 490, while the largest panel in this study is 123 and the earlier largest panel remains 436.
+
+The economic motivation for this gate is a market-structure distinction, not a discovered causal channel. Schrimpf and Sushko's BIS Quarterly Review article, [“FX trade execution: complex and highly fragmented”](https://www.bis.org/publications/qr-201912/fx-trade-execution-complex-and-highly-fragmented), December 2019, describes fragmented venues, dealer internalisation, and incomplete market-wide visibility of activity. That supports testing different state responses across target groups. It does not show that these daily missingness proxies measure order flow, depth, or executable liquidity, nor that the proposed interaction predicts the challenge's one-to-four-date targets. The subgroup hypothesis was also motivated by an already inspected FX weakness and must remain explicitly exploratory.
+
+The study declares 29 new contrasts, expanding the joint domain comparison family from 204 to 233. Uncertainty uses the existing 2,000 paired block bootstrap repetitions at 10, 20, and 40 dates. Global scores retain all 535 evaluation dates. No favorable block length or subgroup can substitute for the complete results. The feature gate remains open pending executed results, stability analysis, and remaining information prerequisites.
