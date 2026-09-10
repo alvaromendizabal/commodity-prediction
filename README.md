@@ -4,6 +4,12 @@ Domain-driven feature engineering for multi-horizon commodity return prediction,
 
 **Current phase: domain feature research. Feature gate: open.** The project studies 424 return targets across LME, JPX, US equities, and FX. A nonlinear domain model improves the development point estimate, but uncertainty and uneven temporal gains do not justify final-model promotion. Final optimization and the one-time final test remain gated.
 
+## Latest draft research checkpoint
+
+The [conditional risk-state study](docs/risk-state-research.md) adds **24 executed fits and 34 candidate templates**. Its best development score is **0.309186**, versus **0.309088** previously: **+0.000098**, with no meaningful improvement established. All **255 joint comparison bounds** include zero at the tested block settings. The 24 interaction products lower their matched point estimate; the best new panel retains 79 of 79 columns. Feature engineering remains open.
+
+**Publication is pending:** 25 new local stages pass integrity checks and all 24 models replay exactly, but automatic approval review blocked private checkpoint upload. The new notebook chapter is prepared but has not executed; the three notebooks below still present the previous verified checkpoint. No AWS compute was started. [Execution evidence](reports/risk_state_execution.json).
+
 ## Start with the notebooks
 
 | Notebook | Question answered |

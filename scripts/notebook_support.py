@@ -100,6 +100,19 @@ def checked_compact(root: Path) -> dict:
     return report
 
 
+def checked_risk_state(root: Path) -> dict:
+    from commodity_prediction.domain.risk_state.run import study_lineage
+
+    report = json.loads((root / "reports/risk_state_study.json").read_text())
+    evidence = json.loads((root / "reports/risk_state_lineage.json").read_text())
+    actual, _ = study_lineage(root)
+    if report["lineage"] != actual or fingerprint(evidence) != actual:
+        raise ValueError("Risk-state feature results have stale dependencies")
+    if report["feature_gate"] != "open" or report["holdout_evaluated"]:
+        raise ValueError("Unexpected risk-state research boundary")
+    return report
+
+
 def show_figure(fig, root: Path, name: str, height: int = 540) -> None:
     fig.update_layout(
         template="plotly_white",

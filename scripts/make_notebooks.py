@@ -7,6 +7,7 @@ from compact_notebook import cells as compact_cells
 from domain_notebook import cells as domain_cells
 from domain_notebook import tree_cells
 from feature_notebook import cells as feature_cells
+from risk_state_notebook import cells as risk_state_cells
 from robustness_notebook import cells as robustness_cells
 
 
@@ -169,6 +170,7 @@ display(pd.Series({"Distinct target assets":len(target_assets),"Directed target-
     definitions["02_feature_research.ipynb"] = feature_cells(setup) + domain_cells() + tree_cells()
     definitions["02_feature_research.ipynb"] += robustness_cells()
     definitions["02_feature_research.ipynb"] += compact_cells()
+    definitions["02_feature_research.ipynb"] += risk_state_cells()
     for filename, cells in definitions.items():
         notebook = nbf.v4.new_notebook()
         notebook.metadata = {

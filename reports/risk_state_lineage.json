@@ -1,0 +1,215 @@
+{
+  "comparisons": [
+    [
+      "tail_states",
+      "historical_mean"
+    ],
+    [
+      "tail_scaled_priors",
+      "historical_mean"
+    ],
+    [
+      "tail_states_and_priors",
+      "historical_mean"
+    ],
+    [
+      "tail_state_products",
+      "historical_mean"
+    ],
+    [
+      "joint_state_products",
+      "historical_mean"
+    ],
+    [
+      "base_state_products",
+      "historical_mean"
+    ],
+    [
+      "screened_state_products",
+      "historical_mean"
+    ],
+    [
+      "delayed_state_products",
+      "historical_mean"
+    ],
+    [
+      "tail_states",
+      "admitted_tail"
+    ],
+    [
+      "tail_scaled_priors",
+      "admitted_tail"
+    ],
+    [
+      "tail_states_and_priors",
+      "admitted_tail"
+    ],
+    [
+      "tail_state_products",
+      "admitted_tail"
+    ],
+    [
+      "tail_state_products",
+      "tail_states_and_priors"
+    ],
+    [
+      "tail_states_and_priors",
+      "tail_states"
+    ],
+    [
+      "tail_states_and_priors",
+      "tail_scaled_priors"
+    ],
+    [
+      "joint_state_products",
+      "admitted_joint"
+    ],
+    [
+      "joint_state_products",
+      "tail_state_products"
+    ],
+    [
+      "base_state_products",
+      "admitted_base"
+    ],
+    [
+      "tail_state_products",
+      "base_state_products"
+    ],
+    [
+      "screened_state_products",
+      "screened_tail"
+    ],
+    [
+      "screened_state_products",
+      "tail_state_products"
+    ],
+    [
+      "delayed_state_products",
+      "tail_state_products"
+    ]
+  ],
+  "config": {
+    "feature_gate": "open",
+    "max_new_fits": 24,
+    "max_run_seconds": 1200,
+    "new_distinct_templates": 34,
+    "parent_lineage": "d8f4fe3423e890ee8440ca14e29ab424a07ddb2f26cc007db5f7b8e967078e46",
+    "residual_weight": 1.0,
+    "selection_contract": "Six release-safe risk states, four normalized priors and 24 bounded products. Main effects remain in product variants. Reuse frozen controls; admit all usable nonduplicate features except the declared screened variant.",
+    "study_kind": "exploratory_matched_conditional_risk_features"
+  },
+  "experiments": [
+    {
+      "admit": true,
+      "drivers": false,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk"
+      ],
+      "name": "tail_states",
+      "prior_delay": 0,
+      "products": false,
+      "states": true
+    },
+    {
+      "admit": true,
+      "drivers": true,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk"
+      ],
+      "name": "tail_scaled_priors",
+      "prior_delay": 0,
+      "products": false,
+      "states": false
+    },
+    {
+      "admit": true,
+      "drivers": true,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk"
+      ],
+      "name": "tail_states_and_priors",
+      "prior_delay": 0,
+      "products": false,
+      "states": true
+    },
+    {
+      "admit": true,
+      "drivers": true,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk"
+      ],
+      "name": "tail_state_products",
+      "prior_delay": 0,
+      "products": true,
+      "states": true
+    },
+    {
+      "admit": true,
+      "drivers": true,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk",
+        "asynchrony"
+      ],
+      "name": "joint_state_products",
+      "prior_delay": 0,
+      "products": true,
+      "states": true
+    },
+    {
+      "admit": true,
+      "drivers": true,
+      "families": [
+        "reference",
+        "released_priors"
+      ],
+      "name": "base_state_products",
+      "prior_delay": 0,
+      "products": true,
+      "states": true
+    },
+    {
+      "admit": false,
+      "drivers": true,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk"
+      ],
+      "name": "screened_state_products",
+      "prior_delay": 0,
+      "products": true,
+      "states": true
+    },
+    {
+      "admit": true,
+      "drivers": true,
+      "families": [
+        "reference",
+        "released_priors",
+        "tail_risk"
+      ],
+      "name": "delayed_state_products",
+      "prior_delay": 1,
+      "products": true,
+      "states": true
+    }
+  ],
+  "feature_lineage": "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba",
+  "files": {
+    "src/commodity_prediction/domain/risk_state/__init__.py": "f0185671eb6887af08b2bdc5a6e8e3ca8b36e19c2fe6b21c2f32cf2c92de5fda",
+    "src/commodity_prediction/domain/risk_state/features.py": "bfffdfbff93dc7d5e5775cf95b2a49b020c52d03fec29de84a06268f141d28c7",
+    "src/commodity_prediction/domain/risk_state/run.py": "cb632323034e2219875886ad5658b23ea0d24f9faca256c8d1f45d5076a2f5cd"
+  },
+  "parent_lineage": "d8f4fe3423e890ee8440ca14e29ab424a07ddb2f26cc007db5f7b8e967078e46"
+}
