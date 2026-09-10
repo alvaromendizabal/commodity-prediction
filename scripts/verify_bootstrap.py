@@ -108,7 +108,7 @@ def main() -> None:
     atomic_json(root / "reports/aws_execution.json", evidence)
     bundle = root / "artifacts/verified-notebooks.tar.gz"
     with tarfile.open(bundle, "w:gz") as archive:
-        for directory in ["notebooks", "reports", "logs"]:
+        for directory in ["notebooks", "reports", "logs", "configs"]:
             archive.add(root / directory, arcname=directory)
     s3, aws = client(root)
     s3.upload_file(

@@ -1,6 +1,6 @@
 # Commodity Prediction
 
-Multi-horizon commodity return forecasting with point-in-time features, purged walk-forward validation, interpretable Plotly notebooks, and reproducible AWS experiments.
+Domain-driven feature engineering for multi-horizon commodity return prediction, with point-in-time market features, purged temporal validation, interpretable notebooks, and reproducible AWS experiments.
 
 **Current phase: target-aware feature research. Feature gate: open.** This project studies the MITSUI&CO. Commodity Prediction Challenge as an offline forecasting problem. The latest controlled study found that a simple historical-mean benchmark remains stronger than the fitted alternatives. Final optimization and the one-time final test remain gated. Kaggle submissions are outside the project scope.
 
