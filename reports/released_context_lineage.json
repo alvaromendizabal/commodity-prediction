@@ -1,0 +1,70 @@
+{
+  "comparisons": [
+    [
+      "short_own",
+      "admitted_tail"
+    ],
+    [
+      "short_own",
+      "historical_mean"
+    ],
+    [
+      "short_peers",
+      "admitted_tail"
+    ],
+    [
+      "short_peers",
+      "historical_mean"
+    ],
+    [
+      "short_joint",
+      "admitted_tail"
+    ],
+    [
+      "short_joint",
+      "historical_mean"
+    ],
+    [
+      "short_joint",
+      "short_own"
+    ],
+    [
+      "short_joint",
+      "short_peers"
+    ]
+  ],
+  "config": {
+    "candidate_templates_added": 24,
+    "feature_gate": "open",
+    "max_new_fits": 9,
+    "max_run_seconds": 300,
+    "parent_lineage": "bdf288bea624a488e6f72cb512edf1fabacedadcd29d98cd8687bb789faab84e",
+    "residual_weight": 1.0,
+    "selection_contract": "Admit all training-usable nonduplicate columns; fixed histogram settings; frozen admitted-tail control. Twelve own-history and twelve signed metadata-peer templates, each based only on individually released labels.",
+    "study_kind": "exploratory_short_released_history_and_signed_peer_context"
+  },
+  "experiments": [
+    {
+      "name": "short_own",
+      "own": true,
+      "peers": false
+    },
+    {
+      "name": "short_peers",
+      "own": false,
+      "peers": true
+    },
+    {
+      "name": "short_joint",
+      "own": true,
+      "peers": true
+    }
+  ],
+  "feature_lineage": "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba",
+  "files": {
+    "src/commodity_prediction/domain/released_context/__init__.py": "02ce296058762a2351de5a1c35cd72a9b7020dc8530d426838806808658515fa",
+    "src/commodity_prediction/domain/released_context/features.py": "094382e38052477a1f9206a8098d1236c49fcc746b17484cafe46151606a1297",
+    "src/commodity_prediction/domain/released_context/run.py": "efefb0cb42617085d51c821d0e4aafc6c6f484121b9b9ff05ce685942176472e"
+  },
+  "parent_lineage": "bdf288bea624a488e6f72cb512edf1fabacedadcd29d98cd8687bb789faab84e"
+}

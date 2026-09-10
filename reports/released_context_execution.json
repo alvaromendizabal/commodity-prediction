@@ -1,0 +1,22 @@
+{
+  "status": "experiment_and_private_checkpoint_verified_notebook_pending",
+  "verified_utc": "2026-09-10T19:16:52.240296+00:00",
+  "lineage": "1022e7104cdf9c1bc3bdd40722b33d392a44b699a38a9ca714d2cce1aad6884b",
+  "new_fitted_models": 9,
+  "exact_model_replays": 9,
+  "maximum_prediction_replay_error": 0.0,
+  "stage_manifests": 10,
+  "cumulative_experiment_seconds": 108.02507624499958,
+  "experiment_budget_seconds": 300,
+  "first_fold_seconds": 34.79460425099933,
+  "complete_no_refit_resume_seconds": 0.031,
+  "targeted_tests_passed": 11,
+  "private_archive_sha256": "41fc9eef849fbaea8f54033212619029d93deeff3cb9aa47cff4267e75de6f5b",
+  "private_archive_bytes": 6925322,
+  "private_s3_key": "bootstrap/released-context-checkpoint.tar.gz",
+  "full_download_sha256_verified": true,
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "untouched_final_origins": 247,
+  "first_fold_checkpoint_preserved_before_resume": true
+}

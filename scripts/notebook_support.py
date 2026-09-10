@@ -113,6 +113,20 @@ def checked_risk_state(root: Path) -> dict:
     return report
 
 
+def checked_released_context(root: Path) -> dict:
+    from commodity_prediction.domain.released_context.run import study_lineage
+
+    report = json.loads((root / "reports/released_context_study.json").read_text())
+    actual, _ = study_lineage(root)
+    if (
+        report["lineage"] != actual
+        or report["validation_dates"] != 535
+        or report["holdout_evaluated"]
+    ):
+        raise ValueError("Released-context source or research boundary differs")
+    return report
+
+
 def show_figure(fig, root: Path, name: str, height: int = 540) -> None:
     fig.update_layout(
         template="plotly_white",

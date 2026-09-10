@@ -1,5 +1,31 @@
 # Commodity Prediction
 
+## Latest checkpoint: short released-history context
+
+The short released-history study and its AWS notebook publication are complete.
+[Measured feature ablations](docs/released-context-research.md) compare own-target
+history (**0.308890**), signed peer context (**0.243727**), and both families
+(**0.249300**) against the matched admitted-tail control (**0.305336**).
+Own history remains inconclusive; signed peer aggregation lowers all three fold
+scores and is not advanced unchanged. The overall development leader remains
+**0.309186**. These are exploratory offline scores, not leaderboard equivalents.
+
+The [publication receipt](reports/aws_released_context_publication.json) records
+nine independent exact saved-model replays, **589 verified stage manifests**,
+**34 Plotly/static figure pairs** across the three executed canonical notebooks,
+and **zero training fits during publication**. Only the research notebook was
+re-executed for this update. Its recorded source is `45144fb0ded7f60a53679b9f4e10b5d3944d9345`.
+The broader comparison history now contains **263 declared contrasts**, with
+no positive simultaneous lower bound at the tested block lengths.
+
+**Feature engineering remains open.** Preserve the 247 final-test origins. The
+next proposed research milestone is a matched short raw-market-sequence study,
+after checking overlap with earlier lag features; it has not been executed by
+this publication. Completed short-label-history fits must not be rerun.
+
+The sections below retain the earlier risk-state checkpoint and historical
+research evidence; their phase-specific counts do not supersede this update.
+
 Domain-driven feature engineering for multi-horizon commodity return prediction, with point-in-time market features, purged temporal validation, interpretable notebooks, and reproducible AWS experiments.
 
 **Current phase: domain feature research. Feature gate: open.** The project studies 424 return targets across LME, JPX, US equities, and FX. A nonlinear domain model improves the development point estimate, but uncertainty and uneven temporal gains do not justify final-model promotion. Final optimization and the one-time final test remain gated.
