@@ -4,7 +4,7 @@ import json
 import tarfile
 from pathlib import Path
 
-from notebook_support import checked_attribution, checked_domain
+from notebook_support import checked_attribution, checked_domain, checked_robustness
 
 from commodity_prediction.cloud import client
 from commodity_prediction.runtime import atomic_json, digest, verify_checkpoint
@@ -67,6 +67,13 @@ def main() -> None:
         "tree-attribution",
         ["tree_attribution.json", "tree_attribution_lineage.json"],
         "tree_attribution_snapshot",
+    )
+    pin(
+        root,
+        checked_robustness(root),
+        "domain-robustness",
+        ["domain_robustness.json", "domain_robustness_lineage.json"],
+        "domain_robustness_snapshot",
     )
 
 
