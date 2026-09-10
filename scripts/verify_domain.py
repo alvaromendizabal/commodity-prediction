@@ -17,10 +17,12 @@ def replay(root: Path, report: dict, log: RunLog) -> dict:
     maximum = 0.0
     models = sorted(directory.rglob("model.joblib"))
     with log.stage("cloud_domain_model_replay"), threadpool_limits(limits=4):
-        verify_checkpoint(directory / "features", report["lineage"])
+        if not verify_checkpoint(directory / "features", report["lineage"]):
+            raise ValueError("Missing domain feature checkpoint")
         panel = load_panel(directory / "features")
         for number, path in enumerate(models, start=1):
-            verify_checkpoint(path.parent, report["lineage"])
+            if not verify_checkpoint(path.parent, report["lineage"]):
+                raise ValueError("Missing domain model manifest")
             result = json.loads((path.parent / "result.json").read_text())
             model = joblib.load(path)
             for name, weight in [("predictions.parquet", None), ("raw_predictions.parquet", 1)]:
