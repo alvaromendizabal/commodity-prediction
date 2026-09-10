@@ -33,6 +33,20 @@ def checked_reports(root: Path) -> tuple[dict, dict]:
     return audit, report
 
 
+def checked_study(root: Path) -> dict:
+    from commodity_prediction.studies.run import study_lineage
+
+    report = json.loads((root / "reports/feature_study.json").read_text())
+    evidence = json.loads((root / "reports/feature_study_lineage.json").read_text())
+    config = json.loads((root / "configs/feature_study.json").read_text())
+    actual, _ = study_lineage(root, config)
+    if report["lineage"] != actual or fingerprint(evidence) != actual:
+        raise ValueError("Feature study results have stale source, data, or configuration")
+    if report["feature_gate"] != "open" or report["holdout_evaluated"]:
+        raise ValueError("Unexpected feature-gate or holdout state")
+    return report
+
+
 def show_figure(fig, root: Path, name: str, height: int = 540) -> None:
     fig.update_layout(
         template="plotly_white",

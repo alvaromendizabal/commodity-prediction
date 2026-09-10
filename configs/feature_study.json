@@ -1,0 +1,23 @@
+{
+  "parent_lineage": "c8c77b70ad535423bc9c003671fe7eceec754e20f493db39f50561bf4e9cc24d",
+  "seed": 42,
+  "max_features_per_output": 24,
+  "terminal_embargo_dates": 5,
+  "max_missing_fraction": 0.4,
+  "max_abs_correlation": 0.98,
+  "minimum_output_observations": 80,
+  "minimum_half_observations": 40,
+  "ridge_alpha": 100.0,
+  "histogram_iterations": 48,
+  "histogram_learning_rate": 0.06,
+  "histogram_max_leaf_nodes": 7,
+  "histogram_min_samples_leaf": 40,
+  "histogram_l2_regularization": 10.0,
+  "bootstrap_repetitions": 2000,
+  "bootstrap_block_dates": [10, 20, 40],
+  "permutation_repetitions": 5,
+  "permutation_block_dates": 20,
+  "threads": 4,
+  "heartbeat_seconds": 15,
+  "feature_gate": "open"
+}

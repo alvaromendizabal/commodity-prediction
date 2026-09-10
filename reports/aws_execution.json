@@ -1,17 +1,25 @@
 {
-  "candidate_count": 9418,
-  "checkpoint_count": 31,
+  "candidate_count": 15098,
+  "checkpoint_count": 105,
   "development_dates": 1709,
   "feature_gate": "open",
-  "fold_experiments": 30,
+  "final_test_start_date_id": 1714,
+  "fold_experiments": 69,
   "holdout_evaluated": false,
-  "lineage": "c8c77b70ad535423bc9c003671fe7eceec754e20f493db39f50561bf4e9cc24d",
+  "initial_fold_experiments_preserved": 30,
+  "lineage": "a904250065ff1ebb93b8f0163dd85cfddd8625058f5d22ca53054fb882f3308c",
+  "maximum_prediction_replay_error": 0.0,
+  "model_checkpoints_replayed": 69,
   "notebooks": [
     "00_data_audit.ipynb",
     "01_eda.ipynb",
     "02_feature_research.ipynb"
   ],
-  "source_commit": "8763226bff5f1fb3a30d89bb33703049b22a7425",
+  "parent_lineage": "c8c77b70ad535423bc9c003671fe7eceec754e20f493db39f50561bf4e9cc24d",
+  "source_commit": "80d7369406bbbde719cd69c8fac12f69dcc10431",
   "status": "completed",
-  "verified_utc": "2026-09-10T00:06:43.108439+00:00"
+  "terminal_embargo_dates": 5,
+  "untouched_final_test_dates": 247,
+  "validation_dates": 535,
+  "verified_utc": "2026-09-10T01:00:38.436948+00:00"
 }

@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import nbformat as nbf
+from feature_notebook import cells as feature_cells
 
 
 def main() -> None:
@@ -19,11 +20,13 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from IPython.display import display, Markdown
-from scripts.notebook_support import project_root, checked_reports, show_figure
+from scripts.notebook_support import project_root, checked_reports, checked_study, show_figure
 root = project_root()
 audit, research = checked_reports(root)
+study = checked_study(root)
+study_config = json.loads((root / "configs/feature_study.json").read_text())
 config = json.loads((root / "configs/research.json").read_text())
-display(Markdown(f"**Verified experiment:** `{research['lineage'][:16]}` · **Feature gate:** open"))"""
+display(Markdown(f"**Verified experiment:** `{study['lineage'][:16]}` · **Feature gate:** open"))"""
     definitions = {
         "00_data_audit.ipynb": [
             (
@@ -33,11 +36,12 @@ display(Markdown(f"**Verified experiment:** `{research['lineage'][:16]}` · **Fe
             ("code", setup),
             (
                 "code",
-                """from commodity_prediction.data import load_data, make_folds
+                """from commodity_prediction.data import load_data
+from commodity_prediction.studies.run import study_folds
 x, y, pairs = load_data(root)
-folds, development_stop = make_folds(len(x), config)
-inventory = pd.DataFrame({"Measure": ["Observed dates", "Input columns", "Return targets", "Development dates", "Reserved holdout dates"],
-                          "Count": [len(x), x.shape[1], y.shape[1], development_stop, len(x) - development_stop]})
+folds, development_stop = study_folds(len(x), config, study_config)
+inventory = pd.DataFrame({"Measure": ["Observed dates", "Input columns", "Return targets", "Development dates", "Nominally reserved dates", "Untouched final-test dates"],
+                          "Count": [len(x), x.shape[1], y.shape[1], development_stop, len(x) - development_stop, 247]})
 display(inventory.set_index("Measure"))""",
             ),
             (
@@ -52,7 +56,7 @@ display(Markdown(f"Target reconstruction compared **{audit['target_reconstructio
             ),
             (
                 "md",
-                "## Reserve the final 252 dates\n\nThree expanding walk-forward folds use 180 validation dates each. Five dates are purged before every validation block, so all fitting labels were released strictly before its first prediction. The final 252 dates are excluded from feature construction, EDA, screening, and model selection. The downloadable mock test file overlaps training and is not a valid holdout.",
+                "## Protect 247 final-test dates and the boundary buffer\n\nThree expanding walk-forward folds use 180, 180, and 175 validation dates. A five-date terminal embargo ensures every validation target is fully observable before the reserved interval begins. Five dates are purged before every validation block, so all fitting labels were released strictly before its first prediction. All 252 nominally reserved origins remain outside development. The initial evaluation already inspected overlapping forward outcomes through date 1713, so origins 1709–1713 are a permanent buffer. Only origins 1714–1960 (247 dates) qualify for the eventual untouched final test. The downloadable mock test file overlaps training and is not a valid holdout.",
             ),
             (
                 "code",
@@ -63,7 +67,8 @@ for fold in folds:
         ("Train", 0, fold.train_stop, "#1F6C99"),
         ("Purge", fold.train_stop, fold.validation_start - fold.train_stop, "#EDAF43"),
         ("Validation", fold.validation_start, fold.validation_stop - fold.validation_start, "#27A394"),
-        ("Reserved holdout", development_stop, len(x) - development_stop, "#CAD3DE")]:
+        ("Boundary buffer", development_stop, 5, "#D76C64"),
+        ("Untouched final test", development_stop + 5, len(x) - development_stop - 5, "#CAD3DE")]:
         fig.add_trace(go.Bar(x=[length], y=[label], base=start, orientation="h", name=part,
                              marker_color=color, showlegend=fold.number == 0))
 fig.update_layout(barmode="overlay", title="Validation respects prediction-time information", xaxis_title="Date index", legend={"orientation": "h", "y": -0.22})
@@ -134,95 +139,8 @@ show_figure(fig, root, "target_coverage", 460)""",
                 "## Implications for feature research\n\n1. Use returns and volatility-normalized quantities to compare instruments with different units.\n2. Preserve missing-market indicators and elapsed observation age.\n3. Test relative market strength and pair spreads against a simple return reference.\n4. Fit every imputer, scaler, and supervised screener inside the training interval.\n5. Require improvements to survive time splits and feature-group ablations.\n\nThis EDA motivates hypotheses; it does not prove predictive value.",
             ),
         ],
-        "02_feature_research.ipynb": [
-            (
-                "md",
-                "# Commodity forecasting | Feature research\n\n**Completion gate: OPEN.** This notebook reports the first controlled feature-family experiment. It does not claim that feature engineering is exhausted or that the final model is selected.\n\nThe initial comparison holds the algorithm and regularization fixed: Ridge regression with $\\alpha=100$. Only the representation changes. This isolates a first estimate of feature value before stronger model optimization.",
-            ),
-            ("code", setup),
-            (
-                "md",
-                "## Candidate families and hypotheses\n\nReturns and momentum capture persistence; reversion measures departures from recent levels; volatility separates movement size from direction. Liquidity and OHLC structure describe trading activity and intraday shape. Market-relative features describe shared context, while target-aligned pair spreads use the competition's economic relationships. All inputs are observable at or before the prediction row.",
-            ),
-            (
-                "code",
-                """family_counts = pd.Series(research["family_counts"]).sort_values().rename_axis("Family").reset_index(name="Candidates")
-fig = px.bar(family_counts, x="Candidates", y="Family", orientation="h", text="Candidates", title=f"{research['candidate_count']:,} domain-motivated candidates across nine families")
-fig.update_traces(marker_color="#1F6C99", textposition="outside")
-show_figure(fig, root, "feature_families", 570)""",
-            ),
-            (
-                "md",
-                "## Fit the screener only on training dates\n\nFor each fold and each ablation: reject over-40%-missing and constant features; remove exact duplicates; rank features by mean absolute target correlation using only observed training labels; remove highly correlated selected candidates; cap the diagnostic model at 96 features. Training medians, means, and scales are reused unchanged for validation.\n\nThe count is a candidate search budget, not a claim that thousands of independent signals exist. Final retained features remain undecided.",
-            ),
-            (
-                "code",
-                """lineage = research["lineage"]
-features_dir = root / "artifacts" / lineage / "features"
-from commodity_prediction.runtime import verify_checkpoint
-assert verify_checkpoint(features_dir, lineage)
-families = json.loads((features_dir / "families.json").read_text())
-last_fold = research["folds_completed"] - 1
-screen = pd.read_csv(root / "artifacts" / lineage / f"fold_{last_fold}" / "all_families" / "screening.csv")
-decision = screen.assign(reason=screen.reason.str.split(":").str[0]).groupby("reason").size().sort_values(ascending=False)
-display(decision.to_frame("Features"))
-assert len(screen) == research["candidate_count"]
-assert int((screen.status == "retained").sum()) <= config["max_features"]""",
-            ),
-            (
-                "md",
-                "## Official metric and additive ablations\n\nThe official metric is the mean daily cross-sectional Spearman rank correlation divided by its **population** standard deviation. Higher is better; no annualization factor is applied. The code is parity-tested against an independent Spearman calculation, including ties and missing labels.\n\n[Official metric](https://www.kaggle.com/code/metric/mitsui-co-commodity-prediction-metric). Each family is added separately to the same one-date-return reference; an additional experiment combines all families. These are historical validation scores, not Kaggle submissions.",
-            ),
-            (
-                "code",
-                """comparison = pd.DataFrame(research["comparison"])
-display(comparison[["variant", "official_metric", "delta_from_reference", "fold_metrics", "retained_per_fold"]].round(4))
-ordered = comparison.sort_values("official_metric")
-fig = px.bar(ordered, x="official_metric", y="variant", orientation="h", text_auto=".3f", title="Which representations improve the fixed diagnostic model?")
-fig.update_traces(marker_color="#27A394", textposition="outside")
-fig.update_layout(xaxis_title="Pooled walk-forward correlation Sharpe", yaxis_title="Feature experiment")
-fig.update_xaxes(range=[min(0, float(ordered.official_metric.min())) - 0.025, max(0, float(ordered.official_metric.max())) + 0.025])
-show_figure(fig, root, "ablation_scores", 600)""",
-            ),
-            (
-                "code",
-                """rows = []
-for result in research["results"]:
-    rows.append({"Fold": f"Fold {result['fold'] + 1}", "Variant": result["variant"], "Metric": result["official_metric"]})
-matrix = pd.DataFrame(rows).pivot(index="Variant", columns="Fold", values="Metric")
-fig = px.imshow(matrix, text_auto=".2f", color_continuous_scale="RdBu", color_continuous_midpoint=0,
-                aspect="auto", title="Average gains can hide unstable periods", labels={"color": "Metric"})
-show_figure(fig, root, "fold_stability", 590)""",
-            ),
-            (
-                "code",
-                """delta = comparison.loc[comparison.variant != "reference"].sort_values("delta_from_reference").copy()
-lower = delta.conditional_delta_95_interval.map(lambda v: v[0])
-upper = delta.conditional_delta_95_interval.map(lambda v: v[1])
-fig = go.Figure(go.Scatter(x=delta.delta_from_reference, y=delta.variant, mode="markers",
-    marker={"size": 11, "color": "#1F6C99"},
-    error_x={"type": "data", "symmetric": False, "array": upper - delta.delta_from_reference,
-             "arrayminus": delta.delta_from_reference - lower}))
-fig.add_vline(x=0, line_dash="dash", line_color="#9EAFBF")
-fig.update_layout(title="Uncertainty around the initial feature gains", xaxis_title="Metric change versus reference · conditional 95% interval")
-show_figure(fig, root, "ablation_uncertainty", 570)""",
-            ),
-            (
-                "md",
-                "The paired circular block bootstrap uses 20-date blocks and 500 resamples. It conditions on already fitted models, does not refit the screener, and is not adjusted for testing multiple families. It is an initial uncertainty diagnostic rather than a definitive significance claim.",
-            ),
-            (
-                "code",
-                """best = research["comparison"][0]
-display(Markdown(f"**Initial leader:** `{best['variant']}` · pooled official metric **{best['official_metric']:.4f}** · change versus reference **{best['delta_from_reference']:+.4f}**.\\n\\nCompleted **{research['experiments_completed']} fold/representation experiments** across all 424 targets. The final 252 dates remain unused for model selection."))
-display(pd.DataFrame({"Open research work": ["Conditional drop-family ablations and group permutation importance", "Nonlinear model controls without broad tuning", "Longer-window regimes, nonlinear interactions, and stability selection", "Target/pair-specific screening versus shared screening", "Release-aware pooling or target encoding only where it adds information", "External point-in-time data assessment and source vintages", "Block-bootstrap sensitivity and model-selection uncertainty", "Locked final feature gate, then final model comparison and holdout"]}))""",
-            ),
-            (
-                "md",
-                "## Decision\n\nKeep the feature gate open. This experiment establishes a reproducible reference and empirical family comparisons. It does not yet establish diminishing returns, a production model, a trading strategy, or an employer-facing project completion score. Follow-up experiments must preserve this lineage, reuse verified stages, and document negative results as carefully as positive ones.",
-            ),
-        ],
     }
+    definitions["02_feature_research.ipynb"] = feature_cells(setup)
     for filename, cells in definitions.items():
         notebook = nbf.v4.new_notebook()
         notebook.metadata = {

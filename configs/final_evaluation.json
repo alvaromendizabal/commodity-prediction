@@ -1,0 +1,12 @@
+{
+  "status": "awaiting_feature_gate",
+  "nominal_reserved_start_date_id": 1709,
+  "nominal_reserved_dates": 252,
+  "boundary_buffer_start_date_id": 1709,
+  "boundary_buffer_stop_date_id_exclusive": 1714,
+  "final_test_start_date_id": 1714,
+  "final_test_stop_date_id_exclusive": 1961,
+  "final_test_dates": 247,
+  "reason": "The initial 540-date validation inspected forward outcomes through date 1713. Its five overlapping reserved origins cannot become unseen by rescoring. Keep them out of the eventual final test.",
+  "evaluated": false
+}

@@ -21,10 +21,13 @@ def restore(root: Path, bundle: Path, expected: str) -> None:
             if member.issym() or member.islnk():
                 raise ValueError("Bootstrap links are prohibited")
         archive.extractall(root, filter="data")
-    report = json.loads((root / "reports/research.json").read_text())
-    run = root / "artifacts" / report["lineage"]
-    for manifest in run.rglob("manifest.json"):
-        verify_checkpoint(manifest.parent, report["lineage"])
+    for filename in ["research.json", "feature_study.json"]:
+        report_path = root / "reports" / filename
+        if report_path.exists():
+            report = json.loads(report_path.read_text())
+            run = root / "artifacts" / report["lineage"]
+            for manifest in run.rglob("manifest.json"):
+                verify_checkpoint(manifest.parent, report["lineage"])
 
 
 def main() -> None:
@@ -36,6 +39,12 @@ def main() -> None:
     if not bundle.exists() or digest(bundle) != settings["snapshot_sha256"]:
         s3.download_file(aws["bucket"], settings["snapshot_key"], str(bundle))
     restore(root, bundle, settings["snapshot_sha256"])
+    if "feature_study_snapshot" in settings:
+        study = settings["feature_study_snapshot"]
+        bundle = root / "data/feature-study-checkpoint.tar.gz"
+        if not bundle.exists() or digest(bundle) != study["sha256"]:
+            s3.download_file(aws["bucket"], study["key"], str(bundle))
+        restore(root, bundle, study["sha256"])
     print("Verified bootstrap snapshot and all stage manifests", flush=True)
 
 
