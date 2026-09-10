@@ -1,6 +1,8 @@
 """Causal transformations, fair feature admission, exact resume, and preserved lineage."""
 
+import importlib.metadata
 import json
+import shutil
 from dataclasses import replace
 from pathlib import Path
 
@@ -14,7 +16,7 @@ from commodity_prediction.domain.catalog import Panel
 from commodity_prediction.domain.compact.features import Variant, build_panel, experiment_plan
 from commodity_prediction.domain.compact.run import compact_lineage, run_study
 from commodity_prediction.domain.model import prepare, select
-from commodity_prediction.runtime import atomic_json, digest, seal_checkpoint
+from commodity_prediction.runtime import atomic_json, digest, fingerprint, seal_checkpoint
 
 
 @pytest.fixture
@@ -174,8 +176,23 @@ def test_study_runs_all_stages_and_complete_resume_never_loads_data(panel, tmp_p
         run_study(tmp_path)
 
 
-def test_all_parent_lineages_remain_frozen():
+def test_all_parent_lineages_remain_frozen(monkeypatch):
     root = Path(__file__).resolve().parents[1]
+    initial = json.loads((root / "reports/lineage.json").read_text())
+    assert initial["config"] == json.loads((root / "configs/research.json").read_text())
+    for name, expected in initial["environment"].items():
+        assert importlib.metadata.version(name) == expected
+    for path, expected in initial["files"].items():
+        if path.startswith("data/raw/") and not (root / path).exists():
+            continue  # Public CI has the recorded digest, not the restricted bytes.
+        assert digest(root / path) == expected
+    initial_id = fingerprint(initial)
+    assert initial_id == json.loads((root / "reports/research.json").read_text())["lineage"]
+    # Inject only the already verified archive at the private-data boundary. All
+    # downstream source/config/experiment fingerprints are recomputed normally.
+    monkeypatch.setattr(
+        "commodity_prediction.studies.run.lineage_for", lambda *_: (initial_id, initial)
+    )
     lineage, evidence = compact_lineage(root)
     assert len(lineage) == 64 and len(evidence["experiments"]) == 12
     for filename in ["domain_lineage", "tree_attribution_lineage", "domain_robustness_lineage"]:
@@ -183,3 +200,11 @@ def test_all_parent_lineages_remain_frozen():
         for nested in [report, report.get("fitting_evidence", {"files": {}})]:
             for path, expected in nested["files"].items():
                 assert digest(root / path) == expected
+
+
+def test_runtime_still_rejects_missing_private_data(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    shutil.copytree(root / "src", tmp_path / "src")
+    shutil.copytree(root / "configs", tmp_path / "configs")
+    with pytest.raises(ValueError, match="Initial source/data/configuration lineage changed"):
+        compact_lineage(tmp_path)
