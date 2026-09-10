@@ -15,11 +15,24 @@ if [[ ! -e "$publication" ]]; then
     git worktree add --detach "$publication" "$expected_commit"
 fi
 cd "$publication"
+if [[ "$(git rev-parse HEAD)" != "$expected_commit" ]]; then
+    git diff --quiet
+    git diff --cached --quiet
+    git merge --ff-only "$expected_commit"
+fi
 test "$(git rev-parse HEAD)" = "$expected_commit"
-for directory in data artifacts .venv; do
+for directory in data .venv; do
     test -d "$project/$directory"
     if [[ ! -e "$directory" ]]; then ln -s "$project/$directory" "$directory"; fi
 done
+# Archive restoration intentionally rejects symlinks leaving the checkout.
+# Hard-link the immutable historical files on the same persistent EBS volume;
+# directories and new outputs remain local to this worktree.
+if [[ -L artifacts ]]; then
+    test "$(readlink -f artifacts)" = "$project/artifacts"
+    rm artifacts
+fi
+if [[ ! -e artifacts ]]; then cp -al "$project/artifacts" artifacts; fi
 export PYTHONPATH="$publication/src:$publication" PYTHONUNBUFFERED=1
 export OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4
 mkdir -p logs
