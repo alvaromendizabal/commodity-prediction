@@ -31,7 +31,7 @@ display(Markdown(f"**Same-window comparison:** {study['validation_dates']} valid
 counts["Study"] = np.where(counts.Family.isin(["regime", "interactions", "release_history"]), "Added in follow-up", "Reused from initial study")
 fig = px.bar(counts, x="Candidates", y="Family", color="Study", orientation="h", text="Candidates",
              color_discrete_map={"Reused from initial study": "#1F6C99", "Added in follow-up": "#27A394"},
-             title=f"{study['candidate_count']:,} candidates; {study['new_candidate_count']:,} new hypotheses")
+             title=f"{study['candidate_count']:,} candidates; {study['new_candidate_count']:,} added candidates")
 fig.update_traces(textposition="outside")
 fig.update_layout(legend={"orientation": "h", "y": -0.14})
 show_figure(fig, root, "feature_families", 690)""",
@@ -150,6 +150,10 @@ display(pd.Series(screening["rejection_reasons"], name="Rejected assignments").s
             """best = study["comparison"][0]
 mean_control = next(r for r in study["comparison"] if r["variant"] == "historical_mean")
 display(Markdown(f"**Observed leader:** {best['variant']} at **{best['official_metric']:.4f}**. Frozen training means score **{mean_control['official_metric']:.4f}** on the same dates.\\n\\nCompleted **{study['experiments_completed']} fold/representation experiments** using **{study['candidate_count']:,} candidates**, while preserving all 30 initial experiments. Feature gate: **open**."))""",
+        ),
+        (
+            "md",
+            "## What the completed study says\n\nFrozen training means lead at **0.2177**; aligned return-only Ridge is close at **0.2087**. Its difference from the mean control is **−0.0091**, with a conditional 95% interval of **[−0.0580, +0.0366]**. This is evidence to keep a strong prior benchmark in every future experiment.\n\nThe three added families improve aligned Ridge by only **+0.0077**, with interval **[−0.0793, +0.0943]**. Released-label history has the largest positive conditional ablation estimate (**+0.0299**), but its interval includes zero. Pair removal helps under a conditional interval, but does not survive simultaneous comparison bounds. No positive matched feature gain is established by the simultaneous bounds.\n\nRicher aligned models reverse sign in the middle fold, and the extended structural model reverses in the last fold. These failures argue for investigating target priors, scale, and residual structure before broad tuning. More generated features are not evidence of more usable signal.",
         ),
         (
             "md",

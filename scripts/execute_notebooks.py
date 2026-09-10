@@ -6,6 +6,7 @@ from pathlib import Path
 
 import nbformat
 from nbclient import NotebookClient
+from review_feature_study import review
 from traitlets.config import Config
 
 from commodity_prediction.runtime import RunLog
@@ -13,6 +14,7 @@ from commodity_prediction.runtime import RunLog
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
+    review(root)
     os.environ["COMMODITY_ROOT"] = str(root)
     log = RunLog(root / "logs/notebooks.jsonl")
     for path in sorted((root / "notebooks").glob("*.ipynb")):

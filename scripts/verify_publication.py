@@ -38,6 +38,10 @@ def main() -> None:
     assert not final_evaluation["evaluated"]
     assert final_evaluation["final_test_start_date_id"] > 1708 + 5
     assert final_evaluation["final_test_dates"] == 247
+    assert study["publication_review"]["final_evaluation_config_sha256"] == digest(
+        root / "configs/final_evaluation.json"
+    )
+    assert "247 untouched" in study["limitations"][0]
     cloud = json.loads((root / "reports/aws_execution.json").read_text())
     assert cloud["lineage"] == study["lineage"]
     assert cloud["model_checkpoints_replayed"] == 69
