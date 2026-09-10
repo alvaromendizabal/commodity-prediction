@@ -9,7 +9,7 @@ import numpy as np
 from commodity_prediction.runtime import digest, fingerprint
 
 
-def main() -> None:
+def main(*, require_aws_evidence: bool = True) -> None:
     root = Path(__file__).resolve().parents[1]
     evidence = json.loads((root / "reports/lineage.json").read_text())
     report = json.loads((root / "reports/research.json").read_text())
@@ -141,6 +141,22 @@ def main() -> None:
     assert robustness["new_distinct_interaction_templates"] == 68
     assert robustness["feature_gate"] == "open" and not robustness["holdout_evaluated"]
     assert robustness["validation_dates"] == 535
+    if require_aws_evidence:
+        latest = json.loads((root / "reports/aws_feature_research.json").read_text())
+        assert latest["status"] == "completed"
+        assert latest["lineage"] == robustness["lineage"]
+        assert latest["stage_manifests_verified"] == 517
+        assert latest["model_replays_total"] == 471
+        assert latest["preserved_model_replays"] == cloud["model_checkpoints_replayed"]
+        assert latest["latest_model_replays"] == robustness["model_checkpoints_replayed"]
+        assert latest["maximum_prediction_replay_error"] <= 1e-12
+        assert latest["preserved_replay_report_sha256"] == digest(
+            root / "reports/aws_execution.json"
+        )
+        assert latest["latest_report_sha256"] == digest(root / "reports/domain_robustness.json")
+        assert latest["notebooks_executed"] == 3
+        assert latest["plotly_static_figure_pairs"] == 25
+        assert latest["feature_gate"] == "open" and not latest["holdout_evaluated"]
     for result in robustness["results"]:
         counts = result["selection"]
         assert (

@@ -20,7 +20,7 @@ from commodity_prediction.runtime import atomic_json, digest, verify_checkpoint
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
-    verify_publication()
+    verify_publication(require_aws_evidence=False)
     _, initial = checked_reports(root)
     study, domain, attribution, robustness = (
         checked_study(root),
@@ -71,6 +71,7 @@ def main() -> None:
         "verification_note": "All 517 manifests reverified. Reused exact replay evidence for unchanged earlier models; the 36 latest models were independently replayed by the coverage-aware analysis.",
     }
     atomic_json(root / "reports/aws_feature_research.json", evidence)
+    verify_publication()
     publish_bundle(root, evidence)
 
 

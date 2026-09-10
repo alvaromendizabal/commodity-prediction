@@ -86,7 +86,7 @@ The follow-up completed all 78 fits. The reference plus released priors scores *
 
 The best exploratory ablation point estimate, **0.284713**, drops intraday features. Dropping pair dynamics, currency-graph features, or latent factors also does not lower the full tree's pooled point estimate. These results do not establish that those mechanisms are universally useless: screening can substitute correlated inputs, and a pooled representation can hide subgroup effects. No positive simultaneous lower bound appears among the 177 joint comparisons at any tested block length (10, 20, or 40 dates).
 
-## Verified checkpoint and open decisions
+## Earlier verified checkpoint and open decisions
 
 All 357 new fitted models completed. AWS verified 480 stage manifests across the four preserved study lineages and replayed 435 saved models/controls with maximum prediction difference **0.0**. The three canonical notebooks executed in fresh kernels and contain 22 Plotly/static figure pairs. Local quality checks pass 66 tests, formatting, linting, and type checking. This is a verified research checkpoint, not feature-gate closure.
 
@@ -154,3 +154,65 @@ Subgroup scores examine single versus paired targets and market-involved target 
 | Can the evidence be reproduced? | Preserved lineages, sealed checkpoints, exact model replays, fresh-kernel notebooks, CI. | The same verification for every follow-up before publication. |
 
 The standard is not “a large number of columns” or “all tests pass.” Feature-gate closure requires a defensible coverage argument and evidence of diminishing marginal benefit from the feasible, distinct high-value hypotheses. Unavailable information must be described as unavailable, not silently replaced with a misleading proxy. Repeated development experiments are exploratory, and adding more comparisons cannot manufacture an independent confirmation set. The gate remains open until the empirical results support a narrower conclusion about exhausted avenues; neither a completion percentage nor a 9.9/10 claim is justified by this checkpoint alone.
+
+## Executed robustness follow-up
+
+All **36 fixed-model fits** completed across the same three outer folds. The previous sections' 357-fit checkpoint is preserved; the three domain phases now contain **393 new fitted models**. This follow-up changes feature representations, information delays, and screening constraints. It does not tune tree depth, learning rate, iteration count, or residual weight using validation outcomes.
+
+| Hypothesis or sensitivity | Pooled metric | Interpretation under this design |
+|---|---:|---|
+| Frozen full tree, 64 retained templates | 0.276887 | Matched parent control. |
+| Reduce budget to 32 | 0.256377 | Narrowing the full screen hurts the point estimate. |
+| Increase budget to 128 | 0.253915 | More retained templates do not improve this fixed estimator. |
+| Remove budget cap | 0.240974 | Retains 363–364 templates; no point-estimate benefit. |
+| Also relax near-correlation exclusion | 0.263243 | Retains 376–377; exact duplicates remain excluded. |
+| Delay released priors one more date | 0.277388 | Close to the control; not proof of timing correctness. |
+| Delay released priors five more dates | 0.249322 | Recent released information appears useful at the point-estimate level. |
+| Delay market observations one date | 0.266008 | A conservative timing stress, with static metadata and priors unchanged. |
+| Add 56 metadata-conditioned priors | 0.228681 | Retains 14–17 new interactions but displaces other inputs and performs worse. |
+| Add 12 bounded mechanism products | 0.276887 | No product is retained; predictions equal the frozen control. |
+| Compact reference + priors control | 0.281237 | Parent attribution result reused exactly. |
+| Compact reference + conditional priors | 0.206819 | Retains 33–35 interactions; does not improve the compact control. |
+| Compact reference + priors + factor-relative features | 0.258062 | No pooled benefit under this fixed configuration. |
+| Compact reference + priors + tail risk + freshness | **0.297055** | Strongest exploratory point estimate; conditional contribution and stability remain unresolved. |
+
+The 68 new interaction templates expand the research inventory from 380 to **448 distinct templates across experiments**. They are not all present in one fit: the largest candidate panel has 436 templates, while the strongest compact candidate begins with 81 and retains 64. The compact candidate retains 13 released-prior templates, 25–26 tail-risk templates, seven freshness templates, and 18–19 reference templates. Counting transformations does not count independent sources of information.
+
+### What the improvement does and does not establish
+
+The compact risk/freshness representation scores **0.379097, 0.161987, and 0.377367** across folds. Compared with historical means, the pooled gain is **+0.079316**; the conditional 20-date-block 95% interval is **[−0.017891, +0.168043]**. Its corresponding gains over the full tree and compact-priors control are **+0.020167** and **+0.015818**, with intervals **[−0.036632, +0.080666]** and **[−0.039355, +0.069148]**.
+
+The historical-mean comparison barely clears zero only with 40-date blocks, whose conditional interval is **[+0.001132, +0.152308]**. Ten- and 20-date blocks do not. None of the **204 joint comparisons** has a positive simultaneous lower bound at any of the three block lengths. Report this sensitivity explicitly; selecting the favorable block length after seeing results would overstate the evidence.
+
+The middle fold still trails historical means (0.161987 versus 0.182488). The compact combination improves over the full tree in the first two folds but loses some of its third-fold gain. That pattern is compatible with a better balance of features, yet it does not establish temporal stability. It also does not identify whether tail risk, freshness, their joint presence, or the different set of screened reference/prior features explains the gain. That requires matched conditional additions/removals inside the compact representation.
+
+The budget experiment weakens the proposition that simply admitting every pooled template improves this estimator. It does not prove the omitted mechanisms lack information under other representations. Likewise, the mechanism-product experiment is a **screening result**, not a successful test of all 12 products' predictive value: none reaches the fitted model. A future controlled experiment must admit a declared product block, compare it with the same reference, and preserve the current negative evidence.
+
+### Reporting correction and preserved work
+
+The original 36-fit driver completed and sealed the models before a subgroup diagnostic encountered market-closed days and single-target horizons. A subgroup with fewer than two observed targets cannot define a cross-sectional rank correlation. A single asset's horizon-specific group contains one target and therefore cannot define that ranking at all.
+
+The corrected analysis applies a truth-only eligibility rule, reports eligible and excluded dates, and leaves mathematically undefined subgroup scores null with reasons. It does not remove dates from the global 535-date metric. Constant daily rankings are also reported as undefined rather than assigned a favorable value. The correction has a separate source fingerprint, while the original fitting fingerprint and all 36 fitted checkpoints remain unchanged. This separation prevents a reporting correction from triggering unnecessary fitting.
+
+| Overlapping diagnostic group | Targets | Eligible / excluded dates | Full tree | Compact risk/freshness |
+|---|---:|---:|---:|---:|
+| FX involved | 134 | 535 / 0 | 0.274172 | 0.251089 |
+| US involved | 270 | 517 / 18 | 0.183377 | 0.208702 |
+| LME involved | 287 | 521 / 14 | 0.196280 | 0.208652 |
+| JPX involved | 145 | 507 / 28 | 0.270488 | 0.309399 |
+| Paired targets | 420 | 535 / 0 | 0.274775 | 0.295516 |
+| Single-asset targets, horizons pooled | 4 | 535 / 0 | 0.110340 | 0.121132 |
+
+The compact model's descriptive FX-involved score falls while the other listed groups improve. Its global horizon scores are 0.192234, 0.207664, 0.299497, and 0.257561, compared with 0.176931, 0.186369, 0.297863, and 0.230525 for the full tree. Those patterns suggest where further conditional tests could be informative; they are not independently validated subgroup discoveries. Markets overlap within paired targets, and pooled single-asset scores rank four different horizons of one asset rather than a broad cross-section of assets.
+
+The expanded verification checks 517 sealed stage manifests. It preserves zero-error replay evidence for 435 unchanged earlier models/controls and independently replays all 36 new models. All three canonical notebooks are regenerated and executed against the verified analysis lineage, with 25 interactive/static figure pairs. These checks establish implementation and artifact consistency; they are not evidence of predictive superiority.
+
+### Ordered remaining work within feature engineering
+
+1. **Attribute the compact lead:** compare priors + tail risk, priors + freshness, and their joint representation with the frozen compact-priors control. Keep model settings fixed and expose selected-template substitutions.
+2. **Stress its information contract:** repeat additional prior and market delays within the compact representation. Results from a different full representation cannot automatically transfer to it.
+3. **Test screened-out mechanisms fairly:** admit a small declared interaction block, then use matched removal or conditional permutation. Avoid a new indiscriminate product expansion.
+4. **Explain instability:** inspect the existing horizon, market-coverage, and temporal diagnostics; any resulting group-specific feature hypothesis must be labeled exploratory and compared with an unchanged control.
+5. **Resolve external-data prerequisites:** obtain a verifiable calendar and instrument metadata before attempting carry, inventories, positioning, macro vintages, fundamentals, options, or text. A source's current web availability is not a historical as-of dataset.
+
+These are open research questions, not hidden completed tasks. This checkpoint provides broader executed coverage and a stronger candidate while keeping the feature gate open. Final optimization, the untouched test, and submissions remain outside the current phase.

@@ -1,0 +1,26 @@
+{
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "latest_model_replays": 36,
+  "latest_report_sha256": "bd7be0346fcfef03557cdf858f0270e459ce9ec4c31a4ef41685c553028bdff9",
+  "lineage": "d3fb7b5fbbaae6f4bebf387e46a03c842de14f6c7f75185b568016ab195d928a",
+  "lineages_verified": [
+    "c8c77b70ad535423bc9c003671fe7eceec754e20f493db39f50561bf4e9cc24d",
+    "a904250065ff1ebb93b8f0163dd85cfddd8625058f5d22ca53054fb882f3308c",
+    "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba",
+    "b6914cbaeb4529841061236aa9b3df651c152d4513bdad5a8aa45abca85dc245",
+    "8e66a5c3a8fb1c2d99c15f909ce89cf51f2ace2ae9a6c9213dafa2eb0a0bac62",
+    "d3fb7b5fbbaae6f4bebf387e46a03c842de14f6c7f75185b568016ab195d928a"
+  ],
+  "maximum_prediction_replay_error": 0.0,
+  "model_replays_total": 471,
+  "notebooks_executed": 3,
+  "plotly_static_figure_pairs": 25,
+  "preserved_model_replays": 435,
+  "preserved_replay_report_sha256": "8b0ea3e89e602844e6d4014bf29171ba5efbdac520f28525a23df60e4e4372ed",
+  "source_commit": "42c81e82dcb09c39e13b381b933b6c5ecf6aeb10",
+  "stage_manifests_verified": 517,
+  "status": "completed",
+  "verification_note": "All 517 manifests reverified. Reused exact replay evidence for unchanged earlier models; the 36 latest models were independently replayed by the coverage-aware analysis.",
+  "verified_utc": "2026-09-10T02:55:18.830172+00:00"
+}
