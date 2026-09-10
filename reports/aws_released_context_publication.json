@@ -1,0 +1,37 @@
+{
+  "archive_sha256": "41fc9eef849fbaea8f54033212619029d93deeff3cb9aa47cff4267e75de6f5b",
+  "files": {
+    "notebooks/02_feature_research.ipynb": {
+      "bytes": 5662430,
+      "key": "bootstrap/released-context-publication/notebooks/02_feature_research.ipynb",
+      "sha256": "11eed2415a947ac7798b389bda09bdc2abc78e6c76334beefcbc12add80ada63"
+    },
+    "reports/figures/released_context_folds.png": {
+      "bytes": 86839,
+      "key": "bootstrap/released-context-publication/reports/figures/released_context_folds.png",
+      "sha256": "6f8a1ae838f79e09c024441dc6c4fbea4d1682ad32706f3b6ac4fe25160b9e5f"
+    },
+    "reports/figures/released_context_scores.png": {
+      "bytes": 90909,
+      "key": "bootstrap/released-context-publication/reports/figures/released_context_scores.png",
+      "sha256": "2909821eeea1874af42e5ad838b6e7e6c2523eb45b1bebe90971dda75bea993c"
+    },
+    "reports/figures/released_context_uncertainty.png": {
+      "bytes": 103857,
+      "key": "bootstrap/released-context-publication/reports/figures/released_context_uncertainty.png",
+      "sha256": "c5d2663ac0555d82c5be6f40ea3bc4a372130bacd09c0cfbe222350434f18dcc"
+    }
+  },
+  "holdout_evaluated": false,
+  "independent_cloud_model_replays": 9,
+  "lineage": "1022e7104cdf9c1bc3bdd40722b33d392a44b699a38a9ca714d2cce1aad6884b",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 0,
+  "notebooks_reexecuted": 1,
+  "plotly_static_figure_pairs": 34,
+  "project_notebooks_executed": 3,
+  "source_commit": "45144fb0ded7f60a53679b9f4e10b5d3944d9345",
+  "stage_manifests_verified": 589,
+  "status": "completed",
+  "verified_utc": "2026-09-10T19:22:23.026287+00:00"
+}

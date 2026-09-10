@@ -31,3 +31,26 @@
 - Treat historical leading performance as a research target. Investigate the feature, validation, model and ensemble gaps separately. Historical CV on different dates does not establish a likely leaderboard win; no submission or unsupported record claim is permitted.
 - Standing user authorization covers necessary project work in connected services. On 2026-09-10 the user explicitly authorized these 24 risk-state models, validation predictions and checkpoint manifests in s3://sagemaker-commodity-prediction-560403859723-us-west-2/ and notebook publication in the existing commodity-prediction-dev AWS space. Do not request this authorization again.
 - Continue through manageable, measurable increments. Keep the final evaluation gate closed while major plausible high-value feature avenues remain unresolved. An employer-facing 9.9/10 standard is a delivery goal, never a self-certified claim.
+
+## Manual continuation override — September 10, 2026
+
+This section supersedes earlier broad execution authorization. The user is
+continuing outside Work mode. Assistants may inspect connected evidence and
+prepare/test downloadable source artifacts, but must not autonomously launch
+AWS/Hugging Face compute, modify cloud resources/IAM, push/merge GitHub, or submit
+to Kaggle. The user performs those operations manually, one bounded milestone
+at a time. Give exact browser and copy/paste instructions.
+
+The released-context experiment and its AWS publication are complete. Reuse
+all nine models and the executed notebook/figures. Preserve every existing
+working copy, private checkpoint, and parent source fingerprint. Never use a
+blind reset/clean, assume that an old branch is corrupted, or rerun studies
+because a handoff omitted their branch. Check all relevant branch evidence.
+
+Use the receipt in reports/aws_released_context_publication.json. Its completed
+publication is not a new final-model promotion; the feature gate stays open and
+only origins 1714–1960 qualify for eventual one-time final testing. Stop the
+unchanged signed peer-aggregation formulation. Audit earlier raw/lag coverage
+before proposing a separate short raw-market-sequence experiment. Keep source,
+features, training-only screening, ablations, uncertainty, and costs explicit.
+
