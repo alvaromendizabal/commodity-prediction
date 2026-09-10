@@ -1,4 +1,9 @@
 {
+  "domain_robustness_snapshot": {
+    "key": "bootstrap/domain-robustness-checkpoint.tar.gz",
+    "lineage": "d3fb7b5fbbaae6f4bebf387e46a03c842de14f6c7f75185b568016ab195d928a",
+    "sha256": "4257c2b136921cf8159f91f8c68caac3594e23947a05315e4364ec7137749427"
+  },
   "domain_study_snapshot": {
     "key": "bootstrap/domain-study-checkpoint.tar.gz",
     "lineage": "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba",

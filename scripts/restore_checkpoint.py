@@ -26,6 +26,7 @@ def restore(root: Path, bundle: Path, expected: str) -> None:
         "feature_study.json",
         "domain_study.json",
         "tree_attribution.json",
+        "domain_robustness.json",
     ]:
         report_path = root / "reports" / filename
         if report_path.exists():
@@ -33,6 +34,10 @@ def restore(root: Path, bundle: Path, expected: str) -> None:
             run = root / "artifacts" / report["lineage"]
             for manifest in run.rglob("manifest.json"):
                 verify_checkpoint(manifest.parent, report["lineage"])
+            if "fitting_lineage" in report:
+                run = root / "artifacts" / report["fitting_lineage"]
+                for manifest in run.rglob("manifest.json"):
+                    verify_checkpoint(manifest.parent, report["fitting_lineage"])
 
 
 def main() -> None:
@@ -53,6 +58,7 @@ def main() -> None:
     for name, filename in [
         ("domain_study_snapshot", "domain-study-checkpoint.tar.gz"),
         ("tree_attribution_snapshot", "tree-attribution-checkpoint.tar.gz"),
+        ("domain_robustness_snapshot", "domain-robustness-checkpoint.tar.gz"),
     ]:
         if name in settings:
             study = settings[name]

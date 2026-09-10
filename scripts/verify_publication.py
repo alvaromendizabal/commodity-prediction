@@ -9,7 +9,7 @@ import numpy as np
 from commodity_prediction.runtime import digest, fingerprint
 
 
-def main() -> None:
+def main(*, require_aws_evidence: bool = True) -> None:
     root = Path(__file__).resolve().parents[1]
     evidence = json.loads((root / "reports/lineage.json").read_text())
     report = json.loads((root / "reports/research.json").read_text())
@@ -120,6 +120,55 @@ def main() -> None:
     assert cloud["attribution_model_checkpoints_replayed"] == 78
     assert cloud["checkpoint_count"] == 480
     assert cloud["maximum_prediction_replay_error"] <= 1e-12
+    robustness = json.loads((root / "reports/domain_robustness.json").read_text())
+    robust_evidence = json.loads((root / "reports/domain_robustness_lineage.json").read_text())
+    assert fingerprint(robust_evidence) == robustness["lineage"]
+    assert robustness["parent_lineage"] == attribution["lineage"]
+    assert robust_evidence["config"] == json.loads(
+        (root / "configs/domain_robustness.json").read_text()
+    )
+    for name, expected in robust_evidence["files"].items():
+        assert digest(root / name) == expected, f"Stale robustness source: {name}"
+    fitting = robust_evidence["fitting_evidence"]
+    assert fingerprint(fitting) == robustness["fitting_lineage"]
+    for name, expected in fitting["files"].items():
+        assert digest(root / name) == expected, f"Stale robustness fitting source: {name}"
+    assert robustness["new_fitted_models"] == robustness["model_checkpoints_replayed"] == 36
+    assert robustness["checkpoint_count"] == 37
+    assert robustness["maximum_prediction_replay_error"] <= 1e-12
+    assert robustness["joint_comparison_count"] == 204
+    assert len(robustness["joint_comparisons"]) == 204 * 3
+    assert robustness["new_distinct_interaction_templates"] == 68
+    assert robustness["feature_gate"] == "open" and not robustness["holdout_evaluated"]
+    assert robustness["validation_dates"] == 535
+    if require_aws_evidence:
+        latest = json.loads((root / "reports/aws_feature_research.json").read_text())
+        assert latest["status"] == "completed"
+        assert latest["lineage"] == robustness["lineage"]
+        assert latest["stage_manifests_verified"] == 517
+        assert latest["model_replays_total"] == 471
+        assert latest["preserved_model_replays"] == cloud["model_checkpoints_replayed"]
+        assert latest["latest_model_replays"] == robustness["model_checkpoints_replayed"]
+        assert latest["maximum_prediction_replay_error"] <= 1e-12
+        assert latest["preserved_replay_report_sha256"] == digest(
+            root / "reports/aws_execution.json"
+        )
+        assert latest["latest_report_sha256"] == digest(root / "reports/domain_robustness.json")
+        assert latest["notebooks_executed"] == 3
+        assert latest["plotly_static_figure_pairs"] == 25
+        assert latest["feature_gate"] == "open" and not latest["holdout_evaluated"]
+    for result in robustness["results"]:
+        counts = result["selection"]
+        assert (
+            counts["candidate_templates"]
+            == counts["retained_templates"] + counts["rejected_templates"]
+        )
+        assert result["train_stop"] - 1 + 5 < result["validation_start"]
+        assert result["validation_stop"] - 1 + 5 < 1709
+    for result in robustness["summaries"].values():
+        daily = np.asarray(result["daily_rank_correlations"])
+        assert len(daily) == 535
+        assert abs(daily.mean() / daily.std(ddof=0) - result["official_metric"]) < 1e-12
     for result in study["results"]:
         values = np.asarray(result["daily_rank_correlations"])
         assert abs(values.mean() / values.std(ddof=0) - result["official_metric"]) < 1e-12
@@ -138,6 +187,7 @@ def main() -> None:
         assert notebook.metadata["study_lineage"] == study["lineage"], path.name
         assert notebook.metadata["domain_lineage"] == domain["lineage"], path.name
         assert notebook.metadata["attribution_lineage"] == attribution["lineage"], path.name
+        assert notebook.metadata["robustness_lineage"] == robustness["lineage"], path.name
         for cell in notebook.cells:
             if cell.cell_type == "code":
                 assert cell.execution_count is not None, path.name
@@ -147,7 +197,7 @@ def main() -> None:
                     and "image/png" in o.get("data", {})
                     for o in cell.outputs
                 )
-    assert figures >= 22, "Interactive figures need static GitHub fallbacks"
+    assert figures >= 25, "Interactive figures need static GitHub fallbacks"
     print(
         f"Verified source/result lineage, {len(paths)} executed notebooks, and {figures} Plotly/static figure pairs"
     )

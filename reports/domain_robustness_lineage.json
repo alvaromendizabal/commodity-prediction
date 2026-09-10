@@ -1,0 +1,131 @@
+{
+  "analysis_contract": "Global official metric unchanged; subgroup days need two labels; undefined subgroup and horizon scores remain null with coverage.",
+  "config": {
+    "feature_gate": "open",
+    "max_new_fits": 36,
+    "parent_lineage": "b6914cbaeb4529841061236aa9b3df651c152d4513bdad5a8aa45abca85dc245",
+    "residual_weight": 1.0,
+    "study_kind": "exploratory_feature_sensitivity"
+  },
+  "feature_lineage": "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba",
+  "files": {
+    "src/commodity_prediction/domain/robustness/reporting/__init__.py": "c6a9f2c07feb368aca5c6f88927e42819d642041f33bb849a593700f3b8a7f44",
+    "src/commodity_prediction/domain/robustness/reporting/run.py": "98150ba695e210c82ef47eecb15ce40b9de1b31b31ea45e043c943bcb69ea0e1"
+  },
+  "fitting_evidence": {
+    "config": {
+      "feature_gate": "open",
+      "max_new_fits": 36,
+      "parent_lineage": "b6914cbaeb4529841061236aa9b3df651c152d4513bdad5a8aa45abca85dc245",
+      "residual_weight": 1.0,
+      "study_kind": "exploratory_feature_sensitivity"
+    },
+    "experiments": [
+      {
+        "families": [],
+        "max_correlation": 0.98,
+        "max_features": 32,
+        "name": "budget_32",
+        "transform": "identity"
+      },
+      {
+        "families": [],
+        "max_correlation": 0.98,
+        "max_features": 128,
+        "name": "budget_128",
+        "transform": "identity"
+      },
+      {
+        "families": [],
+        "max_correlation": 0.98,
+        "max_features": 380,
+        "name": "budget_all",
+        "transform": "identity"
+      },
+      {
+        "families": [],
+        "max_correlation": 1.01,
+        "max_features": 380,
+        "name": "redundancy_relaxed",
+        "transform": "identity"
+      },
+      {
+        "families": [],
+        "max_correlation": 0.98,
+        "max_features": 64,
+        "name": "released_delay_1",
+        "transform": "released_delay_1"
+      },
+      {
+        "families": [],
+        "max_correlation": 0.98,
+        "max_features": 64,
+        "name": "released_delay_5",
+        "transform": "released_delay_5"
+      },
+      {
+        "families": [],
+        "max_correlation": 0.98,
+        "max_features": 64,
+        "name": "market_delay_1",
+        "transform": "market_delay_1"
+      },
+      {
+        "families": [],
+        "max_correlation": 0.98,
+        "max_features": 64,
+        "name": "conditional_priors",
+        "transform": "conditional_priors"
+      },
+      {
+        "families": [],
+        "max_correlation": 0.98,
+        "max_features": 64,
+        "name": "mechanism_products",
+        "transform": "mechanism_products"
+      },
+      {
+        "families": [
+          "reference",
+          "released_priors"
+        ],
+        "max_correlation": 0.98,
+        "max_features": 64,
+        "name": "compact_conditional",
+        "transform": "conditional_priors"
+      },
+      {
+        "families": [
+          "reference",
+          "released_priors",
+          "factor_relative"
+        ],
+        "max_correlation": 0.98,
+        "max_features": 64,
+        "name": "compact_factor",
+        "transform": "identity"
+      },
+      {
+        "families": [
+          "reference",
+          "released_priors",
+          "tail_risk",
+          "asynchrony"
+        ],
+        "max_correlation": 0.98,
+        "max_features": 64,
+        "name": "compact_risk_freshness",
+        "transform": "identity"
+      }
+    ],
+    "feature_lineage": "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba",
+    "files": {
+      "src/commodity_prediction/domain/robustness/__init__.py": "618118fa0e6471d195f3cdc54db010aa7d41ec3483b29df0e0d696cd9030708d",
+      "src/commodity_prediction/domain/robustness/features.py": "cd0aaa4f594b13c287c2abe9d5f52a11f50456a9d446d1b3d6ade795abb9aa74",
+      "src/commodity_prediction/domain/robustness/run.py": "e161ac0f15b3d77f378e0854453bd3e552ffb1fe41c7ad94048c987e8a68a8a5"
+    },
+    "parent_lineage": "b6914cbaeb4529841061236aa9b3df651c152d4513bdad5a8aa45abca85dc245"
+  },
+  "fitting_lineage": "8e66a5c3a8fb1c2d99c15f909ce89cf51f2ace2ae9a6c9213dafa2eb0a0bac62",
+  "parent_lineage": "b6914cbaeb4529841061236aa9b3df651c152d4513bdad5a8aa45abca85dc245"
+}

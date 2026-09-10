@@ -6,6 +6,7 @@ import nbformat as nbf
 from domain_notebook import cells as domain_cells
 from domain_notebook import tree_cells
 from feature_notebook import cells as feature_cells
+from robustness_notebook import cells as robustness_cells
 
 
 def main() -> None:
@@ -165,6 +166,7 @@ display(pd.Series({"Distinct target assets":len(target_assets),"Directed target-
         ),
     ]
     definitions["02_feature_research.ipynb"] = feature_cells(setup) + domain_cells() + tree_cells()
+    definitions["02_feature_research.ipynb"] += robustness_cells()
     for filename, cells in definitions.items():
         notebook = nbf.v4.new_notebook()
         notebook.metadata = {

@@ -74,6 +74,19 @@ def checked_attribution(root: Path) -> dict:
     return report
 
 
+def checked_robustness(root: Path) -> dict:
+    from commodity_prediction.domain.robustness.reporting.run import analysis_lineage
+
+    report = json.loads((root / "reports/domain_robustness.json").read_text())
+    evidence = json.loads((root / "reports/domain_robustness_lineage.json").read_text())
+    actual, _ = analysis_lineage(root)
+    if report["lineage"] != actual or fingerprint(evidence) != actual:
+        raise ValueError("Feature robustness results have stale dependencies")
+    if report["feature_gate"] != "open" or report["holdout_evaluated"]:
+        raise ValueError("Unexpected robustness research boundary")
+    return report
+
+
 def show_figure(fig, root: Path, name: str, height: int = 540) -> None:
     fig.update_layout(
         template="plotly_white",
