@@ -34,7 +34,7 @@ contrasts = pd.DataFrame([r for r in risk_state["comparisons"] if r["block_dates
 contrasts["Contrast"] = contrasts.variant + " vs " + contrasts.reference
 fig = go.Figure(go.Scatter(x=contrasts.delta, y=contrasts.Contrast, mode="markers", marker={"size":9,"color":"#1F6C99"}, error_x={"type":"data","symmetric":False,"array":[b[1]-d for b,d in zip(contrasts.simultaneous_95_interval,contrasts.delta)],"arrayminus":[d-b[0] for b,d in zip(contrasts.simultaneous_95_interval,contrasts.delta)]}))
 fig.add_vline(x=0,line_dash="dash",line_color="#9EAFBF")
-fig.update_layout(title="Risk-state attribution with simultaneous 95% intervals",xaxis_title="Official metric difference")
+fig.update_layout(title={"text":"Risk-state attribution with simultaneous 95% intervals","xanchor":"left","xref":"container"},xaxis_title="Official metric difference")
 show_figure(fig,root,"risk_state_uncertainty",740)
 display(contrasts[["Contrast","delta","conditional_95_interval","simultaneous_95_interval"]])
 positive = {b:sum(r["simultaneous_95_interval"][0]>0 for r in risk_state["joint_comparisons"] if r["block_dates"]==b) for b in [10,20,40]}
