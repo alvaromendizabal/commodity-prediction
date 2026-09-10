@@ -11,6 +11,24 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      # One-time PR #7 handoff check against the user's verified export.
+      # Future PRs may intentionally update these canonical files.
+      - name: Verify PR 7 exported file checksums
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 7
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum --check --strict <<'SHA256'
+          4d0f1f0b5527f59a719cd5ed61eb5cf97696d5b0a9e66480a607a62a4c39f02f  AGENTS.md
+          a471793a544868f3eb081ca631ac9f139d97372587748a880483b95531dc3609  README.md
+          e13acc4657bc629ba0fb5237693e7216b05fe5dc2ceb3057f3b9deeb0b351760  docs/released-context-research.md
+          11eed2415a947ac7798b389bda09bdc2abc78e6c76334beefcbc12add80ada63  notebooks/02_feature_research.ipynb
+          6a0da03b615d85774d898c2152a5ed171fbf4f3b8836e4a5221b29e16a13e46c  reports/aws_released_context_publication.json
+          6f8a1ae838f79e09c024441dc6c4fbea4d1682ad32706f3b6ac4fe25160b9e5f  reports/figures/released_context_folds.png
+          2909821eeea1874af42e5ad838b6e7e6c2523eb45b1bebe90971dda75bea993c  reports/figures/released_context_scores.png
+          c5d2663ac0555d82c5be6f40ea3bc4a372130bacd09c0cfbe222350434f18dcc  reports/figures/released_context_uncertainty.png
+          SHA256
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -18,3 +36,6 @@ jobs:
       - run: uv run --frozen --extra dev python scripts/quality.py
       - run: uv run --frozen python scripts/verify_publication.py
       - run: uv run --frozen python scripts/verify_risk_state_publication.py
+      - name: Verify released-context publication
+        timeout-minutes: 1
+        run: uv run --frozen python scripts/verify_released_context_publication.py
