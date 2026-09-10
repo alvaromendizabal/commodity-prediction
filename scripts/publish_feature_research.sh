@@ -39,6 +39,7 @@ trap publish_log EXIT
 .venv/bin/python -m commodity_prediction.domain.robustness.reporting.run --sync-s3
 .venv/bin/python -m commodity_prediction.domain.robustness.reporting.run
 .venv/bin/python scripts/snapshot_domain.py
+bash scripts/prepare_rendering.sh
 .venv/bin/python scripts/make_notebooks.py
 .venv/bin/python scripts/execute_notebooks.py
 .venv/bin/python scripts/verify_feature_research.py
