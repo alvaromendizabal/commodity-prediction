@@ -181,6 +181,7 @@ ordered = comparison.sort_values("official_metric")
 fig = px.bar(ordered, x="official_metric", y="variant", orientation="h", text_auto=".3f", title="Which representations improve the fixed diagnostic model?")
 fig.update_traces(marker_color="#27A394", textposition="outside")
 fig.update_layout(xaxis_title="Pooled walk-forward correlation Sharpe", yaxis_title="Feature experiment")
+fig.update_xaxes(range=[min(0, float(ordered.official_metric.min())) - 0.025, max(0, float(ordered.official_metric.max())) + 0.025])
 show_figure(fig, root, "ablation_scores", 600)""",
             ),
             (
