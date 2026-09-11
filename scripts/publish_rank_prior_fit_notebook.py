@@ -93,7 +93,7 @@ for name in ["admitted_tail", "admitted_tail_rank", "current_market", "current_m
         "Fold 3": row["fold_scores"][2],
     })
 rank_table = pd.DataFrame(rank_rows)
-display(rank_table.style.format({c: "{:.6f}" for c in rank_table.columns if c != "Representation"}))
+display(rank_table.round(6))
 fig = px.bar(
     rank_table,
     x="Representation",
