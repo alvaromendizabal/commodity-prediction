@@ -79,16 +79,26 @@ def test_metadata_and_date_rejection(inputs):
 
 
 def test_probe_seals_models_and_reuses_without_refit(inputs, tmp_path, monkeypatch):
-    from pathlib import Path
     import json
+    from pathlib import Path
+
     from commodity_prediction.data import Fold
     from commodity_prediction.domain.catalog import Panel
     from commodity_prediction.domain.market_path import run as runner
     from commodity_prediction.runtime import atomic_json, seal_checkpoint
 
-    x, pairs = inputs
+    x, _ = inputs
     x = pd.concat([x] * 4, ignore_index=True).iloc[:260]
     x.index.name = "date_id"
+    # The production metric includes per-horizon correlations. Supply three targets
+    # for every horizon; a singleton horizon is not a valid metric fixture.
+    expressions = ["US_A_adj_close - US_B_adj_close", "US_A_adj_close", "FX_C"]
+    pairs = pd.DataFrame({
+        "target": [f"target_{i}" for i in range(12)],
+        "lag": [h for h in range(1, 5) for _ in expressions],
+        "pair": expressions * 4,
+    })
+    assert pairs.groupby("lag").size().eq(3).all()
     source = Path(__file__).resolve().parents[1]
     names = json.loads((source / "reports/domain_study.json").read_text())["inventory"]["names"]
     original = Panel(np.random.default_rng(2).normal(size=(len(x), len(pairs), len(names))).astype(np.float32),
