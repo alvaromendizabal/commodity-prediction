@@ -1,0 +1,27 @@
+{
+  "aws_experiment_executed": false,
+  "blocker": "AWS launch request was blocked by the connected tool safety check before AWS API execution; no new model score or EBS synchronization is claimed.",
+  "feature_gate": "open",
+  "format": "passed",
+  "holdout_evaluated": false,
+  "lint": "passed",
+  "new_training_fits": 0,
+  "project": "commodity-prediction",
+  "source_hashes": {
+    "src/commodity_prediction/domain/market_normalization/__init__.py": "d9ec7fc2a95c3cbeb9f4b8a07cddb1a008cc5af172189ba022c252b32f9f68e8",
+    "src/commodity_prediction/domain/market_normalization/features.py": "283610238ede856016c310153657479b05834479798246f6f1768779e2660533",
+    "src/commodity_prediction/domain/market_normalization/run.py": "67040825d9379b2f13bc4b1dac346b0955a55b0d7564c672fdbaae8a7d3c34f4",
+    "tests/test_market_normalization.py": "110d57e3ae7fd0c2dcb888e785a3a4a2f47b5c06a683f2c079b4c7378347b646"
+  },
+  "source_parent_commit": "48180c7e1f1db6a92e383061805f52de07306543",
+  "status": "source_preflight_passed",
+  "study": "market_normalization",
+  "tests": {
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "tests": 11
+  },
+  "typecheck": "passed",
+  "utc": "2026-09-11T05:47:53.994228+00:00"
+}

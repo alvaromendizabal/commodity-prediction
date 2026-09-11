@@ -31,15 +31,19 @@ def asset_channels(x: pd.DataFrame, assets: list[str]) -> dict[str, pd.DataFrame
     ):
         raise ValueError("Contiguous dates and complete unique asset metadata required")
     names = (
-        "intraday", "overnight", "range", "direction_volume", "location_volume", "range_volume"
+        "intraday",
+        "overnight",
+        "range",
+        "direction_volume",
+        "location_volume",
+        "range_volume",
     )
     output: dict[str, dict[str, pd.Series]] = {name: {} for name in names}
     for asset in assets:
         us = asset.endswith("_adj_close")
         stem = asset.removesuffix("close" if us else "Close")
         fields = [
-            stem + name
-            for name in (["open", "high", "low"] if us else ["Open", "High", "Low"])
+            stem + name for name in (["open", "high", "low"] if us else ["Open", "High", "Low"])
         ]
         if not set(fields).issubset(x.columns):
             continue
@@ -63,7 +67,9 @@ def asset_channels(x: pd.DataFrame, assets: list[str]) -> dict[str, pd.DataFrame
         scaled_range = (width / scale).clip(0, 12)
         location = ((2 * close - high - low) / width.where(width > 0)).clip(-1, 1)
         for name, series in [
-            ("intraday", intraday), ("overnight", overnight), ("range", scaled_range)
+            ("intraday", intraday),
+            ("overnight", overnight),
+            ("range", scaled_range),
         ]:
             output[name][asset] = series
         volume_name = stem + ("volume" if us else "Volume")
@@ -113,7 +119,10 @@ def feature_block(
         for name in members:
             frame = channels[name]
             left = np.stack(
-                [frame[row[0]].to_numpy() if row[0] in supported else np.zeros(len(x)) for row in legs],
+                [
+                    frame[row[0]].to_numpy() if row[0] in supported else np.zeros(len(x))
+                    for row in legs
+                ],
                 axis=1,
             )
             right = np.stack(

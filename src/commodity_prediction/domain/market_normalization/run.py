@@ -48,7 +48,9 @@ def declarations(root: Path) -> tuple[str, dict]:
         raise ValueError("Frozen current-market parent changed")
     files = {
         str(path.relative_to(root)): digest(path)
-        for path in sorted((root / "src/commodity_prediction/domain/market_normalization").glob("*.py"))
+        for path in sorted(
+            (root / "src/commodity_prediction/domain/market_normalization").glob("*.py")
+        )
     }
     evidence = {
         "config": config,
@@ -138,21 +140,34 @@ def run_study(root: Path, first_fold: bool, sync: bool = False) -> dict:
         replay_error = 0.0
         with threadpool_limits(limits=domain_config["threads"]):
             with log.stage("reuse_sealed_inputs"):
-                x, y, pairs, original, folds = load_inputs(root, evidence["parent_evidence"]["feature_lineage"])
+                x, y, pairs, original, folds = load_inputs(
+                    root, evidence["parent_evidence"]["feature_lineage"]
+                )
                 base, _ = build_panel(original, x, pairs, "current_market")
             used_folds = folds[:1] if first_fold else folds
             for fold in used_folds:
                 budget()
                 # Replay each saved control under exactly the input panel reused here.
-                control_stage = root / "artifacts" / evidence["parent_lineage"] / f"fold_{fold.number}/current_market"
+                control_stage = (
+                    root
+                    / "artifacts"
+                    / evidence["parent_lineage"]
+                    / f"fold_{fold.number}/current_market"
+                )
                 saved = pd.read_parquet(control_stage / "predictions.parquet")
-                replay = joblib.load(control_stage / "model.joblib").predict(base, fold.validation_start, fold.validation_stop)
+                replay = joblib.load(control_stage / "model.joblib").predict(
+                    base, fold.validation_start, fold.validation_stop
+                )
                 pd.testing.assert_frame_equal(saved, replay, check_names=False)
             for variant in VARIANTS:
                 with log.stage("build/" + variant):
                     panel, inventory = augment(base, x, pairs, variant)
                     inventories[variant] = inventory
-                settings = {**domain_config, "max_features": len(panel.names), "max_abs_correlation": 1.01}
+                settings = {
+                    **domain_config,
+                    "max_features": len(panel.names),
+                    "max_abs_correlation": 1.01,
+                }
                 predictions = []
                 for fold in used_folds:
                     budget()
@@ -162,15 +177,34 @@ def run_study(root: Path, first_fold: bool, sync: bool = False) -> dict:
                         stats = None if reused else prepare(panel, y, fold.train_stop, settings)
                         if not reused:
                             new_fits += 1
-                        result = fit_stage(panel, y, pairs, fold, Experiment(variant, algorithm="histogram"), settings, stats, stage, lineage)
+                        result = fit_stage(
+                            panel,
+                            y,
+                            pairs,
+                            fold,
+                            Experiment(variant, algorithm="histogram"),
+                            settings,
+                            stats,
+                            stage,
+                            lineage,
+                        )
                         selected = result["selection"]["selected_names"]
-                        added = [name for name in selected if name.startswith("market_normalization__")]
+                        added = [
+                            name for name in selected if name.startswith("market_normalization__")
+                        ]
                         if not added:
-                            raise ValueError("No usable new feature admitted; stop before more fits")
-                        if any(reason in result["selection"]["rejection_reasons"] for reason in ["feature_budget", "correlated", "unstable_sign"]):
+                            raise ValueError(
+                                "No usable new feature admitted; stop before more fits"
+                            )
+                        if any(
+                            reason in result["selection"]["rejection_reasons"]
+                            for reason in ["feature_budget", "correlated", "unstable_sign"]
+                        ):
                             raise ValueError("Unreviewed feature screening exclusion")
                         saved = pd.read_parquet(stage / "predictions.parquet")
-                        replay = joblib.load(stage / "model.joblib").predict(panel, fold.validation_start, fold.validation_stop)
+                        replay = joblib.load(stage / "model.joblib").predict(
+                            panel, fold.validation_start, fold.validation_stop
+                        )
                         pd.testing.assert_frame_equal(saved, replay, check_names=False)
                         error = float(np.max(np.abs(saved.to_numpy() - replay.to_numpy())))
                         if not np.isfinite(error) or error > 1e-12:
@@ -179,10 +213,24 @@ def run_study(root: Path, first_fold: bool, sync: bool = False) -> dict:
                         persist(stage)
                         results.append({**result, "added_retained_templates": len(added)})
                         predictions.append(saved)
-                        log.event("checkpoint_verified", completed=len(results), total=3 * len(used_folds), reused=reused, new_fits=new_fits, official_metric=result["metrics"]["official_metric"])
+                        log.event(
+                            "checkpoint_verified",
+                            completed=len(results),
+                            total=3 * len(used_folds),
+                            reused=reused,
+                            new_fits=new_fits,
+                            official_metric=result["metrics"]["official_metric"],
+                        )
                         del stats
                 prediction = pd.concat(predictions)
-                summaries[variant] = {**evaluate(y.loc[prediction.index], prediction, pairs), "fold_scores": [row["metrics"]["official_metric"] for row in results if row["variant"] == variant]}
+                summaries[variant] = {
+                    **evaluate(y.loc[prediction.index], prediction, pairs),
+                    "fold_scores": [
+                        row["metrics"]["official_metric"]
+                        for row in results
+                        if row["variant"] == variant
+                    ],
+                }
                 del panel
                 gc.collect()
             report = {
@@ -202,17 +250,42 @@ def run_study(root: Path, first_fold: bool, sync: bool = False) -> dict:
                 control = parent["summaries"]["current_market"]["fold_scores"][0]
                 deltas = {name: row["official_metric"] - control for name, row in summaries.items()}
                 proceed = max(deltas.values()) >= config["first_fold_minimum_gain"]
-                report.update({"status": "first_fold_completed", "matched_deltas": deltas, "continue_allowed": proceed, "minimum_gain": config["first_fold_minimum_gain"]})
+                report.update(
+                    {
+                        "status": "first_fold_completed",
+                        "matched_deltas": deltas,
+                        "continue_allowed": proceed,
+                        "minimum_gain": config["first_fold_minimum_gain"],
+                    }
+                )
                 atomic_json(directory / "probe.json", report)
                 atomic_json(root / "reports/market_normalization_probe.json", report)
             else:
                 summaries["current_market"] = parent["summaries"]["current_market"]
                 summaries["historical_mean"] = parent["summaries"]["historical_mean"]
-                daily = {name: np.asarray(row["daily_rank_correlations"]) for name, row in summaries.items()}
-                contrasts = [(name, "current_market") for name in VARIANTS] + [("normalized_joint", "normalized_price"), ("normalized_joint", "volume_confirmation")]
+                daily = {
+                    name: np.asarray(row["daily_rank_correlations"])
+                    for name, row in summaries.items()
+                }
+                contrasts = [(name, "current_market") for name in VARIANTS] + [
+                    ("normalized_joint", "normalized_price"),
+                    ("normalized_joint", "volume_confirmation"),
+                ]
                 with log.stage("matched_family_uncertainty"):
-                    bounds = compare_predictions(daily, [f.validation_stop - f.validation_start for f in folds], contrasts, domain_config)
-                report.update({"status": "completed", "comparisons": bounds, "uncertainty_scope": "Five predeclared contrasts in this feature family only; not multiplicity correction for prior adaptive research.", "promotion_allowed": False})
+                    bounds = compare_predictions(
+                        daily,
+                        [f.validation_stop - f.validation_start for f in folds],
+                        contrasts,
+                        domain_config,
+                    )
+                report.update(
+                    {
+                        "status": "completed",
+                        "comparisons": bounds,
+                        "uncertainty_scope": "Five predeclared contrasts in this feature family only; not multiplicity correction for prior adaptive research.",
+                        "promotion_allowed": False,
+                    }
+                )
                 atomic_json(summary_dir / "summary.json", report)
                 seal_checkpoint(summary_dir, lineage, ["summary.json"])
                 persist(summary_dir)
@@ -222,7 +295,10 @@ def run_study(root: Path, first_fold: bool, sync: bool = False) -> dict:
             return report
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
-        atomic_json(budget_path, {"seconds": previous + monotonic() - started, "limit": config["max_run_seconds"]})
+        atomic_json(
+            budget_path,
+            {"seconds": previous + monotonic() - started, "limit": config["max_run_seconds"]},
+        )
 
 
 def main() -> None:
@@ -235,7 +311,15 @@ def main() -> None:
     with (root / "logs/market_normalization.lock").open("a") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         result = run_study(root, args.first_fold, args.sync_s3)
-    print(json.dumps({key: result[key] for key in ["status", "lineage", "fits_this_invocation", "validation_dates"]}), flush=True)
+    print(
+        json.dumps(
+            {
+                key: result[key]
+                for key in ["status", "lineage", "fits_this_invocation", "validation_dates"]
+            }
+        ),
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

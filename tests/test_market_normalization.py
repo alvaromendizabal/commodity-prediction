@@ -22,15 +22,24 @@ def market():
         x[stem + "low"] = np.minimum(opening, close) / 1.01
         x[stem + "volume"] = rng.lognormal(8, 0.3, n)
     x["FX_AB"] = np.exp(np.cumsum(rng.normal(0, 0.005, n)))
-    pairs = pd.DataFrame({
-        "target": ["target_0", "target_1", "target_2", "target_3"],
-        "pair": ["US_A_adj_close - US_B_adj_close", "US_B_adj_close - US_A_adj_close", "US_A_adj_close", "FX_AB"],
-        "lag": [1, 1, 2, 1],
-    })
+    pairs = pd.DataFrame(
+        {
+            "target": ["target_0", "target_1", "target_2", "target_3"],
+            "pair": [
+                "US_A_adj_close - US_B_adj_close",
+                "US_B_adj_close - US_A_adj_close",
+                "US_A_adj_close",
+                "FX_AB",
+            ],
+            "lag": [1, 1, 2, 1],
+        }
+    )
     return x, pairs
 
 
-@pytest.mark.parametrize("variant,count", [("normalized_price", 7), ("volume_confirmation", 7), ("normalized_joint", 14)])
+@pytest.mark.parametrize(
+    "variant,count", [("normalized_price", 7), ("volume_confirmation", 7), ("normalized_joint", 14)]
+)
 def test_declared_size_symmetry_and_structural_absence(variant, count):
     x, pairs = market()
     values, names, coverage = feature_block(x, pairs, variant)
@@ -60,7 +69,13 @@ def test_price_units_do_not_change_features():
     for c in changed.columns:
         if c.endswith(("close", "open", "high", "low")):
             changed[c] *= 1000
-    np.testing.assert_allclose(feature_block(x, pairs, "normalized_joint")[0], feature_block(changed, pairs, "normalized_joint")[0], rtol=1e-5, atol=1e-5, equal_nan=True)
+    np.testing.assert_allclose(
+        feature_block(x, pairs, "normalized_joint")[0],
+        feature_block(changed, pairs, "normalized_joint")[0],
+        rtol=1e-5,
+        atol=1e-5,
+        equal_nan=True,
+    )
 
 
 def test_observed_missing_bar_is_not_structural_zero():
@@ -75,8 +90,20 @@ def test_current_return_does_not_enter_its_own_volatility_denominator():
     x, _ = market()
     channels = asset_channels(x, ["US_A_adj_close"])
     expected = np.log(x.US_A_adj_close / x.US_A_adj_open)
-    scale = np.log(x.US_A_adj_close).diff().shift(1).rolling(21, min_periods=14).std(ddof=0).clip(lower=1e-6)
-    np.testing.assert_allclose(channels["intraday"]["US_A_adj_close"], (expected / scale).clip(-12, 12), atol=1e-10, equal_nan=True)
+    scale = (
+        np.log(x.US_A_adj_close)
+        .diff()
+        .shift(1)
+        .rolling(21, min_periods=14)
+        .std(ddof=0)
+        .clip(lower=1e-6)
+    )
+    np.testing.assert_allclose(
+        channels["intraday"]["US_A_adj_close"],
+        (expected / scale).clip(-12, 12),
+        atol=1e-10,
+        equal_nan=True,
+    )
 
 
 def test_current_volume_excluded_from_volume_reference():
@@ -85,7 +112,9 @@ def test_current_volume_excluded_from_volume_reference():
     lv = np.log1p(x.US_A_adj_volume)
     h = lv.shift(1).rolling(21, min_periods=14)
     s = np.tanh(((lv - h.median()) / h.std(ddof=0).clip(lower=1e-6)).clip(-12, 12) / 3)
-    np.testing.assert_allclose(c["direction_volume"]["US_A_adj_close"], c["intraday"]["US_A_adj_close"] * s, equal_nan=True)
+    np.testing.assert_allclose(
+        c["direction_volume"]["US_A_adj_close"], c["intraday"]["US_A_adj_close"] * s, equal_nan=True
+    )
 
 
 def test_joint_is_exact_union_not_different_base():
