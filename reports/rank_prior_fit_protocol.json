@@ -1,0 +1,14 @@
+{
+  "status": "predeclared_not_executed",
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "variants": ["rank_tail", "rank_current_market"],
+  "max_new_fits": 6,
+  "probe_fits": 2,
+  "cumulative_fit_budget_seconds": 180,
+  "matched_controls": {
+    "rank_tail": "admitted_tail",
+    "rank_current_market": "current_market"
+  },
+  "execution_result": null
+}
