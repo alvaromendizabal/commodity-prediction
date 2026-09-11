@@ -148,12 +148,14 @@ def show_figure(fig, root: Path, name: str, height: int = 540) -> None:
     html_path = output / f"{name}.html"
     fig.write_html(html_path, include_plotlyjs="cdn")
     png = None
-    try:
-        png = fig.to_image(format="png", scale=1.5)
-        png_path.write_bytes(png)
-    except Exception:
-        if png_path.exists() and png_path.stat().st_size > 1000:
-            png = png_path.read_bytes()
+    if os.environ.get("COMMODITY_SKIP_PNG_RENDER") != "1":
+        try:
+            png = fig.to_image(format="png", scale=1.5)
+            png_path.write_bytes(png)
+        except Exception:
+            png = None
+    if png is None and png_path.exists() and png_path.stat().st_size > 1000:
+        png = png_path.read_bytes()
     bundle = {
         "application/vnd.plotly.v1+json": json.loads(fig.to_json()),
         "text/plain": str(fig.layout.title.text),
