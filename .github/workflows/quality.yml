@@ -39,3 +39,6 @@ jobs:
       - name: Verify released-context publication
         timeout-minutes: 1
         run: uv run --frozen python scripts/verify_released_context_publication.py
+      - name: Verify market-path publication
+        timeout-minutes: 1
+        run: uv run --frozen python scripts/verify_market_path_publication.py

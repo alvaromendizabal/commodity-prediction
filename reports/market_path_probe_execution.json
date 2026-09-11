@@ -1,0 +1,71 @@
+{
+  "project": "commodity-prediction",
+  "study": "market_path",
+  "status": "PROBE_COMPLETED",
+  "observed_utc": "2026-09-11T03:38:32.994110+00:00",
+  "source_commit": "05a1f77db399530da5cce355f08f3fe11a7c8c9b",
+  "lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "final_test_start_date_id": 1714,
+  "contract_tests": "18 passed in 28.18s",
+  "fits_this_invocation": 4,
+  "new_historical_fits": 0,
+  "maximum_prediction_replay_error": 0.0,
+  "cumulative_study_seconds": 72.17461532199991,
+  "frozen_control": {
+    "variant": "admitted_tail",
+    "fold_0_official_metric": 0.3905792906928788
+  },
+  "first_fold": {
+    "current_market": {
+      "official_metric": 0.40338108742296147,
+      "candidate_templates": 87,
+      "retained_templates": 82,
+      "rejected_templates": 5,
+      "rejection_reasons": {"duplicate": 5}
+    },
+    "price_path": {
+      "official_metric": 0.39200371579403087,
+      "candidate_templates": 105,
+      "retained_templates": 102,
+      "rejected_templates": 3,
+      "rejection_reasons": {"duplicate": 3}
+    },
+    "activity_path": {
+      "official_metric": 0.3927733403657301,
+      "candidate_templates": 87,
+      "retained_templates": 86,
+      "rejected_templates": 1,
+      "rejection_reasons": {"duplicate": 1}
+    },
+    "joint_path": {
+      "official_metric": 0.3920279519965222,
+      "candidate_templates": 123,
+      "retained_templates": 118,
+      "rejected_templates": 5,
+      "rejection_reasons": {"duplicate": 5}
+    }
+  },
+  "continue_allowed": true,
+  "decision_note": "The predeclared first-fold stop rule allows continuation. The current-row market block leads the frozen first-fold control by about 0.012802, while the three four-date path variants are only slightly above it on this single reused development fold. No variant is promoted from this probe; remaining folds are required for matched evidence.",
+  "failed_attempts_before_success": [
+    {
+      "stage": "preserve_local_formatting",
+      "new_fits": 0,
+      "cause": "SageMaker execution role lacked s3:GetObjectVersion for a version-pinned operational formatting receipt. The retry switched to the independently hash-checked current object rather than changing IAM."
+    },
+    {
+      "stage": "first_fold_four_fits",
+      "new_fits": 0,
+      "cause": "The ignored logs directory did not exist before the external supervisor opened its log. A bounded no-training startup created the directory; the probe was then rerun unchanged."
+    }
+  ],
+  "private_status_key": "operations/market-path/first-fold-20260911/status.json",
+  "limitations": [
+    "This is one predeclared development fold, not a final validation result.",
+    "The final 247 origins remain untouched.",
+    "The probe does not establish that longer OHLC/activity paths improve the pooled 535-date metric.",
+    "The historical 0.63834 private leaderboard winner is not directly comparable with this development fold."
+  ]
+}
