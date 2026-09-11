@@ -107,13 +107,19 @@ def verify_manifests(base: Path, hashes: dict[str, str]) -> int:
 
 def git_state(root: Path) -> dict[str, str]:
     environment = {**os.environ, "GIT_OPTIONAL_LOCKS": "0", "GIT_TERMINAL_PROMPT": "0"}
+
     def read(args: list[str]) -> str:
         return subprocess.check_output(
             ["git", "-c", "core.fsmonitor=false", "-C", str(root), *args],
-            text=True, env=environment, timeout=10,
+            text=True,
+            env=environment,
+            timeout=10,
         ).strip()
-    return {"head": read(["rev-parse", "HEAD"]),
-            "status": read(["status", "--porcelain", "--untracked-files=normal"])}
+
+    return {
+        "head": read(["rev-parse", "HEAD"]),
+        "status": read(["status", "--porcelain", "--untracked-files=normal"]),
+    }
 
 
 def main() -> None:
@@ -137,29 +143,51 @@ def main() -> None:
     audit.mkdir(exist_ok=True)
     lock = (audit / "prepare.lock").open("a")
     fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-    s3 = boto3.client("s3", region_name="us-west-2", config=Config(
-        connect_timeout=5, read_timeout=10, retries={"max_attempts": 0}))
+    s3 = boto3.client(
+        "s3",
+        region_name="us-west-2",
+        config=Config(connect_timeout=5, read_timeout=10, retries={"max_attempts": 0}),
+    )
     bucket = "sagemaker-commodity-prediction-560403859723-us-west-2"
     started = time.monotonic()
     done = threading.Event()
     mutex = threading.Lock()
-    report = {"project": "commodity-prediction", "status": "RUNNING", "stage": "preflight",
-              "new_training_fits": 0, "model_loads": 0, "notebook_executions": 0,
-              "source_commit": args.expected_commit, "hard_budget_seconds": 240,
-              "heartbeat_seconds": 15, "errors": [], "copies_created": 0, "copies_reused": 0}
+    report = {
+        "project": "commodity-prediction",
+        "status": "RUNNING",
+        "stage": "preflight",
+        "new_training_fits": 0,
+        "model_loads": 0,
+        "notebook_executions": 0,
+        "source_commit": args.expected_commit,
+        "hard_budget_seconds": 240,
+        "heartbeat_seconds": 15,
+        "errors": [],
+        "copies_created": 0,
+        "copies_reused": 0,
+    }
 
     def save() -> None:
         with mutex:
-            report.update(observed_utc=datetime.now(UTC).isoformat(),
-                          elapsed_seconds=round(time.monotonic() - started, 3))
+            report.update(
+                observed_utc=datetime.now(UTC).isoformat(),
+                elapsed_seconds=round(time.monotonic() - started, 3),
+            )
             encoded = (json.dumps(report, sort_keys=True, indent=2) + "\n").encode()
             temporary = audit / "receipt.tmp"
             temporary.write_bytes(encoded)
             temporary.replace(audit / "receipt.json")
-            s3.put_object(Bucket=bucket, Key=args.receipt_key, Body=encoded,
-                          ContentType="application/json", ServerSideEncryption="AES256",
-                          Metadata={"status": report["status"],
-                                    "sha256": hashlib.sha256(encoded).hexdigest()})
+            s3.put_object(
+                Bucket=bucket,
+                Key=args.receipt_key,
+                Body=encoded,
+                ContentType="application/json",
+                ServerSideEncryption="AES256",
+                Metadata={
+                    "status": report["status"],
+                    "sha256": hashlib.sha256(encoded).hexdigest(),
+                },
+            )
             print(json.dumps(report, sort_keys=True), flush=True)
 
     def heartbeat() -> None:
@@ -171,9 +199,13 @@ def main() -> None:
 
     def run(command: list[str], seconds: int) -> str:
         remaining = 240 - (time.monotonic() - started)
-        return subprocess.check_output(command, cwd=root, text=True,
-                                       timeout=max(1, min(seconds, remaining)),
-                                       env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+        return subprocess.check_output(
+            command,
+            cwd=root,
+            text=True,
+            timeout=max(1, min(seconds, remaining)),
+            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+        )
 
     def timeout_handler(signum, frame):
         raise TimeoutError("Workspace preparation hard deadline reached")
@@ -205,13 +237,16 @@ def main() -> None:
         if count != 589:
             raise ValueError(f"Expected 589 preserved stage manifests, found {count}")
         for name, expected in source_hashes.items():
-            copied = copy_verified(confined(context / "artifacts", name),
-                                   confined(root / "artifacts", name), expected)
+            copied = copy_verified(
+                confined(context / "artifacts", name), confined(root / "artifacts", name), expected
+            )
             report["copies_created" if copied else "copies_reused"] += 1
         destination_hashes = inventory(root / "artifacts")
         if destination_hashes != source_hashes:
             raise ValueError("Independent checkpoint inventory differs")
-        report["checkpoint_manifests_verified"] = verify_manifests(root / "artifacts", destination_hashes)
+        report["checkpoint_manifests_verified"] = verify_manifests(
+            root / "artifacts", destination_hashes
+        )
         report["artifact_files_verified"] = len(destination_hashes)
         report["stage"] = "install_frozen_independent_environment"
         if (root / ".venv").is_symlink():
@@ -224,18 +259,41 @@ def main() -> None:
         if digest(root / "uv.lock") != lock_hash:
             raise ValueError("Lockfile changed")
         python = str(root / ".venv/bin/python")
-        smoke = run([python, "-c", "import json,sys,numpy,pandas,sklearn,commodity_prediction; "
-                     "print(json.dumps(dict(python=sys.version.split()[0],numpy=numpy.__version__,"
-                     "pandas=pandas.__version__,sklearn=sklearn.__version__,source=commodity_prediction.__file__)))"], 15)
+        smoke = run(
+            [
+                python,
+                "-c",
+                "import json,sys,numpy,pandas,sklearn,commodity_prediction; "
+                "print(json.dumps(dict(python=sys.version.split()[0],numpy=numpy.__version__,"
+                "pandas=pandas.__version__,sklearn=sklearn.__version__,source=commodity_prediction.__file__)))",
+            ],
+            15,
+        )
         report["runtime"] = json.loads(smoke.strip())
         if not Path(report["runtime"]["source"]).resolve().is_relative_to(root / "src"):
             raise ValueError("Environment resolves a different source checkout")
         report["stage"] = "verify_existing_publication_without_execution"
         report["publication_verifiers"] = {}
-        for script in ["verify_publication.py", "verify_risk_state_publication.py", "verify_released_context_publication.py"]:
+        for script in [
+            "verify_publication.py",
+            "verify_risk_state_publication.py",
+            "verify_released_context_publication.py",
+        ]:
             report["publication_verifiers"][script] = run([python, "scripts/" + script], 15).strip()
-        run([python, "-m", "ipykernel", "install", "--user", "--name", "commodity-current",
-             "--display-name", "Commodity Research - current"], 15)
+        run(
+            [
+                python,
+                "-m",
+                "ipykernel",
+                "install",
+                "--user",
+                "--name",
+                "commodity-current",
+                "--display-name",
+                "Commodity Research - current",
+            ],
+            15,
+        )
         report["kernel"] = "commodity-current"
         report["status"] = "WORKSPACE_READY"
     except Exception as exc:
@@ -250,8 +308,8 @@ def main() -> None:
         try:
             report["old_git_states_unchanged"] = before == {str(p): git_state(p) for p in old}
             report["copied_sources_unchanged"] = all(
-                digest(confined(context / "artifacts", p)) == h for p, h in source_hashes.items()) and all(
-                digest(confined(original, p)) == h for p, h in raw_hashes.items())
+                digest(confined(context / "artifacts", p)) == h for p, h in source_hashes.items()
+            ) and all(digest(confined(original, p)) == h for p, h in raw_hashes.items())
             if not report["old_git_states_unchanged"] or not report["copied_sources_unchanged"]:
                 raise ValueError("Original-source preservation check failed")
         except Exception as exc:

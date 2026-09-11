@@ -54,3 +54,8 @@ unchanged signed peer-aggregation formulation. Audit earlier raw/lag coverage
 before proposing a separate short raw-market-sequence experiment. Keep source,
 features, training-only screening, ablations, uncertainty, and costs explicit.
 
+
+
+## Connected continuation authorization
+
+The user's latest explicit request supersedes the earlier manual-only override. Use connected AWS and GitHub directly for bounded project work, including tested commits, pull requests, merges, and synchronization. Do not ask the user to perform operations supported by the connected tools. Preserve original worktrees and saved models; keep private records private, feature engineering open, and final evaluation gated. No unlimited spending or Kaggle submission is authorized. Stop compute externally after the app reaches a stoppable state; do not call DeleteApp during PendingCheckout.

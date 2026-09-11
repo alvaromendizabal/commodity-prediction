@@ -72,8 +72,11 @@ def test_checkpoint_manifests_and_corruption(tmp_path):
     stage = tmp_path / "lineage" / "fold_0"
     stage.mkdir(parents=True)
     (stage / "model.joblib").write_bytes(b"bytes only, never deserialized")
-    (stage / "manifest.json").write_text(json.dumps({"lineage": "lineage", "files": {
-        "model.joblib": module.digest(stage / "model.joblib")}}))
+    (stage / "manifest.json").write_text(
+        json.dumps(
+            {"lineage": "lineage", "files": {"model.joblib": module.digest(stage / "model.joblib")}}
+        )
+    )
     assert module.verify_manifests(tmp_path, module.inventory(tmp_path)) == 1
     (stage / "model.joblib").write_bytes(b"damaged")
     with pytest.raises(ValueError, match="checksum"):

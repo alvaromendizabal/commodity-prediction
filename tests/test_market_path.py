@@ -19,9 +19,13 @@ def inputs():
         x[asset + "low"] = price * 0.98
         x[asset + "volume"] = rng.integers(100, 1000, 80).astype(float)
     x["FX_C"] = 1.1 + rng.normal(0, 0.001, 80)
-    pairs = pd.DataFrame({"target": ["target_0", "target_1", "target_2"],
-                          "lag": [1, 4, 2],
-                          "pair": ["US_A_adj_close - US_B_adj_close", "US_A_adj_close", "FX_C"]})
+    pairs = pd.DataFrame(
+        {
+            "target": ["target_0", "target_1", "target_2"],
+            "lag": [1, 4, 2],
+            "pair": ["US_A_adj_close - US_B_adj_close", "US_A_adj_close", "FX_C"],
+        }
+    )
     return x, pairs
 
 
@@ -93,34 +97,68 @@ def test_probe_seals_models_and_reuses_without_refit(inputs, tmp_path, monkeypat
     # The production metric includes per-horizon correlations. Supply three targets
     # for every horizon; a singleton horizon is not a valid metric fixture.
     expressions = ["US_A_adj_close - US_B_adj_close", "US_A_adj_close", "FX_C"]
-    pairs = pd.DataFrame({
-        "target": [f"target_{i}" for i in range(12)],
-        "lag": [h for h in range(1, 5) for _ in expressions],
-        "pair": expressions * 4,
-    })
+    pairs = pd.DataFrame(
+        {
+            "target": [f"target_{i}" for i in range(12)],
+            "lag": [h for h in range(1, 5) for _ in expressions],
+            "pair": expressions * 4,
+        }
+    )
     assert pairs.groupby("lag").size().eq(3).all()
     source = Path(__file__).resolve().parents[1]
     names = json.loads((source / "reports/domain_study.json").read_text())["inventory"]["names"]
-    original = Panel(np.random.default_rng(2).normal(size=(len(x), len(pairs), len(names))).astype(np.float32),
-                     x.index.tolist(), pairs.target.tolist(), names, {})
-    y = pd.DataFrame(np.random.default_rng(3).normal(size=(len(x), len(pairs))), index=x.index, columns=pairs.target)
+    original = Panel(
+        np.random.default_rng(2).normal(size=(len(x), len(pairs), len(names))).astype(np.float32),
+        x.index.tolist(),
+        pairs.target.tolist(),
+        names,
+        {},
+    )
+    y = pd.DataFrame(
+        np.random.default_rng(3).normal(size=(len(x), len(pairs))),
+        index=x.index,
+        columns=pairs.target,
+    )
     config = json.loads((source / "configs/domain_study.json").read_text())
-    config.update(warmup_dates=100, histogram_iterations=2, histogram_min_samples_leaf=16, threads=1)
+    config.update(
+        warmup_dates=100, histogram_iterations=2, histogram_min_samples_leaf=16, threads=1
+    )
     atomic_json(tmp_path / "configs/domain_study.json", config)
-    atomic_json(tmp_path / "configs/final_evaluation.json", {"evaluated": False, "final_test_start_date_id": 1714})
-    for lineage, child, value in [("feature", "features", {}), ("prior", "summary", {"summaries": {"admitted_tail": {"fold_scores": [-100.0]}}})]:
+    atomic_json(
+        tmp_path / "configs/final_evaluation.json",
+        {"evaluated": False, "final_test_start_date_id": 1714},
+    )
+    for lineage, child, value in [
+        ("feature", "features", {}),
+        ("prior", "summary", {"summaries": {"admitted_tail": {"fold_scores": [-100.0]}}}),
+    ]:
         stage = tmp_path / "artifacts" / lineage / child
         atomic_json(stage / "summary.json", value)
         seal_checkpoint(stage, lineage, ["summary.json"])
-    monkeypatch.setattr(runner, "study_lineage", lambda root: ("toy", {"parent_lineage": "prior", "feature_lineage": "feature", "config": {"max_run_seconds": 300}}))
-    monkeypatch.setattr(runner, "load_inputs", lambda *args: (x, y, pairs, original, [Fold(0, 150, 155, 175)]))
+    monkeypatch.setattr(
+        runner,
+        "study_lineage",
+        lambda root: (
+            "toy",
+            {
+                "parent_lineage": "prior",
+                "feature_lineage": "feature",
+                "config": {"max_run_seconds": 300},
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        runner, "load_inputs", lambda *args: (x, y, pairs, original, [Fold(0, 150, 155, 175)])
+    )
     probe = runner.run_study(tmp_path, 1)
     assert probe["fits_this_invocation"] == 4
     assert probe["maximum_prediction_replay_error"] == 0
     models = list((tmp_path / "artifacts/toy").rglob("model.joblib"))
     timestamps = {str(p): p.stat().st_mtime_ns for p in models}
+
     def forbidden(*args, **kwargs):
         raise AssertionError("No fitting statistics should be recomputed for completed stages")
+
     monkeypatch.setattr(runner, "prepare", forbidden)
     again = runner.run_study(tmp_path, 1)
     assert again["fits_this_invocation"] == 0
