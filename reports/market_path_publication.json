@@ -13,6 +13,8 @@
   "model_checkpoints_replayed": 12,
   "maximum_prediction_replay_error": 0.0,
   "joint_comparison_count": 274,
+  "execution_elapsed_seconds": 195.572,
+  "contract_tests": "18 passed in 28.04s",
   "scores": {
     "admitted_tail": {
       "official_metric": 0.3053356475284676,
@@ -82,8 +84,11 @@
   "decision": "Do not advance the four-date OHLC/activity path expansion unchanged. The single-row current-market block produces the highest reproduced development point estimate (0.309709), but its predeclared gain over the admitted-tail control is small and uncertain; adding prior-day price paths or joint price/activity paths reduces the pooled metric. Retain current OHLC/activity as an exploratory compact lead, keep the feature gate open, and next isolate whether market-state normalization or a shared raw-input architecture can use this information without merely adding chronology.",
   "private_evidence": {
     "status_key": "operations/market-path/full-study-20260911/status.json",
+    "status_version": "GIBetNoPPX_.doMcgYj9Ptjp8dynJTwH",
     "study_key": "operations/market-path/full-study-20260911/study.json",
+    "study_version": "zBC4EbKSoSVFaR2bjmuunNAhlSfgvZ_y",
     "lineage_key": "operations/market-path/full-study-20260911/lineage.json",
+    "lineage_version": ".6g7LiCCzCTLwEtUGwEg6o7a56LK7QfR",
     "run_log_key": "operations/market-path/full-study-20260911/run.log"
   },
   "limitations": [
