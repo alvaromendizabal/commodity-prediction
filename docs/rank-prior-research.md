@@ -34,7 +34,7 @@ The probe performs **zero model fits**, has a 120-second hard limit and 15-secon
 
 ## Measured no-fit probe
 
-The AWS probe completed in **9.692 seconds** after the branch Quality gate passed. It performed zero training fits, loaded zero models, executed no notebooks, and did not evaluate the final 247 origins.
+The first verified AWS probe completed in **9.692 seconds** after the branch Quality gate passed. An independent reproduction completed in **9.580 seconds** with exact score parity. Both performed zero training fits, loaded zero models, executed no notebooks, and did not evaluate the final 247 origins.
 
 | Prior | Official metric | Fold 1 | Fold 2 | Fold 3 |
 |---|---:|---:|---:|---:|
@@ -47,7 +47,22 @@ The AWS probe completed in **9.692 seconds** after the branch Quality gate passe
 
 **Decision:** advance only the diagonal rank direction to a small matched fitted ablation. Do not tune the covariance methods or reinterpret this no-fit control as a forecasting model. Preserve `current_market` at 0.309709 as the highest reproduced fitted development point estimate until a matched fitted rank-prior experiment actually exceeds it under the same frozen design.
 
-Public execution evidence is in `reports/rank_prior_probe_execution.json`; private aggregate probe/lineage/log receipts remain under `s3://sagemaker-commodity-prediction-560403859723-us-west-2/operations/rank-prior-probe/20260911/`.
+Public execution evidence is in `reports/rank_prior_probe_execution.json`; private aggregate probe/lineage/log receipts are checksum-pinned in that receipt.
+
+## Predeclared matched fitted ablation
+
+The fitted follow-up is a separate child lineage under `domain/rank_prior_fit/`; it does not modify the frozen no-fit probe package or any historical parent source. It adds exactly one fold-local `diagonal_rank` template to two frozen representations:
+
+1. `admitted_tail_rank`: the admitted-tail control plus the diagonal-rank template.
+2. `current_market_rank`: the current best compact OHLC/activity representation plus the same diagonal-rank template.
+
+The diagonal rank score is re-estimated separately for each outer fold using only `y[:train_stop]` for that fold and then repeated as a target-aligned static template across dates. No validation label enters the feature. Existing `admitted_tail` and `current_market` predictions are reused as matched controls; they are not refit.
+
+The experiment is capped at **six new fits** (two variants × three folds) and **180 cumulative seconds**. It begins with exactly two first-fold fits. The full four remaining fits may continue only if at least one rank-augmented variant is not more than 0.03 below its own matched control on that first fold and all lineage, admission, replay, and timing checks pass. This gate prevents one reused development fold from selecting a winner while still stopping a clearly harmful formulation.
+
+All fitting uses the existing fixed pooled histogram configuration, residual weight one, and the same admitted train-only preprocessing policy. The rank template itself must be admitted; any lineage mismatch, future dependence, missing parent seal, replay difference above `1e-12`, final-boundary change, or cumulative deadline is a hard stop. No covariance search, model hyperparameter tuning, GPU, final-test evaluation, or Kaggle submission is declared.
+
+Primary matched contrasts are `admitted_tail_rank` vs `admitted_tail` and `current_market_rank` vs `current_market`. The combined current-market rank model is also compared with the admitted-tail rank model and historical means. Completed evidence will report all three fold scores, pooled official metric, exact replay, and 10/20/40-date paired conditional and simultaneous uncertainty inside the cumulative adaptive comparison family.
 
 ## Broader feature-research backlog
 
