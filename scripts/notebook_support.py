@@ -144,6 +144,7 @@ def show_figure(fig, root: Path, name: str, height: int = 540) -> None:
     output = root / "reports/figures"
     output.mkdir(parents=True, exist_ok=True)
     png_path = output / f"{name}.png"
+    svg_path = output / f"{name}.svg"
     html_path = output / f"{name}.html"
     fig.write_html(html_path, include_plotlyjs="cdn")
     png = None
@@ -159,4 +160,6 @@ def show_figure(fig, root: Path, name: str, height: int = 540) -> None:
     }
     if png is not None:
         bundle["image/png"] = base64.b64encode(png).decode()
+    elif svg_path.exists() and svg_path.stat().st_size > 1000:
+        bundle["image/svg+xml"] = svg_path.read_text()
     display(bundle, raw=True)
