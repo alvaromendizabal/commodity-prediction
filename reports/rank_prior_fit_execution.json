@@ -1,0 +1,114 @@
+{
+  "project": "commodity-prediction",
+  "study": "matched_diagonal_rank_fitted_ablation",
+  "status": "completed",
+  "source_commit": "50616f6558abeda63a960bb36dff85b16a6b1481",
+  "lineage": "6135c59876e32a5cee97776c81a542cb7f2d5a7ef4a2bd92e077ae4ee17dc68f",
+  "parent_market_path_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "probe_lineage": "55fb66221db807065ccec0e1d1066487bc2d0b0f44c00f3bd867042c075bb28b",
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "final_test_evaluations": 0,
+  "validation_dates": 535,
+  "first_fold_probe_fits": 2,
+  "full_continuation_new_fits": 4,
+  "new_fitted_models": 6,
+  "checkpoint_count": 7,
+  "model_checkpoints_replayed": 6,
+  "maximum_prediction_replay_error": 0.0,
+  "joint_comparison_count": 279,
+  "first_fold_gate": {
+    "continue_allowed": true,
+    "stop_threshold": -0.03,
+    "matched_control_deltas": {
+      "admitted_tail_rank": 0.0,
+      "current_market_rank": 0.0
+    },
+    "note": "The diagonal-rank feature was admitted in both first-fold fitted models but did not change either first-fold prediction. The predeclared gate therefore allowed continuation because neither variant degraded by 0.03 or more."
+  },
+  "scores": {
+    "historical_mean": {
+      "official_metric": 0.217739151200211,
+      "fold_scores": [0.1625498054219968, 0.1824882692897385, 0.2968612204207786]
+    },
+    "admitted_tail": {
+      "official_metric": 0.3053356475284676,
+      "fold_scores": [0.3905792906928788, 0.1523414795003661, 0.3998806510721264]
+    },
+    "admitted_tail_rank": {
+      "official_metric": 0.30177176783610526,
+      "fold_scores": [0.3905792906928788, 0.16075638216878305, 0.37939086481234574],
+      "matched_control": "admitted_tail",
+      "delta_vs_control": -0.003563879692362326
+    },
+    "current_market": {
+      "official_metric": 0.3097087232124053,
+      "fold_scores": [0.40338108742296147, 0.16704165319061334, 0.39061886486364056]
+    },
+    "current_market_rank": {
+      "official_metric": 0.3073733617662018,
+      "fold_scores": [0.40338108742296147, 0.16111157751388996, 0.38807250013873873],
+      "matched_control": "current_market",
+      "delta_vs_control": -0.002335361446203499
+    }
+  },
+  "matched_uncertainty": {
+    "admitted_tail_rank_vs_admitted_tail": {
+      "delta": -0.003563879692362326,
+      "10": {
+        "conditional_95_interval": [-0.013481964626408504, 0.005134156641710565],
+        "simultaneous_95_interval": [-0.22700321569001056, 0.2198754563052859]
+      },
+      "20": {
+        "conditional_95_interval": [-0.013441602574139499, 0.005374150297103289],
+        "simultaneous_95_interval": [-0.2144067978455106, 0.20727903846078594]
+      },
+      "40": {
+        "conditional_95_interval": [-0.012085540432505263, 0.005596761513328182],
+        "simultaneous_95_interval": [-0.20295483842323397, 0.19582707903850932]
+      }
+    },
+    "current_market_rank_vs_current_market": {
+      "delta": -0.002335361446203499,
+      "10": {
+        "conditional_95_interval": [-0.008806569498346573, 0.004171902054332325],
+        "simultaneous_95_interval": [-0.22577469744385173, 0.22110397455144473]
+      },
+      "20": {
+        "conditional_95_interval": [-0.008678823782352078, 0.0035168501171709845],
+        "simultaneous_95_interval": [-0.21317827959935176, 0.20850755670694476]
+      },
+      "40": {
+        "conditional_95_interval": [-0.009121384474757912, 0.003655489187428957],
+        "simultaneous_95_interval": [-0.20172632017707515, 0.19705559728466815]
+      }
+    }
+  },
+  "decision": {
+    "advance_fitted_diagonal_rank": false,
+    "promotion_allowed": false,
+    "highest_reproduced_fitted_development_score": 0.3097087232124053,
+    "leader": "current_market",
+    "reason": "The training-only diagonal-rank prior passed its predeclared no-fit information-value gate, but adding it to either matched fitted representation reduced the pooled official metric. Do not tune or expand this fitted rank-prior family unchanged. Preserve the negative transfer result and move to a distinct feature mechanism."
+  },
+  "durable_private_evidence": {
+    "study_key": "operations/rank-prior-fit/50616f6558ab/full/study.json",
+    "study_version": "0eIJmkdw5dfOPzYFeCmRVPnHutrkgwJQ",
+    "study_sha256": "9fb262b660b34ba2ff054e6ac9b046be63702be01e457b9b67d334672297de2e",
+    "checkpoint_prefix": "checkpoints/artifacts/6135c59876e32a5cee97776c81a542cb7f2d5a7ef4a2bd92e077ae4ee17dc68f/"
+  },
+  "operational_notes": [
+    "A first execution attempt stopped before fitting because the isolated checkout lacked private data and parent artifacts; the root cause was diagnosed before retry.",
+    "A second execution attempt stopped before fitting because the isolated checkout lacked the private aggregate market-path report required to verify the sealed parent; no unchanged retry was made.",
+    "The successful isolated runtime mounted private data, parent artifact directories, and aggregate comparison reports without modifying the original working copy.",
+    "The first-fold gate fit two models and uploaded exact checkpoints. The full continuation reused those two checkpoints and fit only the remaining four models.",
+    "The successful full continuation completed in about 80 seconds of lifecycle time, with 73 seconds inside the study stages, and all six saved models replayed exactly.",
+    "The SageMaker app was stopped after completion; the temporary lifecycle configuration was deleted and the persistent 50 GB space was retained. IAM was not broadened."
+  ],
+  "limitations": [
+    "These are repeatedly inspected development folds, not final-test or leaderboard scores.",
+    "The no-fit structural prior passing its gate did not imply that the fitted models would benefit; the matched fitted ablation is the relevant transfer test.",
+    "Conditional and simultaneous uncertainty intervals condition on the fitted models and do not undo adaptive feature research.",
+    "The final 247 origins remain untouched and no Kaggle submission was made."
+  ]
+}

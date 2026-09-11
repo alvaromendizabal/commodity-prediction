@@ -1,0 +1,96 @@
+{
+  "project": "commodity-prediction",
+  "study": "training_only_metric_aligned_rank_prior_probe",
+  "status": "completed",
+  "source_commit": "9ead2ac8325b87475562daa8a77bac599fdc1bf7",
+  "lineage": "55fb66221db807065ccec0e1d1066487bc2d0b0f44c00f3bd867042c075bb28b",
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "validation_dates": 535,
+  "new_training_fits": 0,
+  "model_loads": 0,
+  "notebook_executions": 0,
+  "probe_elapsed_seconds": 9.692345121000017,
+  "scores": {
+    "raw_mean": {
+      "official_metric": 0.217739151200211,
+      "fold_scores": [0.1625498054219968, 0.1824882692897385, 0.2968612204207786]
+    },
+    "mean_rank": {
+      "official_metric": 0.23612971002256308,
+      "fold_scores": [0.18534698012841433, 0.15391535639561366, 0.3719141913300795]
+    },
+    "diagonal_rank": {
+      "official_metric": 0.24075530656525568,
+      "fold_scores": [0.17728941860008962, 0.15984075944017054, 0.38561135412397274]
+    },
+    "ledoit_rank": {
+      "official_metric": 0.2307289725295179,
+      "fold_scores": [0.17269877351198992, 0.22809452119242057, 0.29801805934853576]
+    }
+  },
+  "decision": {
+    "best_probe": "diagonal_rank",
+    "delta_vs_raw_mean": 0.02301615536504467,
+    "folds_improved_vs_raw_mean": 2,
+    "predeclared_gate_met": true,
+    "advance_to_matched_fitted_ablation": true,
+    "promotion_allowed": false,
+    "reason": "The diagonal rank prior exceeds the predeclared +0.02 pooled threshold and improves two of three folds, so it earns a bounded matched fitted ablation. Its paired uncertainty still includes zero at every tested block length, so this is exploratory evidence rather than established superiority."
+  },
+  "paired_uncertainty_vs_raw_mean": {
+    "10": {
+      "delta": 0.02301615536504467,
+      "conditional_95_interval": [-0.04061770368717289, 0.0890248373170241],
+      "simultaneous_95_interval": [-0.11092552813898296, 0.1569578388690723]
+    },
+    "20": {
+      "delta": 0.02301615536504467,
+      "conditional_95_interval": [-0.03405534564642862, 0.08158804690318688],
+      "simultaneous_95_interval": [-0.11913520012370163, 0.16516751085379097]
+    },
+    "40": {
+      "delta": 0.02301615536504467,
+      "conditional_95_interval": [-0.030486878826776725, 0.07858667465051072],
+      "simultaneous_95_interval": [-0.11739826112245652, 0.16343057185254586]
+    }
+  },
+  "verification": {
+    "rank_prior_contract_tests": "7 passed in 5.82s",
+    "github_quality_run_before_aws": 34560751355,
+    "github_quality_conclusion_before_aws": "success",
+    "private_probe_key": "operations/rank-prior-probe/20260911/probe.json",
+    "private_probe_version": "bFxAdo5gU0lQ72PB.tARg1ho69E9gqXE",
+    "private_probe_sha256": "1e321aca31f0dd15f3cecd69d7a910609848956cc4ab99f963db9eb1ce1dece5",
+    "independent_reproduction": {
+      "source_commit": "9ead2ac8325b87475562daa8a77bac599fdc1bf7",
+      "rank_prior_contract_tests": "7 passed in 5.64s",
+      "probe_elapsed_seconds": 9.579585135000343,
+      "private_status_key": "operations/rank-prior-probe/9ead2ac8325b/status.json",
+      "private_probe_key": "operations/rank-prior-probe/9ead2ac8325b/rank_prior_probe.json",
+      "private_probe_version": "IycxQAfhUnrSyn_DKNjM9kDRdF5BL1W2",
+      "private_probe_sha256": "9afa309ef543d13ac0748ac49fe2eb5bd67fb45cfbcad65d005bbd0fcc7be066",
+      "private_lineage_key": "operations/rank-prior-probe/9ead2ac8325b/rank_prior_probe_lineage.json",
+      "private_lineage_version": "fVd_MtfBJqq4e4T1J9VWOBCqQW9HD3nK",
+      "private_lineage_sha256": "50f0a26be79cdd73df903b3b64a3bb1559d5e7f1140dcb18e3e588a9a180385b",
+      "exact_score_parity": true,
+      "new_training_fits": 0,
+      "final_test_evaluations": 0,
+      "app_shutdown_verified": true,
+      "temporary_lifecycle_removed": true
+    }
+  },
+  "operational_notes": [
+    "An initial lifecycle-config API request supplied raw script content where the API required encoded content; SageMaker rejected it before compute was started.",
+    "Two subsequent JupyterLab starts reached InService without running the intended lifecycle because attaching the lifecycle to the user profile alone did not make it the private space default. Both apps were stopped immediately and produced no probe receipt or model fit.",
+    "The root cause was fixed by temporarily setting the existing space JupyterLab DefaultResourceSpec LifecycleConfigArn, then launching from that space default. That run produced the expected heartbeats and probe receipt.",
+    "A later independent reproduction first failed before tests because a fresh no-checkout clone was checked for dirtiness before its pinned commit was checked out. The corrected startup checked out the pinned commit first, then verified cleanliness; no failed attempt fit a model or evaluated the final test.",
+    "After successful read-back verification, the app was stopped, the one-time lifecycle was detached/deleted, and the 50 GB persistent space was retained. IAM was not broadened."
+  ],
+  "limitations": [
+    "These are repeatedly inspected development folds, not final-test or leaderboard scores.",
+    "The probe is a fixed cross-target ordering, not a fitted forecasting model.",
+    "The advancement gate was predeclared, but the paired uncertainty intervals still include zero.",
+    "The final 247 origins remain untouched."
+  ]
+}

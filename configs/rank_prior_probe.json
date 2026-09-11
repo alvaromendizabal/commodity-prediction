@@ -1,0 +1,14 @@
+{
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "study_kind": "training_only_metric_aligned_rank_prior_probe",
+  "max_run_seconds": 120,
+  "heartbeat_seconds": 15,
+  "methods": [
+    "raw_mean",
+    "mean_rank",
+    "diagonal_rank",
+    "ledoit_rank"
+  ],
+  "decision_rule": "Advance metric-aligned rank priors to matched feature fits only if a rank method improves pooled development score over raw_mean by at least 0.02 and improves at least two of three folds; otherwise preserve the negative probe and move to a distinct representation hypothesis."
+}

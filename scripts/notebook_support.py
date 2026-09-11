@@ -143,14 +143,25 @@ def show_figure(fig, root: Path, name: str, height: int = 540) -> None:
     fig.update_yaxes(gridcolor="#E3E9F0", zerolinecolor="#9EAFBF")
     output = root / "reports/figures"
     output.mkdir(parents=True, exist_ok=True)
-    png = fig.to_image(format="png", scale=1.5)
-    (output / f"{name}.png").write_bytes(png)
-    fig.write_html(output / f"{name}.html", include_plotlyjs="cdn")
-    display(
-        {
-            "application/vnd.plotly.v1+json": json.loads(fig.to_json()),
-            "image/png": base64.b64encode(png).decode(),
-            "text/plain": str(fig.layout.title.text),
-        },
-        raw=True,
-    )
+    png_path = output / f"{name}.png"
+    svg_path = output / f"{name}.svg"
+    html_path = output / f"{name}.html"
+    fig.write_html(html_path, include_plotlyjs="cdn")
+    png = None
+    if os.environ.get("COMMODITY_SKIP_PNG_RENDER") != "1":
+        try:
+            png = fig.to_image(format="png", scale=1.5)
+            png_path.write_bytes(png)
+        except Exception:
+            png = None
+    if png is None and png_path.exists() and png_path.stat().st_size > 1000:
+        png = png_path.read_bytes()
+    bundle = {
+        "application/vnd.plotly.v1+json": json.loads(fig.to_json()),
+        "text/plain": str(fig.layout.title.text),
+    }
+    if png is not None:
+        bundle["image/png"] = base64.b64encode(png).decode()
+    elif svg_path.exists() and svg_path.stat().st_size > 1000:
+        bundle["image/svg+xml"] = svg_path.read_text()
+    display(bundle, raw=True)
