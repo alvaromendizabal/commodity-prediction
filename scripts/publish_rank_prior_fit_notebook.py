@@ -27,11 +27,11 @@ def write_static_svg(root: Path, scores: dict) -> Path:
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
         '<rect width="100%" height="100%" fill="#FAFBFD"/>',
-        '<style>text{font-family:Arial,sans-serif;fill:#20334D}.title{font-size:23px;font-weight:600}.label{font-size:14px}.value{font-size:15px;font-weight:600}.axis{font-size:13px}</style>',
+        "<style>text{font-family:Arial,sans-serif;fill:#20334D}.title{font-size:23px;font-weight:600}.label{font-size:14px}.value{font-size:15px;font-weight:600}.axis{font-size:13px}</style>",
         '<text x="40" y="42" class="title">Diagonal target-rank prior does not improve the matched fitted controls</text>',
-        f'<line x1="{left}" y1="{top + plot_h}" x2="{width-right}" y2="{top + plot_h}" stroke="#9EAFBF" stroke-width="1"/>',
-        f'<line x1="{left}" y1="{y_leader:.2f}" x2="{width-right}" y2="{y_leader:.2f}" stroke="#8070A6" stroke-width="2" stroke-dasharray="7 5"/>',
-        f'<text x="{width-right-180}" y="{y_leader-8:.2f}" class="axis">Current fitted leader</text>',
+        f'<line x1="{left}" y1="{top + plot_h}" x2="{width - right}" y2="{top + plot_h}" stroke="#9EAFBF" stroke-width="1"/>',
+        f'<line x1="{left}" y1="{y_leader:.2f}" x2="{width - right}" y2="{y_leader:.2f}" stroke="#8070A6" stroke-width="2" stroke-dasharray="7 5"/>',
+        f'<text x="{width - right - 180}" y="{y_leader - 8:.2f}" class="axis">Current fitted leader</text>',
     ]
     palette = ["#1F6C99", "#27A394", "#EDAF43", "#D76C64"]
     for index, (name, value) in enumerate(zip(names, values, strict=True)):
@@ -50,7 +50,7 @@ def write_static_svg(root: Path, scores: dict) -> Path:
         [
             f'<text x="25" y="{top + plot_h / 2}" transform="rotate(-90 25 {top + plot_h / 2})" text-anchor="middle" class="axis">Official development metric</text>',
             '<text x="40" y="475" class="axis">Source: verified 535-date development evaluation; final 247 origins untouched.</text>',
-            '</svg>',
+            "</svg>",
         ]
     )
     output = root / "reports/figures/rank_prior_fit_scores.svg"
