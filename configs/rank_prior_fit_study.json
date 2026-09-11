@@ -1,0 +1,20 @@
+{
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "study_kind": "matched_training_only_diagonal_rank_feature_ablation",
+  "parent_market_path_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "parent_rank_probe_lineage": "55fb66221db807065ccec0e1d1066487bc2d0b0f44c00f3bd867042c075bb28b",
+  "variants": ["rank_tail", "rank_current_market"],
+  "matched_controls": {
+    "rank_tail": "admitted_tail",
+    "rank_current_market": "current_market"
+  },
+  "max_new_fits": 6,
+  "probe_fits": 2,
+  "max_run_seconds": 180,
+  "heartbeat_seconds": 15,
+  "residual_weight": 1.0,
+  "first_fold_stop_margin": 0.03,
+  "final_test_start_date_id": 1714,
+  "decision_rule": "Continue from the two-fit first-fold smoke only if at least one rank-augmented variant is no worse than its matched frozen control by more than 0.03. On all three folds, retain the diagonal-rank feature family as promising only if its matched pooled delta is positive and at least two fold deltas are positive; report 10/20/40-date paired uncertainty and do not promote a model when intervals include zero."
+}
