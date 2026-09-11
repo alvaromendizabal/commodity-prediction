@@ -8,7 +8,10 @@ import numpy as np
 import pandas as pd
 from sklearn.covariance import LedoitWolf
 
+from commodity_prediction.domain.catalog import Panel
+
 SENTINEL = -999999
+RANK_TEMPLATE = "rank_prior__diagonal"
 
 
 def _clean(y: pd.DataFrame) -> pd.DataFrame:
@@ -85,6 +88,30 @@ def constant_prediction(index: pd.Index, columns: pd.Index, scores: pd.Series) -
         raise ValueError("Constant cross-target ordering cannot be evaluated")
     values = np.broadcast_to(aligned.to_numpy(dtype=float), (len(index), len(columns))).copy()
     return pd.DataFrame(values, index=index, columns=columns)
+
+
+def append_diagonal_rank(panel: Panel, training_labels: pd.DataFrame) -> Panel:
+    """Append one fold-local target-ordering template estimated from training labels only."""
+    if list(training_labels.columns) != panel.targets:
+        raise ValueError("Rank-prior training labels must match the panel target order")
+    if RANK_TEMPLATE in panel.names:
+        raise ValueError("Diagonal-rank template is already present")
+    scores = diagonal_rank_scores(training_labels).reindex(panel.targets)
+    if scores.isna().any():
+        raise ValueError("Diagonal-rank target schema differs from the panel")
+    values = np.broadcast_to(
+        scores.to_numpy(dtype=np.float32)[None, :, None],
+        (len(panel.dates), len(panel.targets), 1),
+    ).copy()
+    result = Panel(
+        np.concatenate([panel.values, values], axis=2),
+        list(panel.dates),
+        list(panel.targets),
+        [*panel.names, RANK_TEMPLATE],
+        dict(panel.source_series),
+    )
+    result.validate()
+    return result
 
 
 def probe_methods() -> dict[str, Callable[[pd.DataFrame], pd.Series]]:
