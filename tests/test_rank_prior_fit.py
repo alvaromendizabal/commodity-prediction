@@ -10,7 +10,11 @@ import pandas as pd
 
 from commodity_prediction.domain.catalog import Panel
 from commodity_prediction.domain.rank_prior_fit.features import RANK_TEMPLATE, append_diagonal_rank
-from commodity_prediction.domain.rank_prior_fit.run import VARIANTS, declared_comparisons, study_lineage
+from commodity_prediction.domain.rank_prior_fit.run import (
+    VARIANTS,
+    declared_comparisons,
+    study_lineage,
+)
 
 
 def panel(rows: int = 180, targets: int = 12) -> Panel:
