@@ -10,6 +10,57 @@ import nbformat
 MARKER = "rank_prior_fit_evidence"
 
 
+def write_static_svg(root: Path, scores: dict) -> Path:
+    """Write a deterministic browser-independent static view of the four fitted scores."""
+    names = ["admitted_tail", "admitted_tail_rank", "current_market", "current_market_rank"]
+    values = [float(scores[name]["official_metric"]) for name in names]
+    width, height = 1120, 500
+    left, right, top, bottom = 110, 50, 85, 115
+    plot_w, plot_h = width - left - right, height - top - bottom
+    lo = min(values) - 0.004
+    hi = max(values) + 0.004
+    span = hi - lo
+    bar_w = 150
+    gap = (plot_w - len(values) * bar_w) / (len(values) + 1)
+    leader = float(scores["current_market"]["official_metric"])
+    y_leader = top + plot_h * (hi - leader) / span
+    parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        '<rect width="100%" height="100%" fill="#FAFBFD"/>',
+        '<style>text{font-family:Arial,sans-serif;fill:#20334D}.title{font-size:23px;font-weight:600}.label{font-size:14px}.value{font-size:15px;font-weight:600}.axis{font-size:13px}</style>',
+        '<text x="40" y="42" class="title">Diagonal target-rank prior does not improve the matched fitted controls</text>',
+        f'<line x1="{left}" y1="{top + plot_h}" x2="{width-right}" y2="{top + plot_h}" stroke="#9EAFBF" stroke-width="1"/>',
+        f'<line x1="{left}" y1="{y_leader:.2f}" x2="{width-right}" y2="{y_leader:.2f}" stroke="#8070A6" stroke-width="2" stroke-dasharray="7 5"/>',
+        f'<text x="{width-right-180}" y="{y_leader-8:.2f}" class="axis">Current fitted leader</text>',
+    ]
+    palette = ["#1F6C99", "#27A394", "#EDAF43", "#D76C64"]
+    for index, (name, value) in enumerate(zip(names, values, strict=True)):
+        x = left + gap * (index + 1) + bar_w * index
+        y = top + plot_h * (hi - value) / span
+        h = top + plot_h - y
+        display_name = name.replace("_", " ")
+        parts.extend(
+            [
+                f'<rect x="{x:.2f}" y="{y:.2f}" width="{bar_w}" height="{h:.2f}" rx="4" fill="{palette[index]}"/>',
+                f'<text x="{x + bar_w / 2:.2f}" y="{y - 10:.2f}" text-anchor="middle" class="value">{value:.4f}</text>',
+                f'<text x="{x + bar_w / 2:.2f}" y="{top + plot_h + 30}" text-anchor="middle" class="label">{display_name}</text>',
+            ]
+        )
+    parts.extend(
+        [
+            f'<text x="25" y="{top + plot_h / 2}" transform="rotate(-90 25 {top + plot_h / 2})" text-anchor="middle" class="axis">Official development metric</text>',
+            '<text x="40" y="475" class="axis">Source: verified 535-date development evaluation; final 247 origins untouched.</text>',
+            '</svg>',
+        ]
+    )
+    output = root / "reports/figures/rank_prior_fit_scores.svg"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text("\n".join(parts) + "\n")
+    if output.stat().st_size <= 1000:
+        raise ValueError("Static rank-prior SVG is unexpectedly small")
+    return output
+
+
 def publication_cells(root: Path) -> list[nbformat.NotebookNode]:
     report = json.loads((root / "reports/rank_prior_fit_execution.json").read_text())
     if report["status"] != "completed" or report["holdout_evaluated"]:
@@ -78,6 +129,7 @@ def main() -> None:
     notebook.cells = [cell for cell in notebook.cells if not cell.metadata.get(MARKER)]
     notebook.cells.extend(publication_cells(root))
     report = json.loads((root / "reports/rank_prior_fit_execution.json").read_text())
+    write_static_svg(root, report["scores"])
     notebook.metadata["rank_prior_fit_lineage"] = report["lineage"]
     nbformat.validate(notebook)
     temporary = path.with_suffix(".ipynb.tmp")
@@ -89,6 +141,7 @@ def main() -> None:
                 "notebook": str(path.relative_to(root)),
                 "lineage": report["lineage"],
                 "evidence_cells": sum(bool(cell.metadata.get(MARKER)) for cell in notebook.cells),
+                "static_svg": "reports/figures/rank_prior_fit_scores.svg",
             },
             sort_keys=True,
         )
