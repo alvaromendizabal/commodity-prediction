@@ -142,3 +142,76 @@ def test_invalid_ohlc_and_negative_volume_remain_missing():
     a, names, _ = feature_block(x, pairs, "normalized_joint")
     assert np.isnan(a[50, 2, names.index("market_normalization__intraday_difference")])
     assert np.isnan(a[51, 2, names.index("market_normalization__direction_volume_difference")])
+
+
+@pytest.mark.parametrize("bad", [np.inf, -np.inf, np.nan])
+def test_nonfinite_volume_cannot_become_clipped_confirmation(bad):
+    x, _ = market()
+    x.loc[50, "US_A_adj_volume"] = bad
+    channels = asset_channels(x, ["US_A_adj_close"])
+    for channel in ["direction_volume", "location_volume", "range_volume"]:
+        assert np.isnan(channels[channel].loc[50, "US_A_adj_close"])
+    assert np.isfinite(channels["intraday"].loc[50, "US_A_adj_close"])
+
+
+@pytest.mark.parametrize("field", ["close", "open", "high", "low"])
+def test_infinite_price_is_missing_before_any_clipping(field):
+    x, _ = market()
+    x.loc[50, "US_A_adj_" + field] = np.inf
+    channels = asset_channels(x, ["US_A_adj_close"])
+    for frame in channels.values():
+        assert np.isnan(frame.loc[50, "US_A_adj_close"])
+
+
+def test_invalid_previous_close_cannot_become_extreme_overnight_signal():
+    x, _ = market()
+    x.loc[49, "US_A_adj_close"] = np.inf
+    channels = asset_channels(x, ["US_A_adj_close"])
+    assert np.isnan(channels["overnight"].loc[50, "US_A_adj_close"])
+
+
+def test_duplicate_input_columns_are_rejected():
+    x, pairs = market()
+    ambiguous = pd.concat([x, x[["US_A_adj_volume"]]], axis=1)
+    with pytest.raises(ValueError, match="unique input columns"):
+        feature_block(ambiguous, pairs, "normalized_joint")
+
+
+@pytest.mark.parametrize("column", ["target", "pair", "lag"])
+def test_missing_target_metadata_is_rejected(column):
+    x, pairs = market()
+    with pytest.raises(ValueError, match="Target metadata"):
+        feature_block(x, pairs.drop(columns=column), "normalized_price")
+
+
+def test_empty_target_metadata_is_rejected():
+    x, pairs = market()
+    with pytest.raises(ValueError, match="Target metadata"):
+        feature_block(x, pairs.iloc[:0], "normalized_price")
+
+
+@pytest.mark.parametrize("lag", [0, 5, 1.5, np.nan])
+def test_unsupported_target_horizons_are_rejected(lag):
+    x, pairs = market()
+    pairs["lag"] = pairs["lag"].astype(float)
+    pairs.loc[0, "lag"] = lag
+    with pytest.raises(ValueError, match="Target metadata"):
+        feature_block(x, pairs, "normalized_price")
+
+
+def test_streaming_prefix_matches_full_history_at_each_origin():
+    x, pairs = market()
+    full, _, _ = feature_block(x, pairs, "normalized_joint")
+    for stop in [30, 51, 62, 90]:
+        prefix, _, _ = feature_block(x.iloc[:stop], pairs, "normalized_joint")
+        np.testing.assert_array_equal(prefix[-1], full[stop - 1])
+
+
+def test_partial_pair_applicability_does_not_fill_observed_missingness():
+    x, pairs = market()
+    pairs = pairs.iloc[:1].copy()
+    pairs.loc[0, "pair"] = "US_A_adj_close - FX_AB"
+    x.loc[50, "US_A_adj_open"] = np.nan
+    values, names, _ = feature_block(x, pairs, "normalized_joint")
+    assert values[50, 0, names.index("market_normalization__price_applicable_legs")] == 1
+    assert np.isnan(values[50, 0, names.index("market_normalization__intraday_difference")])

@@ -1,27 +1,37 @@
 {
-  "aws_experiment_executed": false,
-  "blocker": "AWS launch request was blocked by the connected tool safety check before AWS API execution; no new model score or EBS synchronization is claimed.",
-  "feature_gate": "open",
-  "format": "passed",
-  "holdout_evaluated": false,
-  "lint": "passed",
-  "new_training_fits": 0,
   "project": "commodity-prediction",
+  "study": "market_normalization",
+  "utc": "2026-09-11T19:41:21.539855+00:00",
+  "status": "adversarial_feature_tests_passed_locally_awaiting_integrated_ci",
+  "source_parent_commit": "2241c6a3b5c98d8c55d2049201958ff7f7e14029",
   "source_hashes": {
     "src/commodity_prediction/domain/market_normalization/__init__.py": "d9ec7fc2a95c3cbeb9f4b8a07cddb1a008cc5af172189ba022c252b32f9f68e8",
-    "src/commodity_prediction/domain/market_normalization/features.py": "283610238ede856016c310153657479b05834479798246f6f1768779e2660533",
     "src/commodity_prediction/domain/market_normalization/run.py": "67040825d9379b2f13bc4b1dac346b0955a55b0d7564c672fdbaae8a7d3c34f4",
-    "tests/test_market_normalization.py": "110d57e3ae7fd0c2dcb888e785a3a4a2f47b5c06a683f2c079b4c7378347b646"
+    "src/commodity_prediction/domain/market_normalization/features.py": "574f612b365fe33d8d74bbf787dd57e04d170c10ae23d9c2fc697d3f4523119b",
+    "tests/test_market_normalization.py": "457471d65cd599f21f2528a0fda1ad84a68913a7dc3f58a25bd6c258a52f47c5"
   },
-  "source_parent_commit": "48180c7e1f1db6a92e383061805f52de07306543",
-  "status": "source_preflight_passed",
-  "study": "market_normalization",
-  "tests": {
-    "errors": 0,
-    "failures": 0,
-    "skipped": 0,
-    "tests": 11
-  },
-  "typecheck": "passed",
-  "utc": "2026-09-11T05:47:53.994228+00:00"
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "new_training_fits": 0,
+  "aws_experiment_executed": false,
+  "ebs_source_synchronized": false,
+  "blocker": "AWS read action returned Resource not found; rediscovery exposed no AWS execution action in this session. Live space/S3 status not verified.",
+  "local_environment": {"python": "3.13.5", "numpy": "2.3.5", "pandas": "2.2.3", "pytest": "9.0.2"},
+  "validation_scope": "Synthetic adversarial feature tests only. Pinned project environment and full integration remain CI gates; no private-data performance claim.",
+  "local_tests": {"tests": 30, "failures": 0, "errors": 0, "skipped": 0, "pytest_seconds": 0.65},
+  "parent_against_expanded_suite": {"tests": 30, "failures": 12, "passed": 18, "pytest_seconds": 1.24},
+  "previous_test_count": 11,
+  "added_test_cases": 19,
+  "clean_synthetic_parity": {"variants": 3, "exact_equal_including_nan": true, "max_absolute_difference": 0.0},
+  "unchanged": {"model_settings": true, "parent_modules": true, "experiment_config": true, "new_template_counts": [7, 7, 14], "first_fold_fits": 3, "max_new_fits": 9, "max_cumulative_study_seconds": 300},
+  "lint": "not_run_locally; enforced by integrated CI",
+  "format": "not_run_locally; enforced by integrated CI",
+  "typecheck": "not_run_locally; enforced by integrated CI",
+  "previous_preflight": {"commit": "e0ed23882a76221da878063ff32518c326b69c57", "source_workflow": 34567325886, "integrated_workflow": 34567435319, "main_workflow": 34567871121, "verified_main_conclusion": "success", "feature_test_count": 11},
+  "limitations": [
+    "No verified Commodity score of 0.62 was identified in the inspected execution reports.",
+    "No private normalization experiment ran; current recorded fitted leader remains 0.3097087232124053.",
+    "Prior AWS safety blocks were not bypassed.",
+    "No claim that competition data actually contain the synthetic invalid observations."
+  ]
 }
