@@ -1,0 +1,79 @@
+{
+  "project": "commodity-prediction",
+  "study": "matched_four_date_ohlc_activity_paths",
+  "status": "completed",
+  "observed_utc": "2026-09-11T03:45:28.412548+00:00",
+  "lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "validation_dates": 535,
+  "final_test_start_date_id": 1714,
+  "contract_tests": "18 passed in 28.04s",
+  "first_fold_probe": {
+    "fits_completed": 4,
+    "continue_allowed": true,
+    "maximum_prediction_replay_error": 0.0,
+    "cumulative_study_seconds_after_probe": 72.17461532199991
+  },
+  "full_study": {
+    "new_fitted_models": 12,
+    "probe_fits_reused": 4,
+    "fits_this_invocation": 8,
+    "model_checkpoints_replayed": 12,
+    "checkpoint_count": 13,
+    "maximum_prediction_replay_error": 0.0,
+    "joint_comparison_count": 274
+  },
+  "selection_counts_by_fold": {
+    "current_market": {
+      "fold_0": {"candidate": 87, "retained": 82, "rejected": 5, "reasons": {"duplicate": 5}},
+      "fold_1": {"candidate": 87, "retained": 82, "rejected": 5, "reasons": {"duplicate": 5}},
+      "fold_2": {"candidate": 87, "retained": 82, "rejected": 5, "reasons": {"duplicate": 5}}
+    },
+    "price_path": {
+      "fold_0": {"candidate": 105, "retained": 102, "rejected": 3, "reasons": {"duplicate": 3}},
+      "fold_1": {"candidate": 105, "retained": 102, "rejected": 3, "reasons": {"duplicate": 3}},
+      "fold_2": {"candidate": 105, "retained": 102, "rejected": 3, "reasons": {"duplicate": 3}}
+    },
+    "activity_path": {
+      "fold_0": {"candidate": 87, "retained": 86, "rejected": 1, "reasons": {"duplicate": 1}},
+      "fold_1": {"candidate": 87, "retained": 86, "rejected": 1, "reasons": {"duplicate": 1}},
+      "fold_2": {"candidate": 87, "retained": 86, "rejected": 1, "reasons": {"duplicate": 1}}
+    },
+    "joint_path": {
+      "fold_0": {"candidate": 123, "retained": 118, "rejected": 5, "reasons": {"duplicate": 5}},
+      "fold_1": {"candidate": 123, "retained": 118, "rejected": 5, "reasons": {"duplicate": 5}},
+      "fold_2": {"candidate": 123, "retained": 118, "rejected": 5, "reasons": {"duplicate": 5}}
+    }
+  },
+  "operational_failures_before_success": [
+    {
+      "stage": "preserve_local_formatting",
+      "new_fits": 0,
+      "cause": "The managed SageMaker role could read the operational object but not a pinned object version because s3:GetObjectVersion was not allowed.",
+      "resolution": "Did not broaden IAM. Used the independently SHA-256-verified current operational object instead."
+    },
+    {
+      "stage": "first_fold_four_fits",
+      "new_fits": 0,
+      "cause": "The ignored logs directory did not exist when the external supervisor tried to open market_path_probe_supervisor.log.",
+      "resolution": "Created only the missing ignored logs directory in a bounded no-training startup, stopped the app, then reran the unchanged tested probe."
+    }
+  ],
+  "private_evidence": {
+    "probe_status": "s3://sagemaker-commodity-prediction-560403859723-us-west-2/operations/market-path/first-fold-20260911/status.json",
+    "full_status": "s3://sagemaker-commodity-prediction-560403859723-us-west-2/operations/market-path/full-study-20260911/status.json",
+    "full_study": "s3://sagemaker-commodity-prediction-560403859723-us-west-2/operations/market-path/full-study-20260911/study.json",
+    "full_lineage": "s3://sagemaker-commodity-prediction-560403859723-us-west-2/operations/market-path/full-study-20260911/lineage.json",
+    "run_log": "s3://sagemaker-commodity-prediction-560403859723-us-west-2/operations/market-path/full-study-20260911/run.log"
+  },
+  "compute_cleanup": {
+    "app_status_verified_after_study": "Deleted",
+    "one_time_market_path_lifecycle_configs_deleted": 4,
+    "persistent_space_preserved": true,
+    "persistent_ebs_gb": 50
+  },
+  "new_historical_fits": 0,
+  "notebook_executions": 0,
+  "final_test_evaluations": 0
+}
