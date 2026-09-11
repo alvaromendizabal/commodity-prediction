@@ -1,0 +1,20 @@
+{
+  "study": "current_market_causal_normalization_and_volume_confirmation",
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "variants": ["normalized_price", "volume_confirmation", "normalized_joint"],
+  "max_new_fits": 9,
+  "max_run_seconds": 300,
+  "first_fold_new_fits": 3,
+  "first_fold_minimum_gain": 0.002,
+  "first_fold_gate": "Continue only when at least one variant improves its frozen current_market control by at least 0.002 and every dependency, screening, replay and timing check passes. Otherwise stop this formulation without claiming all periods were tested.",
+  "first_fold_review_required": true,
+  "candidate_templates": {"normalized_price": 7, "volume_confirmation": 7, "normalized_joint": 14},
+  "history_window": 21,
+  "minimum_history": 14,
+  "market_baseline_delay": 1,
+  "labels_used_for_new_features": false,
+  "final_test_start_date_id": 1714,
+  "model_policy": "Frozen histogram settings and admitted preprocessing policy. Reuse and replay saved current_market controls; no hyperparameter tuning, control refits, GPU or final-test access."
+}
