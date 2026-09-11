@@ -1,0 +1,13 @@
+{
+  "parent_lineage": "1022e7104cdf9c1bc3bdd40722b33d392a44b699a38a9ca714d2cce1aad6884b",
+  "feature_gate": "open",
+  "max_new_fits": 12,
+  "max_run_seconds": 300,
+  "study_kind": "matched_four_date_ohlc_activity_paths",
+  "frozen_control": "admitted_tail",
+  "probe_fits": 4,
+  "stop_if_all_first_fold_deltas_below": -0.10,
+  "input_rows": 1709,
+  "final_test_start": 1714,
+  "model_policy": "Existing fixed histogram settings, residual weight one, all training-usable nonduplicate columns. No hyperparameter sweep."
+}

@@ -1,0 +1,47 @@
+name: Market path evidence maintenance
+on:
+  push:
+    branches: [feat/market-path-research]
+permissions:
+  contents: write
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --extra dev
+      - name: Format only the new unfrozen research files
+        run: |
+          uv run --frozen python -m ruff check --fix scripts/prepare_current_workspace.py scripts/maintain_market_path.py tests/test_current_workspace.py tests/test_market_path.py src/commodity_prediction/domain/market_path
+          uv run --frozen python -m ruff format scripts/prepare_current_workspace.py scripts/maintain_market_path.py tests/test_current_workspace.py tests/test_market_path.py src/commodity_prediction/domain/market_path
+      - name: Test new contracts and no-refit recovery
+        run: uv run --frozen python -m pytest -q tests/test_current_workspace.py tests/test_market_path.py
+      - name: Update only documented aggregate evidence
+        run: uv run --frozen python scripts/maintain_market_path.py
+      - name: Commit the verified formatting and evidence update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add AGENTS.md README.md docs/market-path-research.md notebooks/02_feature_research.ipynb scripts/prepare_current_workspace.py scripts/maintain_market_path.py tests/test_current_workspace.py tests/test_market_path.py src/commodity_prediction/domain/market_path
+          if ! git diff --cached --quiet; then
+            git commit -m 'Maintain tested market-path source and canonical research evidence'
+            git push origin HEAD:feat/market-path-research
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: commodity-research-source
+          retention-days: 7
+          path: |
+            src/
+            scripts/
+            tests/
+            configs/
+            reports/
+            pyproject.toml
+            uv.lock
+            AGENTS.md
+            docs/market-path-research.md
