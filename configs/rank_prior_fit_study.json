@@ -1,0 +1,20 @@
+{
+  "parent_market_path_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "probe_lineage": "55fb66221db807065ccec0e1d1066487bc2d0b0f44c00f3bd867042c075bb28b",
+  "feature_gate": "open",
+  "max_new_fits": 6,
+  "probe_fits": 2,
+  "max_run_seconds": 180,
+  "input_rows": 1709,
+  "final_test_start": 1714,
+  "variants": [
+    "admitted_tail_rank",
+    "current_market_rank"
+  ],
+  "matched_controls": {
+    "admitted_tail_rank": "admitted_tail",
+    "current_market_rank": "current_market"
+  },
+  "first_fold_stop_if_both_below_control_by": -0.03,
+  "model_policy": "Existing fixed pooled histogram settings, residual weight one, all training-usable nonduplicate columns. Diagonal rank is estimated independently inside each fold from that fold's training labels only. No covariance tuning, hyperparameter sweep, final-test access, or control refit."
+}
