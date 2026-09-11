@@ -32,6 +32,23 @@ Advance this family to matched fitted-feature ablations only if a rank method im
 
 The probe performs **zero model fits**, has a 120-second hard limit and 15-second heartbeats, writes aggregate reports only, and preserves the final-test gate. A favorable point estimate remains exploratory because these development folds have already informed extensive prior research.
 
+## Measured no-fit probe
+
+The AWS probe completed in **9.692 seconds** after the branch Quality gate passed. It performed zero training fits, loaded zero models, executed no notebooks, and did not evaluate the final 247 origins.
+
+| Prior | Official metric | Fold 1 | Fold 2 | Fold 3 |
+|---|---:|---:|---:|---:|
+| raw_mean | 0.217739 | 0.162550 | 0.182488 | 0.296861 |
+| mean_rank | 0.236130 | 0.185347 | 0.153915 | 0.371914 |
+| **diagonal_rank** | **0.240755** | **0.177289** | 0.159841 | **0.385611** |
+| ledoit_rank | 0.230729 | 0.172699 | **0.228095** | 0.298018 |
+
+`diagonal_rank` improves the pooled metric over `raw_mean` by **+0.023016** and improves folds 1 and 3, so it meets the predeclared advancement gate. This is an information-gain decision, not model promotion. The paired conditional 95% interval for the diagonal contrast still crosses zero at all tested block sizes: 10 dates `[-0.040618, 0.089025]`, 20 dates `[-0.034055, 0.081588]`, and 40 dates `[-0.030487, 0.078587]`. Simultaneous intervals also include zero.
+
+**Decision:** advance only the diagonal rank direction to a small matched fitted ablation. Do not tune the covariance methods or reinterpret this no-fit control as a forecasting model. Preserve `current_market` at 0.309709 as the highest reproduced fitted development point estimate until a matched fitted rank-prior experiment actually exceeds it under the same frozen design.
+
+Public execution evidence is in `reports/rank_prior_probe_execution.json`; private aggregate probe/lineage/log receipts remain under `s3://sagemaker-commodity-prediction-560403859723-us-west-2/operations/rank-prior-probe/20260911/`.
+
 ## Broader feature-research backlog
 
 The current code already represents return lags 0/1/2/5, risk-scaled returns, trend/path summaries, activity, OHLC/intraday structure, asynchrony, factor-relative innovations, macro links, FX graph structure, contract-basis proxies, pair dynamics, released priors, horizon structure, latent factors, short released own-target context, tested signed peers, and the bounded market-path variants. High-value unresolved directions therefore include training-only target/group structure, market-state normalization of the useful current OHLC/activity block, online adaptation under released labels, ranking-aware objectives, shared raw-input architectures, and externally sourced carry/inventory/macro/weather information only where point-in-time dates, instrument mapping, vintages and data rights can be verified.
