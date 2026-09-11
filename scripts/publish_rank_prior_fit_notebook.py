@@ -88,9 +88,7 @@ def main() -> None:
             {
                 "notebook": str(path.relative_to(root)),
                 "lineage": report["lineage"],
-                "evidence_cells": sum(
-                    bool(cell.metadata.get(MARKER)) for cell in notebook.cells
-                ),
+                "evidence_cells": sum(bool(cell.metadata.get(MARKER)) for cell in notebook.cells),
             },
             sort_keys=True,
         )
