@@ -313,7 +313,9 @@ def run_study(root: Path, fold_limit: int = 1, sync: bool = False) -> dict:
                         not verify_checkpoint(sealed, older["lineage"])
                         or json.loads((sealed / "summary.json").read_text()) != older
                     ):
-                        raise ValueError("Historical comparison evidence differs from its private seal")
+                        raise ValueError(
+                            "Historical comparison evidence differs from its private seal"
+                        )
                     daily.update(
                         {
                             f"{prefix}::{name}": np.asarray(summary["daily_rank_correlations"])
