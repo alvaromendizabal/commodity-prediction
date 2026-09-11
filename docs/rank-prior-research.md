@@ -62,8 +62,25 @@ The experiment is capped at **six new fits** (two variants × three folds) and *
 
 All fitting uses the existing fixed pooled histogram configuration, residual weight one, and the same admitted train-only preprocessing policy. The rank template itself must be admitted; any lineage mismatch, future dependence, missing parent seal, replay difference above `1e-12`, final-boundary change, or cumulative deadline is a hard stop. No covariance search, model hyperparameter tuning, GPU, final-test evaluation, or Kaggle submission is declared.
 
-Primary matched contrasts are `admitted_tail_rank` vs `admitted_tail` and `current_market_rank` vs `current_market`. The combined current-market rank model is also compared with the admitted-tail rank model and historical means. Completed evidence will report all three fold scores, pooled official metric, exact replay, and 10/20/40-date paired conditional and simultaneous uncertainty inside the cumulative adaptive comparison family.
+Primary matched contrasts are `admitted_tail_rank` vs `admitted_tail` and `current_market_rank` vs `current_market`. The combined current-market rank model is also compared with the admitted-tail rank model and historical means.
+
+## Measured fitted transfer test
+
+The first-fold gate fit exactly two models. The diagonal-rank template was admitted in both, both checkpoints replayed exactly, and both predictions tied their matched controls on that fold. The predeclared continuation rule therefore allowed the remaining four fits. The full continuation reused those two checkpoints and fit only folds 2–3 for the same two declared variants. All six saved models replay with maximum absolute prediction difference **0.0**; the study preserves **7 sealed checkpoints** including its summary and expands the joint comparison family to **279 declared contrasts**.
+
+| Fitted representation | Official metric | Fold 1 | Fold 2 | Fold 3 | Delta vs matched control |
+|---|---:|---:|---:|---:|---:|
+| admitted_tail control | 0.305336 | 0.390579 | 0.152341 | 0.399881 | — |
+| admitted_tail + diagonal rank | 0.301772 | 0.390579 | 0.160756 | 0.379391 | **-0.003564** |
+| current_market control | **0.309709** | 0.403381 | 0.167042 | 0.390619 | — |
+| current_market + diagonal rank | 0.307373 | 0.403381 | 0.161112 | 0.388073 | **-0.002335** |
+
+The no-fit prior did **not** transfer into a useful fitted feature. For `admitted_tail_rank` versus its control, the 20-date conditional 95% interval is `[-0.013442, 0.005374]`; for `current_market_rank` versus `current_market`, it is `[-0.008679, 0.003517]`. Both simultaneous intervals are much wider and include zero. The first-fold ties also show why the staged gate matters: the rank feature can be admitted without changing a tree's actual predictions.
+
+**Decision: stop this fitted rank-prior family.** Do not tune the variance floor, covariance method, model hyperparameters, or feature combinations to rescue it on the same repeatedly inspected folds. Preserve the positive no-fit diagnostic and the negative fitted transfer result as separate evidence. `current_market` remains the highest reproduced fitted development point estimate at **0.309709**. Feature engineering remains open, but the next experiment must test a genuinely distinct mechanism.
+
+Public execution evidence is in `reports/rank_prior_fit_execution.json`. Private models, validation predictions, manifests, and the full comparison history remain checksum-pinned under the study lineage in the existing encrypted S3 bucket. The final 247 origins remain untouched.
 
 ## Broader feature-research backlog
 
-The current code already represents return lags 0/1/2/5, risk-scaled returns, trend/path summaries, activity, OHLC/intraday structure, asynchrony, factor-relative innovations, macro links, FX graph structure, contract-basis proxies, pair dynamics, released priors, horizon structure, latent factors, short released own-target context, tested signed peers, and the bounded market-path variants. High-value unresolved directions therefore include training-only target/group structure, market-state normalization of the useful current OHLC/activity block, online adaptation under released labels, ranking-aware objectives, shared raw-input architectures, and externally sourced carry/inventory/macro/weather information only where point-in-time dates, instrument mapping, vintages and data rights can be verified.
+The current code already represents return lags 0/1/2/5, risk-scaled returns, trend/path summaries, activity, OHLC/intraday structure, asynchrony, factor-relative innovations, macro links, FX graph structure, contract-basis proxies, pair dynamics, released priors, horizon structure, latent factors, short released own-target context, tested signed peers, bounded market-path variants, and now a fitted transfer test of stable target-rank priors. High-value unresolved directions therefore include training-only target/group structure beyond a single scalar rank prior, market-state normalization of the useful current OHLC/activity block, leakage-safe online adaptation under released labels, ranking-aware objectives, shared raw-input multi-target architectures, and externally sourced carry/inventory/macro/weather information only where point-in-time dates, instrument mapping, vintages and data rights can be verified.
