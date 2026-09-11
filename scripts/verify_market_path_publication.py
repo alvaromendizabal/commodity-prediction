@@ -43,7 +43,9 @@ def main() -> None:
     assert config["max_run_seconds"] == 300 and config["frozen_control"] == "admitted_tail"
 
     assert publication["new_fitted_models"] == execution["full_study"]["new_fitted_models"] == 12
-    assert publication["fits_this_invocation"] == execution["full_study"]["fits_this_invocation"] == 8
+    assert (
+        publication["fits_this_invocation"] == execution["full_study"]["fits_this_invocation"] == 8
+    )
     assert publication["probe_fits_reused"] == execution["full_study"]["probe_fits_reused"] == 4
     assert publication["model_checkpoints_replayed"] == 12
     assert execution["full_study"]["checkpoint_count"] == 13
