@@ -21,6 +21,8 @@ FLOOR = 1e-6
 
 def asset_channels(x: pd.DataFrame, assets: list[str]) -> dict[str, pd.DataFrame]:
     """Return three normalized price channels and three volume interactions."""
+    if not x.columns.is_unique:
+        raise ValueError("Market observations require unique input columns")
     dates = x.index.to_numpy()
     if (
         len(dates) < WINDOW + 2
@@ -47,8 +49,12 @@ def asset_channels(x: pd.DataFrame, assets: list[str]) -> dict[str, pd.DataFrame
         ]
         if not set(fields).issubset(x.columns):
             continue
-        close = np.log(x[asset].where(x[asset] > 0))
-        opening, high, low = [np.log(x[name].where(x[name] > 0)) for name in fields]
+        # Mask nonfinite raw observations before logs and clipping. Otherwise an
+        # infinite bar can become a finite, saturated signal or contaminate lags.
+        close = np.log(x[asset].where(np.isfinite(x[asset]) & (x[asset] > 0)))
+        opening, high, low = [
+            np.log(x[name].where(np.isfinite(x[name]) & (x[name] > 0))) for name in fields
+        ]
         valid = (
             close.notna()
             & opening.notna()
@@ -75,7 +81,8 @@ def asset_channels(x: pd.DataFrame, assets: list[str]) -> dict[str, pd.DataFrame
         volume_name = stem + ("volume" if us else "Volume")
         if volume_name not in x:
             continue
-        log_volume = np.log1p(x[volume_name].where(x[volume_name] >= 0))
+        volume = x[volume_name]
+        log_volume = np.log1p(volume.where(np.isfinite(volume) & (volume >= 0)))
         history = log_volume.shift(1).rolling(WINDOW, min_periods=MIN_PERIODS)
         baseline = history.median()
         volume_scale = history.std(ddof=0).clip(lower=FLOOR)
@@ -93,6 +100,14 @@ def feature_block(
     x: pd.DataFrame, pairs: pd.DataFrame, variant: str
 ) -> tuple[np.ndarray, list[str], dict]:
     """Project each asset mechanism as directed-pair difference and common sum."""
+    if (
+        pairs.empty
+        or not pairs.columns.is_unique
+        or not {"target", "pair", "lag"}.issubset(pairs.columns)
+        or pairs[["target", "pair", "lag"]].isna().any().any()
+        or not pairs["lag"].isin([1, 2, 3, 4]).all()
+    ):
+        raise ValueError("Target metadata requires nonempty target/pair columns and horizons 1-4")
     if variant not in VARIANTS or pairs.target.duplicated().any():
         raise ValueError("Unknown variant or duplicated target")
     legs = [str(value).split(" - ") for value in pairs.pair]
