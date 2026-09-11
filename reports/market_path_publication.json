@@ -1,0 +1,95 @@
+{
+  "project": "commodity-prediction",
+  "study": "matched_four_date_ohlc_activity_paths",
+  "status": "completed",
+  "lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "source_commit": "8f2c0455f70c1afddead1f667e2d037d41fc7b24",
+  "feature_gate": "open",
+  "holdout_evaluated": false,
+  "validation_dates": 535,
+  "new_fitted_models": 12,
+  "fits_this_invocation": 8,
+  "probe_fits_reused": 4,
+  "model_checkpoints_replayed": 12,
+  "maximum_prediction_replay_error": 0.0,
+  "joint_comparison_count": 274,
+  "scores": {
+    "admitted_tail": {
+      "official_metric": 0.3053356475284676,
+      "fold_scores": [0.3905792906928788, 0.1523414795003661, 0.3998806510721264]
+    },
+    "current_market": {
+      "official_metric": 0.3097087232124053,
+      "fold_scores": [0.40338108742296147, 0.16704165319061334, 0.39061886486364056]
+    },
+    "price_path": {
+      "official_metric": 0.30030837044600683,
+      "fold_scores": [0.39200371579403087, 0.14945211281575305, 0.3849465173419137]
+    },
+    "activity_path": {
+      "official_metric": 0.30791556736804493,
+      "fold_scores": [0.3927733403657301, 0.1627303372869313, 0.39665909907896035]
+    },
+    "joint_path": {
+      "official_metric": 0.29925174187198667,
+      "fold_scores": [0.3920279519965222, 0.13296745314641417, 0.3990229930112519]
+    },
+    "screened_tail": {
+      "official_metric": 0.3090877827229402,
+      "fold_scores": [0.40590097298685235, 0.1548558135530329, 0.4001717417140378]
+    },
+    "tail_states_and_priors": {
+      "official_metric": 0.3091861813700116,
+      "fold_scores": [0.38678367663669233, 0.1785342704730629, 0.38318544789213876]
+    },
+    "short_own": {
+      "official_metric": 0.3088898908988178,
+      "fold_scores": [0.39413862194361016, 0.16677279710729295, 0.39664125107517406]
+    },
+    "historical_mean": {
+      "official_metric": 0.217739151200211,
+      "fold_scores": [0.1625498054219968, 0.1824882692897385, 0.2968612204207786]
+    }
+  },
+  "predeclared_20_date_comparisons": {
+    "current_market_vs_admitted_tail": {
+      "delta": 0.004373075683937688,
+      "conditional_95_interval": [-0.012105292834246129, 0.020290104884475017],
+      "simultaneous_95_interval": [-0.20646984246921057, 0.21521599383708595]
+    },
+    "activity_path_vs_admitted_tail": {
+      "delta": 0.002579919839577338,
+      "conditional_95_interval": [-0.016904296607689974, 0.020282558744304596],
+      "simultaneous_95_interval": [-0.20826299831357092, 0.2134228379927256]
+    },
+    "price_path_vs_admitted_tail": {
+      "delta": -0.005027277082460757,
+      "conditional_95_interval": [-0.03671408905380771, 0.026599901278627158],
+      "simultaneous_95_interval": [-0.21587019523560902, 0.2058156410706875]
+    },
+    "joint_path_vs_admitted_tail": {
+      "delta": -0.006083905656480926,
+      "conditional_95_interval": [-0.04138054873742864, 0.03149180253361231],
+      "simultaneous_95_interval": [-0.2169268238096292, 0.20475901249666734]
+    },
+    "joint_path_vs_current_market": {
+      "delta": -0.010456981340418614,
+      "conditional_95_interval": [-0.047363370450085956, 0.026973281272728612],
+      "simultaneous_95_interval": [-0.22129989949356688, 0.20038593681272965]
+    }
+  },
+  "point_estimate_note": "current_market is the new highest reproduced 535-date development point estimate at 0.3097087232, about +0.000522542 versus the prior 0.3091861814 leader. That cross-study contrast was not predeclared for this experiment and has no new confirmatory interval here.",
+  "decision": "Do not advance the four-date OHLC/activity path expansion unchanged. The single-row current-market block produces the highest reproduced development point estimate (0.309709), but its predeclared gain over the admitted-tail control is small and uncertain; adding prior-day price paths or joint price/activity paths reduces the pooled metric. Retain current OHLC/activity as an exploratory compact lead, keep the feature gate open, and next isolate whether market-state normalization or a shared raw-input architecture can use this information without merely adding chronology.",
+  "private_evidence": {
+    "status_key": "operations/market-path/full-study-20260911/status.json",
+    "study_key": "operations/market-path/full-study-20260911/study.json",
+    "lineage_key": "operations/market-path/full-study-20260911/lineage.json",
+    "run_log_key": "operations/market-path/full-study-20260911/run.log"
+  },
+  "limitations": [
+    "Repeatedly inspected development folds; no final-test origin was evaluated.",
+    "The fixed histogram model tests representation value, not the fifth-place RNN or eighth-place Transformer architecture.",
+    "The new point leader is not a statistically established gain and is not directly comparable with the historical private leaderboard.",
+    "True carry, physical inventory, calendar/vintage macro data, options/order-book signals, and text remain unresolved prerequisites rather than negative experiments."
+  ]
+}
