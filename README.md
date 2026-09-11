@@ -1,5 +1,9 @@
 # Commodity Prediction
 
+## Current market-path research checkpoint
+
+Do not advance the four-date OHLC/activity path expansion unchanged. The single-row current-market block produces the highest reproduced development point estimate (0.309709), but its predeclared gain over the admitted-tail control is small and uncertain; adding prior-day price paths or joint price/activity paths reduces the pooled metric. Retain current OHLC/activity as an exploratory compact lead, keep the feature gate open, and next isolate whether market-state normalization or a shared raw-input architecture can use this information without merely adding chronology. See [measured evidence](reports/market_path_publication.json) and [feature protocol](docs/market-path-research.md).
+
 ## Latest checkpoint: short released-history context
 
 The short released-history study and its AWS notebook publication are complete.

@@ -77,3 +77,25 @@ Implementation and local feature tests are prepared. Actual AWS probe/full-study
 results are separate evidence; no predictive improvement is claimed by this
 protocol. Runtime preparation reused 589 sealed stages and installed the frozen
 independent current-checkout environment without refitting prior models.
+
+## Measured results
+
+## Four-date market-path experiment
+
+Measured on the same 535 purged development origins. These are exploratory offline scores, not leaderboard results.
+
+| Representation | Official metric | Fold 1 | Fold 2 | Fold 3 |
+|---|---:|---:|---:|---:|
+| admitted_tail | 0.305336 | 0.390579 | 0.152341 | 0.399881 |
+| current_market | 0.309709 | 0.403381 | 0.167042 | 0.390619 |
+| price_path | 0.300308 | 0.392004 | 0.149452 | 0.384947 |
+| activity_path | 0.307916 | 0.392773 | 0.162730 | 0.396659 |
+| joint_path | 0.299252 | 0.392028 | 0.132967 | 0.399023 |
+| screened_tail | 0.309088 | 0.405901 | 0.154856 | 0.400172 |
+| tail_states_and_priors | 0.309186 | 0.386784 | 0.178534 | 0.383185 |
+| short_own | 0.308890 | 0.394139 | 0.166773 | 0.396641 |
+| historical_mean | 0.217739 | 0.162550 | 0.182488 | 0.296861 |
+
+Do not advance the four-date OHLC/activity path expansion unchanged. The single-row current-market block produces the highest reproduced development point estimate (0.309709), but its predeclared gain over the admitted-tail control is small and uncertain; adding prior-day price paths or joint price/activity paths reduces the pooled metric. Retain current OHLC/activity as an exploratory compact lead, keep the feature gate open, and next isolate whether market-state normalization or a shared raw-input architecture can use this information without merely adding chronology.
+
+[Full protocol and limitations](../docs/market-path-research.md). No previous model was retrained. The final test remains gated.
