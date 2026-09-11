@@ -89,8 +89,16 @@ def test_fitted_study_is_six_fits_with_only_two_declared_variants():
     ]
 
 
-def test_child_lineage_preserves_market_path_and_probe_parents():
+def test_child_lineage_preserves_market_path_and_probe_parents(monkeypatch):
     root = Path(__file__).resolve().parents[1]
+    initial = json.loads((root / "reports/lineage.json").read_text())
+    initial_id = json.loads((root / "reports/research.json").read_text())["lineage"]
+    # Public CI cannot recompute restricted raw-data hashes. Inject only the
+    # already-recorded initial lineage; every downstream source/config hash is
+    # recomputed normally, matching the established project test boundary.
+    monkeypatch.setattr(
+        "commodity_prediction.studies.run.lineage_for", lambda *_: (initial_id, initial)
+    )
     lineage, evidence = study_lineage(root)
     config = json.loads((root / "configs/rank_prior_fit_study.json").read_text())
     assert len(lineage) == 64
