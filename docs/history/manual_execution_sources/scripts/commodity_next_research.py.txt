@@ -1,0 +1,506 @@
+#!/usr/bin/env python3
+"""Rounds 18/19: released-outcome sequence structure and prequential prior errors.
+
+Prepared for MANUAL execution. No account, network, package, or Git writes.
+This module imports reusable safeguards from the corrected round16/17 helper.
+All future outcome information is excluded by per-target h+1 release shifts.
+"""
+from __future__ import annotations
+import argparse
+from contextlib import contextmanager
+import fcntl
+import gc
+import hashlib
+import json
+import math
+import os
+import shutil
+from pathlib import Path
+import sys
+import time
+import traceback
+import zipfile
+
+import commodity_prior_research as p
+
+ROOT=p.ROOT
+WINDOWS=(21,63,126)
+INFO={
+ 18: {'slug':'sequence_state','notebook':'18_released_sequence_ablation.ipynb',
+      'title':'Released sequence structure: horizon-spaced dependence',
+      'variants':['sequence_clock','sequence_magnitude','sequence_transitions','sequence_joint'],
+      'groups':['clock','magnitude','transitions'],'fold':2},
+ 19: {'slug':'prior_error_memory','notebook':'19_prior_error_memory_ablation.ipynb',
+      'title':'Prior error memory: observable historical bias and error shape',
+      'variants':['error_clock','error_bias','error_dispersion','error_joint'],
+      'groups':['clock','bias','dispersion'],'fold':2},
+}
+FORMS18=('pair_coverage','mean_pair_release_age','lag_correlation','signed_persistence','sequence_innovation',
+         'conditional_sign_response','positive_transition_bias','negative_transition_bias')
+FORMS19=('error_coverage','mean_error_release_age','bias_mean','bias_median','sign_balance',
+         'absolute_error','root_squared_error','large_error_rate')
+DONE={'ROUND_COMPLETE','NOTEBOOK_COMPLETE'}
+
+
+def require(n):
+    if type(n) is not int or n not in INFO:raise p.Stop('Choose round 18 or 19.')
+    return INFO[n]
+
+
+def plan(n):
+    spec=require(n); v=spec['variants']; train,start,stop=p.FOLDS[2]
+    r=dict(round=n,study=spec['slug'],source_commit=p.SHA,parent_lineage=p.PARENT,
+      fold=2,train_stop=train,validation_start=start,validation_stop=stop,validation_origins=175,
+      baseline_score=p.SCORES[2],variants=v,windows=list(WINDOWS),candidate_templates=24,
+      panel_sizes=[6,15,15,24],new_fit_limit=4,worker_limit_seconds=240.0,
+      memory_rss_limit_bytes=p.RAM_LIMIT,threads=4,seed=42,warmup_dates=252,
+      release_delay='per-target h+1',new_control_refits=0,automatic_promotion=False,
+      final_test_evaluations=0,feature_gate='open',other_round_results_used_for_selection=False,
+      selected_new_features='Fixed groups; only training missingness/constant/duplicate screening.',
+      minimum_gain=.002,comparators={v[0]:['current_market'],v[1]:['current_market',v[0]],
+        v[2]:['current_market',v[0]],v[3]:['current_market',v[0],v[1],v[2]]},
+      acceptance='Every declared delta >=0.002; at least one non-clock input admitted for numerical panels; exact replays and integrity checks. Review only.',
+      uncertainty='Paired 10/20/40-origin blocks, conditional on fitted models. No full adaptive-search correction.',
+      model='Original histogram configuration, preprocessing and target scaling; no tuning or online refitting.',
+      validation_scope='Previously inspected last development period, NOT an untouched final holdout.',
+      account_operations=0,network_calls=0,package_installs=0)
+    if n==18:
+        r.update(forms=list(FORMS18),pair_spacing='h origins between outcomes in each serial pair; NOT a claim that the rolling pairs are mutually independent.',
+          paired_moments='Both moments and sign-transition counts use matching finite pairs.',
+          distinction='Ordered serial dependence, unlike unordered event moments in round17.',
+          scale='Sequence innovation divided by the existing causal released risk at prediction time.',
+          prerequisite_new_rounds='The corrected preflight; no score from rounds16/17/19 enters this plan.')
+    else:
+        r.update(forms=list(FORMS19),reference_error='(outcome[s] - released_priors.location_126[s]) / released_priors.risk_126[s], clipped to [-12,12], released at s+h+1.',
+          distinction='Error versus the historical as-of prior at origin s, NOT an in-sample residual of the fitted forecaster.',
+          threshold='Fixed |standardized reference error| > 2; not an optimized alarm threshold.',
+          prerequisite_new_rounds='The corrected preflight; no score from rounds16/17/18 enters this plan.')
+    return r
+
+
+def clean_labels(labels,pairs,*other):
+    import numpy as np
+    y=np.array(labels,dtype=float,copy=True)
+    if y.ndim!=2 or not 1<=len(y)<=1704:raise p.Stop('Expected bounded development outcome matrix.')
+    p.bounded_inputs(np.zeros((*y.shape,1),np.float32),['axis'],pairs,['axis'])
+    for value in other:
+        if np.asarray(value).shape!=y.shape:raise p.Stop('Outcome and reference axes differ.')
+    y[(~np.isfinite(y))|(y==-999999)]=np.nan
+    return y
+
+
+def release_stream(values,pairs):
+    import numpy as np
+    a=np.array(values,float,copy=True); out=np.full_like(a,np.nan)
+    for j,h in enumerate(pairs.lag):
+        delay=int(h)+1
+        if len(a)>delay:out[delay:,j]=a[:-delay,j]
+    return out
+
+
+def clocks(valid,window,minimum):
+    """Coverage plus mean age of actually observed release rows, never magnitudes."""
+    import numpy as np
+    import pandas as pd
+    good=np.asarray(valid,bool); dates=np.arange(len(good),dtype=float)[:,None]
+    cnt=pd.DataFrame(good.astype(float)).rolling(window,min_periods=1).sum().to_numpy(copy=True)
+    stamped=np.where(good,np.broadcast_to(dates,good.shape),np.nan)
+    mean_date=pd.DataFrame(stamped).rolling(window,min_periods=minimum).mean().to_numpy(copy=True)
+    cover=cnt/window; cover[np.arange(len(good))<minimum-1]=np.nan
+    age=np.log1p(np.maximum(0,dates-mean_date)/window)
+    return cover,age
+
+
+def ratio(a,b):
+    return p.ratio(a,b)
+
+
+def sequence_block(labels,risk,pairs):
+    """24 descriptors of legally released, h-spaced pairs. No outcome imputation."""
+    import numpy as np
+    import pandas as pd
+    y=clean_labels(labels,pairs,risk);known=release_stream(y,pairs);lag=np.full_like(known,np.nan)
+    for j,h in enumerate(pairs.lag):
+        h=int(h)
+        if len(y)>h:lag[h:,j]=known[:-h,j]
+    valid=np.isfinite(known)&np.isfinite(lag); x=np.where(valid,known,np.nan);q=np.where(valid,lag,np.nan)
+    arrays=[];meta=[]
+    for w in WINDOWS:
+        minimum=max(8,w*2//3)
+        def mean(z):return pd.DataFrame(z).rolling(w,min_periods=minimum).mean().to_numpy(copy=True)
+        def count(mask):return pd.DataFrame(mask.astype(float)).rolling(w,min_periods=1).sum().to_numpy(copy=True)
+        mx,mq=mean(x),mean(q)
+        vx=np.maximum(mean(x*x)-mx*mx,0);vq=np.maximum(mean(q*q)-mq*mq,0);cov=mean(x*q)-mx*mq
+        corr=ratio(cov,np.sqrt(vx*vq));beta=ratio(cov,vq)
+        corr=np.clip(corr,-1,1)
+        nz=valid&(known!=0)&(lag!=0)
+        agree_count=count(nz&(np.sign(known)==np.sign(lag)));nz_count=count(nz)
+        agreement=ratio(agree_count,nz_count);agreement[nz_count<minimum]=np.nan
+        signed=np.sign(known)*(2*agreement-1)
+        innovation=ratio(known-(mx+beta*(lag-mq)),np.asarray(risk,float))
+        pos=valid&(lag>0);neg=valid&(lag<0)
+        pc,nc=count(pos),count(neg);allc=count(valid)
+        up=ratio(count(valid&(known>0)),allc);down=ratio(count(valid&(known<0)),allc)
+        up_p=ratio(count(pos&(known>0)),pc);up_n=ratio(count(neg&(known>0)),nc)
+        down_n=ratio(count(neg&(known<0)),nc)
+        adequate=(allc>=minimum)&(pc>=3)&(nc>=3)
+        positive=up_p-up;negative=down_n-down
+        response=np.where(known>0,up_p-up,np.where(known<0,up_n-up,0.0))
+        for z in (positive,negative,response):z[~adequate|~np.isfinite(known)]=np.nan
+        cover,age=clocks(valid,w,minimum)
+        fields=[cover,age,corr,signed,innovation,response,positive,negative]
+        for idx,(form,a) in enumerate(zip(FORMS18,fields,strict=True)):
+            out=np.array(a,float,copy=True);out[~np.isfinite(out)]=np.nan
+            arrays.append(np.clip(out,-12,12))
+            meta.append(dict(name=f'released_sequence18__w{w}__{form}',window=w,form=form,
+                group='clock' if idx<2 else ('magnitude' if idx<5 else 'transitions'),uses_released_labels=True))
+    cube=np.stack(arrays,axis=2).astype(np.float32)
+    return cube,[v['name'] for v in meta],meta
+
+
+def error_block(labels,source_mean,source_risk,pairs):
+    """Residuals reference the causal prior at the ORIGINAL forecast origin s."""
+    import numpy as np
+    import pandas as pd
+    y=clean_labels(labels,pairs,source_mean,source_risk)
+    # All three terms below refer to origin s. The *whole* error is then delayed.
+    reference_error=ratio(y-np.asarray(source_mean,float),np.asarray(source_risk,float))
+    error=release_stream(np.clip(reference_error,-12,12),pairs)
+    valid=np.isfinite(error);arrays=[];meta=[]
+    for w in WINDOWS:
+        minimum=max(8,w*2//3);hist=pd.DataFrame(error).rolling(w,min_periods=minimum)
+        avg=hist.mean().to_numpy(copy=True);med=hist.median().to_numpy(copy=True)
+        sign=pd.DataFrame(np.where(valid,np.sign(error),np.nan)).rolling(w,min_periods=minimum).mean().to_numpy(copy=True)
+        absolute=pd.DataFrame(np.abs(error)).rolling(w,min_periods=minimum).mean().to_numpy(copy=True)
+        rms=np.sqrt(pd.DataFrame(error*error).rolling(w,min_periods=minimum).mean().to_numpy(copy=True))
+        exceed=pd.DataFrame(np.where(valid,(np.abs(error)>2).astype(float),np.nan)).rolling(w,min_periods=minimum).mean().to_numpy(copy=True)
+        cover,age=clocks(valid,w,minimum)
+        for idx,(form,a) in enumerate(zip(FORMS19,[cover,age,avg,med,sign,absolute,rms,exceed],strict=True)):
+            out=np.array(a,float,copy=True);out[~np.isfinite(out)]=np.nan;arrays.append(np.clip(out,-12,12))
+            meta.append(dict(name=f'prior_error19__w{w}__{form}',window=w,form=form,
+              group='clock' if idx<2 else ('bias' if idx<5 else 'dispersion'),uses_released_labels=True))
+    cube=np.stack(arrays,axis=2).astype(np.float32)
+    return cube,[v['name'] for v in meta],meta
+
+
+def feature_block(n,base,y,pairs):
+    import numpy as np
+    risk=base.values[:,:,base.names.index('released_priors__risk_126')]
+    if n==18:return sequence_block(y,risk,pairs)
+    if n==19:
+        loc=base.values[:,:,base.names.index('released_priors__location_126')]
+        return error_block(y,loc,risk,pairs)
+    raise p.Stop('Unknown feature round.')
+
+
+def groups(n,meta):
+    spec=require(n);names=[z['name'] for z in meta]
+    if len(names)!=24 or len(set(names))!=24:raise p.Stop('Exactly 24 named templates required.')
+    a,b,c=spec['groups'];clock=[z['name'] for z in meta if z['group']==a]
+    left=[z['name'] for z in meta if z['group']==b];right=[z['name'] for z in meta if z['group']==c]
+    out=dict(zip(spec['variants'],[clock,clock+left,clock+right,names],strict=True))
+    if [len(z) for z in out.values()]!=[6,15,15,24]:raise p.Stop('Ablation panel sizes changed.')
+    return out
+
+
+def outdir(root,n):return p.safe(root,'logs/manual_'+require(n)['slug'])
+def report_path(root,n):return outdir(root,n)/('commodity_'+INFO[n]['slug']+'_report.json')
+def tests_path(root):return p.safe(root,'tests/test_manual_next_research.py')
+def gate_path(root):return p.safe(root,'logs/manual_next_research/preflight.json')
+
+
+def identity(root,n):
+    if p.read_json(p.safe(root,'configs/manual_'+INFO[n]['slug']+'.json'))!=plan(n):raise p.Stop('Declared experiment changed.')
+    b=dict(plan=plan(n),helper_sha256=p.digest(Path(__file__)),shared_helper_sha256=p.digest(Path(p.__file__)),
+      tests_sha256=p.digest(tests_path(root)),domain_config_sha256=p.digest(root/'configs/domain_study.json'),
+      dependencies=p.PINS)
+    return hashlib.sha256(json.dumps(b,sort_keys=True).encode()).hexdigest(),b
+
+
+def test_gate(root):
+    p.test_gate(root)
+    r=p.read_json(gate_path(root));t=p.read_json(gate_path(root).parent/'tests.json')
+    if (r.get('status')!='NEXT_PREFLIGHT_PASSED' or r.get('helper_sha256')!=p.digest(Path(__file__))
+       or r.get('shared_helper_sha256')!=p.digest(Path(p.__file__))
+       or r.get('tests_sha256')!=p.digest(tests_path(root))
+       or r.get('tests_receipt_sha256')!=p.digest(gate_path(root).parent/'tests.json')
+       or t.get('status')!='TESTS_PASSED' or any(t.get(k,1) for k in ('failures','errors','skipped'))):
+        raise p.Stop('New-round preflight is missing, failed, or stale.')
+    return r
+
+
+def preflight(root=ROOT):
+    root=Path(root);p.test_gate(root);out=gate_path(root).parent;out.mkdir(parents=True,exist_ok=True)
+    if gate_path(root).exists():
+        r=test_gate(root);p.emit('NEXT_PREFLIGHT_PASSED',reused=True);return r
+    r=dict(status='RUNNING',started_utc=p.utc(),helper_sha256=p.digest(Path(__file__)),
+      shared_helper_sha256=p.digest(Path(p.__file__)),tests_sha256=p.digest(tests_path(root)),
+      private_model_fits=0,synthetic_forecast_model_fits=0)
+    p.atomic_json(gate_path(root),r);began=time.monotonic()
+    try:
+        with p.time_limit(100,'Next-round preflight deadline.'):
+            _,_,_,u=p.previous(root);ready=u.readiness(root);u.validate_runtime(root,ready);u.validate_source(root)
+            env=u.environment(root);env['PYTHONPATH']=str(root/'scripts')+os.pathsep+str(root/'src')
+            p.supervise([ready['runtime']['python'],'-u',str(tests_path(root)),'--receipt',str(out/'tests.json')],root,80,out/'tests.log',env)
+            t=p.read_json(out/'tests.json')
+            if t.get('status')!='TESTS_PASSED' or t.get('tests_run',0)<25:raise p.Stop('Prepared tests did not pass.')
+            r.update(status='NEXT_PREFLIGHT_PASSED',tests_receipt_sha256=p.digest(out/'tests.json'),
+                     elapsed_seconds=round(time.monotonic()-began,3),test_results=t)
+            p.atomic_json(gate_path(root),r);p.emit('NEXT_PREFLIGHT_PASSED',tests=t['tests_run']);return r
+    except BaseException as exc:
+        r.update(status='STOPPED',error=type(exc).__name__+': '+str(exc),traceback=traceback.format_exc())
+        p.atomic_json(gate_path(root),r);raise
+
+
+def append(base,cube,names,chosen):
+    import numpy as np
+    from commodity_prediction.domain.catalog import Panel
+    q=Panel(np.concatenate([base.values,cube[:,:,[names.index(z) for z in chosen]]],axis=2),
+      base.dates,base.targets,base.names+chosen,dict(base.source_series));q.validate();return q
+
+
+def aggregate(n,r,config):
+    import numpy as np
+    from commodity_prediction.studies.evaluation import compare_predictions
+    v=INFO[n]['variants'];data={'current_market':r['control']}
+    data.update({name:x['metrics'] for name,x in r['results'].items()})
+    contrasts=[(name,ref) for name in v if name in data for ref in plan(n)['comparators'][name] if ref in data]
+    r['comparisons']=compare_predictions({k:np.asarray(z['daily_rank_correlations']) for k,z in data.items()},[175],contrasts,config) if contrasts else []
+    rows=[];clock=v[0]
+    for name in v:
+        if name not in data:continue
+        refs=plan(n)['comparators'][name];deltas={k:data[name]['official_metric']-data[k]['official_metric'] for k in refs if k in data}
+        selected=r['results'][name]['selection']['selected_names'];chosen=r['panels'][name]
+        numeric=[x for x in chosen if x not in r['panels'][clock]]
+        admitted=sum(x in selected for x in chosen);nadmitted=sum(x in selected for x in numeric)
+        passing=(len(deltas)==len(refs) and all(x>=.002 for x in deltas.values()) and admitted>0 and (not numeric or nadmitted>0))
+        rows.append(dict(variant=name,official_metric=data[name]['official_metric'],delta_vs_current_market=deltas['current_market'],
+            comparator_deltas=deltas,intended=len(chosen),admitted=admitted,numerical_admitted=nadmitted,
+            exact_dropped_inputs=[x for x in chosen if x not in selected],passes_review_gate=bool(passing)))
+    r['comparison_rows']=rows;r['candidates_for_review']=[x['variant'] for x in rows if x['passes_review_gate']]
+    r['decision']='REVIEW_ON_OTHER_PERIODS' if r['candidates_for_review'] else 'STOP_TESTED_PANELS'
+    r['pooled_score_promoted']=False
+
+
+def verify_complete(root,n,r):
+    lineage,ident=identity(root,n)
+    if (r.get('status') not in DONE or r.get('identity')!=ident or r.get('lineage')!=lineage
+       or not r.get('parents_unchanged') or not r.get('source_unchanged')
+       or r.get('maximum_prediction_replay_error')!=0 or r.get('control_refits')!=0):raise p.Stop('Not a completed compatible round.')
+    d=root/'artifacts/manual_next_research'/INFO[n]['slug']/lineage
+    p.verify(d/'features',lineage,r['feature_hashes'])
+    if set(r['results'])|set(r['skipped'])!=set(INFO[n]['variants']) or set(r['results'])&set(r['skipped']):raise p.Stop('Incomplete task inventory.')
+    if r['new_training_fits']!=len(r['results']) or r['fit_attempts_total']!=len(r['results']):raise p.Stop('Fit count differs from sealed inventory.')
+    for name,z in r['results'].items():
+        p.verify(d/name,lineage,r['stage_hashes'][name])
+        if p.read_json(d/name/'result.json')!=z:raise p.Stop('Model report differs.')
+        p.metrics_valid(z['metrics'],list(range(1529,1704)))
+    copy=json.loads(json.dumps(r));aggregate(n,copy,p.read_json(root/'configs/domain_study.json'))
+    for k in ('comparison_rows','decision','candidates_for_review'):
+        if copy[k]!=r[k]:raise p.Stop('Derived comparison changed.')
+    return r
+
+
+def worker(root,n,remaining,pause_after=None):
+    import numpy as np
+    import pandas as pd
+    import joblib
+    from threadpoolctl import threadpool_limits
+    from commodity_prediction.domain.catalog import Panel
+    from commodity_prediction.domain.model import prepare,select
+    from commodity_prediction.domain.experiment import Experiment
+    from commodity_prediction.domain.attribution.run import fit_stage
+    from commodity_prediction.data import Fold
+    root=Path(root);lineage,ident=identity(root,n);r=p.read_json(report_path(root,n));began=time.monotonic();before=r['new_training_fits']
+    d=root/'artifacts/manual_next_research'/INFO[n]['slug']/lineage
+    def save(stage=None,task=None):
+        if stage:r['stage']=stage
+        if task:r['task']=task
+        r['worker_seconds']=round(time.monotonic()-began,3);p.atomic_json(report_path(root,n),r)
+    try:
+        with p.time_limit(remaining,'Remaining experiment time exhausted.'),threadpool_limits(limits=4):
+            test_gate(root);_,audit,_,u=p.previous(root);ready=u.readiness(root)
+            u.validate_runtime(root,ready);u.validate_source(root);parents=u.checkpoint_snapshot(root,ready)
+            for name,pin in u.RAW.items():
+                if p.digest(p.safe(root,'data/raw/'+name))!=pin:raise p.Stop('Immutable raw hash mismatch.')
+            final=p.read_json(root/'configs/final_evaluation.json')
+            if final.get('evaluated') or final.get('final_test_start_date_id')!=1714:raise p.Stop('Final-test gate changed.')
+            save('BUILD_SAVED_BASE');base,y,pairs=p.make_base(root,1704)
+            r['control']=p.baseline(root,base,y,pairs,2,u);save('BUILD_CAUSAL_FEATURES')
+            stage=d/'features'
+            if stage.exists():
+                p.verify(stage,lineage,r['feature_hashes']);meta=p.read_json(stage/'inventory.json')['metadata']
+                with np.load(stage/'candidates.npz',allow_pickle=False) as z:cube=z['values'].copy()
+                names=[q['name'] for q in meta]
+            else:
+                cube,names,meta=feature_block(n,base,y.to_numpy(),pairs)
+                for cut in [1164,1344,1524]:
+                    prefix=Panel(base.values[:cut],base.dates[:cut],base.targets,base.names,base.source_series)
+                    got,nn,_=feature_block(n,prefix,y.iloc[:cut].to_numpy(),pairs)
+                    np.testing.assert_array_equal(got,cube[:cut])
+                    if nn!=names:raise p.Stop('Prefix metadata differs.')
+                stage.mkdir(parents=True);np.savez_compressed(stage/'candidates.npz',values=cube)
+                p.atomic_json(stage/'inventory.json',dict(names=names,metadata=meta))
+                r['feature_hashes']=p.seal(stage,lineage,['candidates.npz','inventory.json']);save()
+            if cube.shape!=(1704,424,24) or np.isinf(cube).any():raise p.Stop('Unexpected feature axes.')
+            r['panels']=groups(n,meta);r['feature_metadata']=meta
+            r['feature_audit']=p.candidate_audit(base,cube,meta,y.iloc[:1524].to_numpy(),1524,audit)
+            config=p.read_json(root/'configs/domain_study.json')
+            for name,chosen in r['panels'].items():
+                if name in r['skipped']:continue
+                task=d/name
+                if name in r['results']:
+                    p.verify(task,lineage,r['stage_hashes'][name]);p.emit('SEALED_MODEL_REUSED',task=name,new_fits=0);continue
+                if task.exists():raise p.Stop('Unrecorded model directory preserved; no blind refit.')
+                panel=append(base,cube,names,chosen);settings={**config,'max_features':len(panel.names),'max_abs_correlation':1.01}
+                stats=prepare(panel,y,1524,settings);exp=Experiment(name,algorithm='histogram')
+                _,screen=select(stats,exp.candidates(panel.names),settings,False)
+                if not any(v in screen['selected_names'] for v in chosen):
+                    r['skipped'][name]=dict(reason='No additional usable inputs',selection=screen);save();continue
+                if r['fit_attempts_total']>=4:raise p.Stop('Four-fit ceiling reached.')
+                r['fit_attempts_total']+=1;save('FIT_DECLARED_PANEL',name)
+                result=fit_stage(panel,y,pairs,Fold(2,1524,1529,1704),exp,settings,stats,task,lineage)
+                p.verify(task,lineage);pred=pd.read_parquet(task/'predictions.parquet');model=joblib.load(task/'model.joblib')
+                u.exact_predictions(pred,model.predict(panel,1529,1704));p.metrics_valid(result['metrics'],list(range(1529,1704)))
+                r['results'][name]=result;r['stage_hashes'][name]=p.verify(task,lineage)
+                r['new_training_fits']+=1;r['completed_tasks']+=1;save('CHECKPOINTED',name)
+                p.emit('FIT_CHECKPOINTED',round=n,variant=name,new_fits=r['new_training_fits'],official_metric=result['metrics']['official_metric'])
+                del model,stats,panel,pred;gc.collect()
+                if pause_after is not None and r['new_training_fits']-before>=pause_after:raise p.Pause('Intentional checkpoint pause.')
+            save('AGGREGATE');aggregate(n,r,config)
+            if parents!=u.checkpoint_snapshot(root,ready):raise p.Stop('Parent checkpoints changed.')
+            u.validate_source(root)
+            r.update(status='ROUND_COMPLETE',parents_unchanged=True,source_unchanged=True,maximum_prediction_replay_error=0.0,
+              finished_utc=p.utc(),causal_prefixes=[1164,1344,1524],final_test_evaluations=0,
+              limitations=['Previously inspected development fold, not final-test evidence.',
+                'h-spaced serial pairs do not make the rolling sample independent.',
+                'Round19 reference errors use historical causal priors, not fitted-model residuals.',
+                'Feature counts are representations. Conditional intervals do not cover the full adaptive search.',
+                'No automatic promotion, account changes, dependency install or space shutdown.'])
+            save('COMPLETE');return r
+    except p.Pause as exc:
+        r.update(status='PAUSED_AFTER_CHECKPOINT',pause_reason=str(exc));save();return r
+    except BaseException as exc:
+        r.update(status='STOPPED',error=type(exc).__name__+': '+str(exc),traceback=traceback.format_exc());save();raise
+
+
+def run(root=ROOT,round_number=18,resume=False,pause_after=None):
+    n=round_number;require(n);root=Path(root);test_gate(root)
+    if pause_after is not None and (type(pause_after) is not int or pause_after<1):raise p.Stop('Pause count must be positive.')
+    if shutil.disk_usage(root).free<2*1024**3:raise p.Stop('At least 2 GiB free disk required; do not delete old work.')
+    with p.safe(root,'logs/manual_two_feature_rounds.lock').open('a') as lock:
+        try:fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError:raise p.Stop('Another research worker is active.')
+        lineage,ident=identity(root,n);path=report_path(root,n);outdir(root,n).mkdir(parents=True,exist_ok=True)
+        if path.exists():
+            r=p.read_json(path)
+            if r.get('status') in DONE:return verify_complete(root,n,r)
+            if not resume or r.get('status')!='PAUSED_AFTER_CHECKPOINT' or r.get('identity')!=ident:raise p.Stop('Only intentional pauses can resume; errors require diagnosis.')
+        else:
+            if resume:raise p.Stop('No saved pause to resume.')
+            if (root/'artifacts/manual_next_research'/INFO[n]['slug']/lineage).exists():raise p.Stop('Orphan artifacts preserved.')
+            r=dict(project='commodity-prediction',round=n,status='STARTING_WORKER',source_commit=p.SHA,lineage=lineage,identity=ident,plan=plan(n),
+              results={},skipped={},stage_hashes={},completed_tasks=0,new_training_fits=0,fit_attempts_total=0,
+              cumulative_supervised_seconds=0.,supervisor_calls=0,control_refits=0,final_test_evaluations=0,
+              github_writes=False,aws_api_calls=0,feature_gate='open',promotion_allowed=False,started_utc=p.utc())
+        old=float(r['cumulative_supervised_seconds']);remaining=240-old
+        if not math.isfinite(remaining) or remaining<10:raise p.Stop('No adequate remaining allowance; budget not reset.')
+        r['supervisor_calls']+=1;p.atomic_json(path,r)
+        _,_,_,u=p.previous(root);ready=u.readiness(root);env=u.environment(root)
+        env['PYTHONPATH']=str(root/'scripts')+os.pathsep+str(root/'src')
+        cmd=[ready['runtime']['python'],'-u',str(Path(__file__).resolve()),'--worker','--round',str(n),'--root',str(root),'--remaining',str(remaining)]
+        if pause_after is not None:cmd+=['--pause-after',str(pause_after)]
+        began=time.monotonic()
+        try:
+            elapsed=p.supervise(cmd,root,remaining,outdir(root,n)/f'worker_{r["supervisor_calls"]:02d}.log',env,path)
+            r=p.read_json(path);r['cumulative_supervised_seconds']=old+elapsed;p.atomic_json(path,r)
+            return r if r['status']=='PAUSED_AFTER_CHECKPOINT' else verify_complete(root,n,r)
+        except BaseException as exc:
+            r=p.read_json(path);r.update(status='STOPPED',supervisor_error=type(exc).__name__+': '+str(exc),
+               cumulative_supervised_seconds=old+time.monotonic()-began);p.atomic_json(path,r);raise
+
+
+def charts(r):
+    import numpy as np
+    import plotly.graph_objects as go
+    n=r['round'];info=INFO[n];q=r['feature_audit'];rows=r['comparison_rows'];figures=[]
+    def add(f,title,x,y,height=560):
+        f.update_layout(title=title,xaxis_title=x,yaxis_title=y,height=height,template='plotly_white',
+          margin=dict(l=100,r=30,t=100,b=125),legend=dict(orientation='h',y=-.25));figures.append(f)
+    names=[z['name'].split('__',1)[1] for z in q]
+    add(go.Figure(go.Bar(y=names,x=[z['training_coverage'] for z in q],orientation='h')),
+        '1 · Training coverage: missing data are not filled with zero','Finite fraction','Representation',820)
+    f=go.Figure()
+    for group in info['groups']:
+        z=[v for v in q if v['group']==group];f.add_scatter(x=[v['half_1_mean_ic'] for v in z],y=[v['half_2_mean_ic'] for v in z],text=[v['name'] for v in z],mode='markers',name=group)
+    f.add_hline(y=0,line_dash='dot');f.add_vline(x=0,line_dash='dot');add(f,'2 · Training-half associations, NOT validation gains','Earlier mean daily Spearman','Later mean daily Spearman')
+    z=[v for v in q if v['group']=='clock'];add(go.Figure(go.Bar(x=[v['name'].split('__',1)[1] for v in z],y=[v['median'] for v in z])),
+      '3 · Historical observation timing and coverage','Clock representation','Training median (feature units)')
+    add(go.Figure(go.Bar(x=['Saved baseline']+[v['variant'] for v in rows],y=[r['control']['official_metric']]+[v['official_metric'] for v in rows])),
+      '4 · Same last-period comparison: origins 1529–1703','Representation','Daily-correlation mean / population standard deviation')
+    f=go.Figure()
+    for ref in ['current_market',info['variants'][0]]:
+        z=[v for v in rows if ref in v['comparator_deltas']];f.add_bar(x=[v['variant'] for v in z],y=[v['comparator_deltas'][ref] for v in z],name='versus '+ref)
+    f.add_hline(y=.002,line_dash='dash');add(f,'5 · Numerical information must beat both controls','Representation','Matched metric gain')
+    f=go.Figure()
+    for z in r['comparisons']:
+        if z['block_dates']==20 and z['reference']=='current_market':
+            lo,hi=z['conditional_95_interval'];f.add_scatter(x=[lo,hi],y=[z['variant']]*2,mode='lines',showlegend=False)
+            f.add_scatter(x=[z['delta']],y=[z['variant']],mode='markers',showlegend=False)
+    f.add_vline(x=0,line_dash='dot');add(f,'6 · Conditional 20-origin intervals: adaptive research not corrected','Metric difference','Representation')
+    f=go.Figure()
+    for v,z in r['results'].items():f.add_scatter(x=z['metrics']['date_ids'],y=np.cumsum(np.asarray(z['metrics']['daily_rank_correlations'])-r['control']['daily_rank_correlations']),name=v,mode='lines')
+    add(f,'7 · Cumulative correlation differences — NOT trading returns','Origin ID','Cumulative Spearman difference')
+    f=go.Figure();f.add_bar(x=[z['variant'] for z in rows],y=[z['intended'] for z in rows],name='Declared');f.add_bar(x=[z['variant'] for z in rows],y=[z['admitted'] for z in rows],name='Admitted')
+    add(f,'8 · Admission is a preprocessing diagnostic, not causal importance','Panel','Number of inputs')
+    f=go.Figure()
+    for v,z in [('current_market',r['control'])]+[(v,z['metrics']) for v,z in r['results'].items()]:
+        hm=z['horizon_metrics'];f.add_bar(x=list(hm),y=[hm[k]['official_metric'] for k in hm],name=v)
+    add(f,'9 · Horizon diagnostics are not the all-target primary metric','Forecast horizon','Subset correlation ratio')
+    add(go.Figure(go.Bar(x=['New fits','Baseline refits','Final-test evaluations'],y=[r['new_training_fits'],0,0])),
+      '10 · Bounded execution accounting','Operation','Count')
+    return figures
+
+
+def export(root,n,r,figures):
+    root=Path(root);verify_complete(root,n,r);out=outdir(root,n)
+    with p.time_limit(90,'Presentation deadline; no refitting is needed.'):
+        html=out/(INFO[n]['slug']+'_dashboard.html')
+        html.write_text('<!doctype html><meta charset="utf-8"><h1>'+INFO[n]['title']+'</h1><p>Development research only.</p>'+''.join(f.to_html(full_html=False,include_plotlyjs=(i==0)) for i,f in enumerate(figures)),encoding='utf-8')
+        d=root/'artifacts/manual_next_research'/INFO[n]['slug']/r['lineage'];items={}
+        for stage in [d/'features']+[d/x for x in r['stage_hashes']]:
+            man=p.read_json(stage/'manifest.json')
+            for name in list(man['files'])+['manifest.json']:
+                file=p.safe(stage,name);items[str(file.relative_to(d))]=file
+        if sum(f.stat().st_size for f in items.values())>250*1024**2:raise p.Stop('Backup exceeds bounded size.')
+        dest=out/(INFO[n]['slug']+'_checkpoints.zip');temp=dest.with_suffix('.zip.tmp')
+        with zipfile.ZipFile(temp,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=3) as z:
+            for rel,file in items.items():z.write(file,rel)
+        with zipfile.ZipFile(temp) as z:
+            for rel,file in items.items():
+                if hashlib.sha256(z.read(rel)).hexdigest()!=p.digest(file):raise p.Stop('ZIP verification failed.')
+        os.replace(temp,dest)
+        r.update(status='NOTEBOOK_COMPLETE',plotly_figures=len(figures),notebook=str(root/'notebooks'/INFO[n]['notebook']),dashboard=str(html),
+          checkpoint_bundle=dict(path=str(dest),sha256=p.digest(dest),private=True,off_disk_backup=False),dashboard_sha256=p.digest(html))
+        p.atomic_json(report_path(root,n),r);return r
+
+
+def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--root',type=Path,default=ROOT);parser.add_argument('--round',type=int,choices=[18,19],default=18)
+    acts=parser.add_mutually_exclusive_group(required=True);acts.add_argument('--preflight',action='store_true');acts.add_argument('--worker',action='store_true');acts.add_argument('--run',action='store_true');acts.add_argument('--export',action='store_true')
+    parser.add_argument('--remaining',type=float);parser.add_argument('--pause-after',type=int);parser.add_argument('--resume',action='store_true');a=parser.parse_args()
+    sys.path.insert(0,str(a.root/'src'))
+    for key in ('OMP_NUM_THREADS','MKL_NUM_THREADS','OPENBLAS_NUM_THREADS'):os.environ[key]='4'
+    try:
+        if a.preflight:preflight(a.root)
+        elif a.worker:
+            if a.remaining is None or not 0<a.remaining<=240:raise p.Stop('A bounded remaining allowance is required.')
+            worker(a.root,a.round,a.remaining,a.pause_after)
+        elif a.run:
+            r=run(a.root,a.round,a.resume,a.pause_after);print('RESULT:',r['status']);print('REPORT:',report_path(a.root,a.round))
+        else:
+            r=p.read_json(report_path(a.root,a.round));export(a.root,a.round,r,charts(r))
+    except BaseException as e:
+        print('RESULT: STOPPED',flush=True);print('ERROR:',type(e).__name__+': '+str(e),flush=True);raise
+
+if __name__=='__main__':main()

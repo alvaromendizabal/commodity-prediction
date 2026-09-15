@@ -1,0 +1,1775 @@
+#!/usr/bin/env python3
+"""Install two independent, bounded feature rounds (notebooks 14 and 15).
+
+Setup only by default. Each notebook launches at most four fixed-learner fits
+on the same middle development period. No cloud/Git writes, installs, refits of
+old controls, promotion, final-test access, or automatic additional periods.
+"""
+
+from __future__ import annotations
+
+import argparse
+import fcntl
+import gc
+import hashlib
+import importlib.util
+import json
+import math
+import os
+import shutil
+import signal
+import time
+import traceback
+import zipfile
+from datetime import UTC, datetime
+from pathlib import Path
+
+ROOT = Path("/home/sagemaker-user/projects/commodity-prediction-manual")
+SHA = "d142a4cb57a5c4b2880f9341619e13a735b1cddc"
+PARENT = "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605"
+FEATURE = "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba"
+AUDIT_HASH = "e86f608be525d41c667d261cc0c9fa04a51f08e17b2a58d0a81224a9771d27df"
+REPORT_HASH = "01f5cef137cc0527b4fd59b9e56b1c31e0258913d85534f3d318f4bfc3778bee"
+AUDIT_LINEAGE = "38e222706a234b1f8b1cf05e430581ae4660b588a184e012d9dca9cdfcc11a6d"
+TRAIN_STOP, START, STOP, FOLD = 1344, 1349, 1529, 1
+CONTROL = 0.16704165319061334
+LIMIT, GAIN = 240.0, 0.002
+SIGNALS = [
+    "reference__return_lag_0_difference",
+    "reference__return_lag_1_difference",
+    "reference__return_lag_5_difference",
+    "reference__risk_63_difference",
+    "released_priors__location_63",
+    "released_priors__location_126",
+]
+SHORT_SOURCES = [SIGNALS[0], SIGNALS[5], SIGNALS[1]]
+AUDIT_SHORTLIST = [
+    "relative_state__" + s.replace("__", "_") + "__innovation_horizon_rank" for s in SHORT_SOURCES
+]
+PRIOR_SOURCES = [
+    "released_priors__location_63",
+    "released_priors__location_126",
+    "released_priors__location_252",
+    "released_priors__median_63",
+    "released_priors__risk_63",
+    "released_priors__risk_126",
+    "released_priors__risk_252",
+    "released_priors__market_pair_pool",
+    "released_priors__canonical_cross_horizon_pool",
+]
+MECHANISMS = [
+    "fast_minus_medium",
+    "medium_minus_slow",
+    "median_minus_mean",
+    "own_minus_market_pool",
+    "own_minus_cross_horizon_pool",
+    "short_long_risk_ratio",
+]
+ROUND_INFO = {
+    14: dict(
+        slug="innovation_ablation",
+        title="Historical surprise: magnitude, ranks and robust scale",
+        notebook="14_innovation_feature_ablation.ipynb",
+        variants=[
+            "audit_shortlist",
+            "ordinary_innovations",
+            "robust_innovations",
+            "innovation_joint",
+        ],
+    ),
+    15: dict(
+        slug="prior_dynamics",
+        title="Released-prior disagreement, drift and risk stability",
+        notebook="15_prior_dynamics_ablation.ipynb",
+        variants=[
+            "risk_dynamics_only",
+            "own_history_dynamics",
+            "pool_and_risk_dynamics",
+            "prior_dynamics_joint",
+        ],
+    ),
+}
+TERMINAL = {"ROUND_REVIEW_READY", "NOTEBOOK_AND_FEATURE_ROUND_READY"}
+
+
+class Stop(RuntimeError):
+    """Preserve the evidence; diagnose rather than repeat an interrupted run."""
+
+
+def utc():
+    return datetime.now(UTC).isoformat()
+
+
+def emit(stage, **fields):
+    print(json.dumps(dict(utc=utc(), stage=stage, **fields), allow_nan=False), flush=True)
+
+
+def info(round_number):
+    if type(round_number) is not int or round_number not in ROUND_INFO:
+        raise Stop("Choose round 14 or 15 explicitly; no automatic chained experiments.")
+    return ROUND_INFO[round_number]
+
+
+def previous(root):
+    path = Path(root) / "scripts/commodity_information_audit.py"
+    if (
+        path.is_symlink()
+        or not path.is_file()
+        or hashlib.sha256(path.read_bytes()).hexdigest() != AUDIT_HASH
+    ):
+        raise Stop("The verified notebook-13 helper is absent or changed; do not replace it.")
+    spec = importlib.util.spec_from_file_location("two_rounds_audit13", path)
+    audit = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(audit)
+    session, older, u = audit.previous(Path(root))
+    return audit, session, older, u
+
+
+def outdir(root, round_number):
+    return Path(root) / ("logs/manual_" + info(round_number)["slug"])
+
+
+def report_path(root, round_number):
+    return outdir(root, round_number) / ("commodity_" + info(round_number)["slug"] + "_report.json")
+
+
+def read_audit(root, u, verify=False):
+    path = u.safe_path(
+        root, "logs/manual_information_audit/commodity_information_audit_report.json"
+    )
+    if u.digest(path) != REPORT_HASH:
+        raise Stop("Notebook-13 report changed from the inspected copy. Preserve it for review.")
+    r = u.read_json(path)
+    if (
+        r.get("status") != "NOTEBOOK_AND_INFORMATION_AUDIT_READY"
+        or r.get("lineage") != AUDIT_LINEAGE
+        or r.get("source_commit") != SHA
+        or r.get("new_training_fits") != 0
+        or r.get("model_replays") != 3
+        or r.get("diagnostic_prediction_calls") != 24
+        or r.get("maximum_prediction_replay_error") != 0
+        or r.get("parents_unchanged") is not True
+        or r.get("source_unchanged") is not True
+        or r.get("final_test_evaluations") != 0
+        or r.get("candidate_lab", {}).get("shortlist") != AUDIT_SHORTLIST
+    ):
+        raise Stop("The completed information audit does not match this experiment declaration.")
+    if verify:
+        d = u.safe_path(root, "artifacts/information_audit/" + AUDIT_LINEAGE)
+        if set(r.get("stage_hashes", {})) != {"feature_lab", "fold_0", "fold_1", "fold_2"}:
+            raise Stop("Audit checkpoint inventory changed.")
+        for name, pins in r["stage_hashes"].items():
+            u.verify_stage(u.safe_path(d, name), AUDIT_LINEAGE, pins)
+    return r
+
+
+def plan(round_number):
+    i = info(round_number)
+    common = dict(
+        round=round_number,
+        study=i["slug"],
+        source_commit=SHA,
+        parent_lineage=PARENT,
+        audited_parent=AUDIT_LINEAGE,
+        candidate_templates=24,
+        new_fit_limit=4,
+        worker_limit_seconds=LIMIT,
+        training_stop_exclusive=TRAIN_STOP,
+        training_diagnostic_start=252,
+        training_diagnostic_split=798,
+        validation_start=START,
+        validation_stop_exclusive=STOP,
+        fold=FOLD,
+        saved_same_fold_control=CONTROL,
+        review_gain=GAIN,
+        final_test_evaluations=0,
+        control_refits=0,
+        other_round_dependency=False,
+        other_folds=False,
+        automatic_promotion=False,
+        feature_gate="open",
+        github_writes=False,
+        aws_api_calls=0,
+        new_direct_label_access_in_feature_builder=False,
+        inherited_released_label_inputs=True,
+        release_contract="Existing horizon+1 parent priors; do not weaken.",
+        learner="Unchanged parent histogram settings and preprocessing. Family inputs appended to original current_market, never to the other round.",
+        training_screen="Check finite coverage, constants and exact duplicates with parent fit-time preprocessing; audit two-half IC and redundancy on training only. Panels are fixed: IC signs do not select validation-driven replacements.",
+        transforms_update="Trailing input statistics may update sequentially; existing priors may use only already-released earlier outcomes. Forecaster stays frozen during validation.",
+        novelty="Counts denote representations, not independent new information. Exact duplicate audit covers active baseline, notebook-13 candidates, and this round; not every abandoned historical array.",
+        uncertainty="Within-round conditional 10/20/40-date block intervals; not independent confirmation or full adaptive-search correction.",
+        declaration_timing="Both rounds frozen together after notebook13, before either new result. Previously inspected middle development period; no test-set claim.",
+        variants=i["variants"],
+    )
+    if round_number == 14:
+        common.update(
+            sources=SIGNALS,
+            forms=["ordinary_z", "ordinary_rank", "robust_z", "robust_rank"],
+            window=63,
+            min_history=42,
+            reference_delay=1,
+            magnitude_clip=12.0,
+            robust_scale="IQR, not SD-equivalent IQR and not sklearn RobustScaler fitting; per-target trailing window only.",
+            reused_notebook13_representations=6,
+            newly_constructed_representation_templates=18,
+            fixed_audit_shortlist=AUDIT_SHORTLIST,
+            panel_sizes=[3, 12, 12, 24],
+            rule="Shortlist and ordinary: +0.002 over saved control. Robust: +0.002 over saved AND ordinary. Joint: +0.002 over saved AND both separate full groups. All intended inputs admitted; exact replay. Review only.",
+            contrasts=[
+                ["audit_shortlist", "current_market"],
+                ["ordinary_innovations", "current_market"],
+                ["robust_innovations", "current_market"],
+                ["innovation_joint", "current_market"],
+                ["robust_innovations", "ordinary_innovations"],
+                ["innovation_joint", "ordinary_innovations"],
+                ["innovation_joint", "robust_innovations"],
+                ["ordinary_innovations", "audit_shortlist"],
+            ],
+        )
+    else:
+        common.update(
+            sources=PRIOR_SOURCES,
+            mechanisms=MECHANISMS,
+            forms=["level", "change_5", "surprise_63", "horizon_rank"],
+            panel_sizes=[4, 12, 12, 24],
+            new_representation_templates=24,
+            change_rows=5,
+            innovation_window=63,
+            min_history=42,
+            reference_delay=1,
+            magnitude_clip=12.0,
+            ratios="Finite positive risk denominator >1e-12. risk contrast is log(risk63/risk252). No filled labels or fabricated effective sample size.",
+            rule="Risk-only and own-history: +0.002 over saved control. Pool/risk: +0.002 over saved AND risk-only. Joint: +0.002 over saved AND both 12-column groups. All intended inputs admitted; exact replay. Review only.",
+            contrasts=[
+                ["risk_dynamics_only", "current_market"],
+                ["own_history_dynamics", "current_market"],
+                ["pool_and_risk_dynamics", "current_market"],
+                ["prior_dynamics_joint", "current_market"],
+                ["pool_and_risk_dynamics", "risk_dynamics_only"],
+                ["prior_dynamics_joint", "own_history_dynamics"],
+                ["prior_dynamics_joint", "pool_and_risk_dynamics"],
+                ["own_history_dynamics", "risk_dynamics_only"],
+            ],
+        )
+    return common
+
+
+def identity(root, round_number, u):
+    if u.read_json(u.safe_path(root, f"configs/manual_{info(round_number)['slug']}.json")) != plan(
+        round_number
+    ):
+        raise Stop("Round declaration changed. Do not edit limits after results.")
+    evidence = dict(
+        plan=plan(round_number),
+        helper_sha256=u.digest(Path(__file__)),
+        audit_helper_sha256=AUDIT_HASH,
+        audit_report_sha256=REPORT_HASH,
+        domain_config_sha256=u.digest(root / "configs/domain_study.json"),
+    )
+    return hashlib.sha256(json.dumps(evidence, sort_keys=True).encode()).hexdigest(), evidence
+
+
+# Feature builders intentionally have no outcome argument.
+def validate_inputs(values, names, pairs, round_number):
+    import numpy as np
+    import pandas as pd
+
+    a = np.asarray(values)
+    required = SIGNALS if round_number == 14 else PRIOR_SOURCES
+    if (
+        a.ndim != 3
+        or not 1 <= len(a) <= STOP
+        or a.dtype.kind != "f"
+        or a.shape[2] != len(names)
+        or len(set(names)) != len(names)
+        or not set(required).issubset(names)
+        or np.isinf(a).any()
+    ):
+        raise Stop("Bounded, named, finite-or-missing parent panel required.")
+    if (
+        not isinstance(pairs, pd.DataFrame)
+        or pairs.empty
+        or not pairs.columns.is_unique
+        or not {"target", "lag"}.issubset(pairs.columns)
+        or pairs[["target", "lag"]].isna().any().any()
+        or pairs.target.duplicated().any()
+        or not pairs.target.map(lambda v: isinstance(v, str) and bool(v)).all()
+        or pd.api.types.is_bool_dtype(pairs.lag)
+        or not pairs.lag.isin([1, 2, 3, 4]).all()
+        or a.shape[1] != len(pairs)
+    ):
+        raise Stop("Unique ordered target/horizon metadata required.")
+    return a
+
+
+def ordinal(values):
+    import numpy as np
+    import pandas as pd
+
+    a = np.array(values, dtype=float, copy=True)
+    if a.ndim != 2:
+        raise Stop("Rank input requires two axes.")
+    a[~np.isfinite(a)] = np.nan
+    n = np.isfinite(a).sum(axis=1)
+    q = pd.DataFrame(a).rank(axis=1, method="average").to_numpy(dtype=float, copy=True)
+    result = 2 * (q - 1) / np.maximum(n[:, None] - 1, 1) - 1
+    result[n < 3] = np.nan
+    return result
+
+
+def by_horizon(values, pairs):
+    import numpy as np
+
+    h = pairs.lag.to_numpy(dtype=int, copy=True)
+    result = np.full_like(values, np.nan, dtype=float)
+    for k in (1, 2, 3, 4):
+        idx = np.flatnonzero(h == k)
+        if len(idx):
+            result[:, idx] = ordinal(values[:, idx])
+    return result
+
+
+def historical_surprise(values, robust=False):
+    import numpy as np
+    import pandas as pd
+
+    a = np.array(values, dtype=float, copy=True)
+    h = pd.DataFrame(a).shift(1).rolling(63, min_periods=42)
+    if robust:
+        loc = h.median().to_numpy(dtype=float, copy=True)
+        scale = (h.quantile(0.75) - h.quantile(0.25)).to_numpy(dtype=float, copy=True)
+    else:
+        loc = h.mean().to_numpy(dtype=float, copy=True)
+        scale = h.std(ddof=0).to_numpy(dtype=float, copy=True)
+    good = np.isfinite(a) & np.isfinite(loc) & np.isfinite(scale) & (scale > 1e-12)
+    out = np.full_like(a, np.nan)
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        np.divide(a - loc, scale, out=out, where=good)
+    out[~np.isfinite(out)] = np.nan
+    return out
+
+
+def safe_ratio(num, den):
+    import numpy as np
+
+    a, b = np.asarray(num, float), np.asarray(den, float)
+    if a.shape != b.shape:
+        raise Stop("Ratio axes differ.")
+    out = np.full_like(a, np.nan)
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        np.divide(a, b, out=out, where=np.isfinite(a) & np.isfinite(b) & (b > 1e-12))
+    out[~np.isfinite(out)] = np.nan
+    return out
+
+
+def feature_block(values, names, pairs, round_number):
+    import numpy as np
+    import pandas as pd
+
+    info(round_number)
+    a = validate_inputs(values, names, pairs, round_number)
+    channels, meta = [], []
+
+    def add(v, name, group, source, form, inherited=True, reused=False):
+        b = np.array(v, dtype=float, copy=True)
+        b[~np.isfinite(b)] = np.nan
+        channels.append(b)
+        meta.append(
+            dict(
+                name=name,
+                group=group,
+                source=source,
+                form=form,
+                uses_released_label_inputs=inherited,
+                reused_notebook13_representation=reused,
+            )
+        )
+
+    if round_number == 14:
+        for source in SIGNALS:
+            raw = a[:, :, names.index(source)]
+            for robust, group in [(False, "ordinary"), (True, "robust")]:
+                z = historical_surprise(raw, robust)
+                prefix = "innovation14__" + source.replace("__", "_") + "__" + group
+                add(
+                    np.clip(z, -12, 12),
+                    prefix + "_z",
+                    group,
+                    source,
+                    "magnitude",
+                    source.startswith("released_priors__"),
+                )
+                # Rank BEFORE clipping so previous notebook-13 ranks remain exactly reproducible.
+                add(
+                    by_horizon(z, pairs),
+                    prefix + "_rank",
+                    group,
+                    source,
+                    "rank",
+                    source.startswith("released_priors__"),
+                    not robust,
+                )
+    else:
+        q = {
+            s.removeprefix("released_priors__"): np.array(a[:, :, names.index(s)], float, copy=True)
+            for s in PRIOR_SOURCES
+        }
+        drivers = [
+            safe_ratio(q["location_63"] - q["location_126"], q["risk_126"]),
+            safe_ratio(q["location_126"] - q["location_252"], q["risk_126"]),
+            safe_ratio(q["median_63"] - q["location_63"], q["risk_63"]),
+            safe_ratio(q["location_126"] - q["market_pair_pool"], q["risk_126"]),
+            safe_ratio(q["location_126"] - q["canonical_cross_horizon_pool"], q["risk_126"]),
+        ]
+        ratio = safe_ratio(q["risk_63"], q["risk_252"])
+        risk = np.full_like(ratio, np.nan)
+        np.log(ratio, out=risk, where=np.isfinite(ratio) & (ratio > 0))
+        drivers.append(risk)
+        for j, (mechanism, raw) in enumerate(zip(MECHANISMS, drivers, strict=True)):
+            group = "own_history" if j < 3 else "pool_and_risk"
+            forms = [
+                np.clip(raw, -12, 12),
+                np.clip(pd.DataFrame(raw).diff(5).to_numpy(dtype=float, copy=True), -12, 12),
+                np.clip(historical_surprise(raw), -12, 12),
+                by_horizon(raw, pairs),
+            ]
+            for form, v in zip(
+                ["level", "change_5", "surprise_63", "horizon_rank"], forms, strict=True
+            ):
+                add(v, "prior_dynamics15__" + mechanism + "__" + form, group, mechanism, form)
+    output = np.stack(channels, axis=2).astype(np.float32)
+    output_names = [r["name"] for r in meta]
+    if (
+        output.shape != (len(a), len(pairs), 24)
+        or np.isinf(output).any()
+        or len(set(output_names)) != 24
+    ):
+        raise Stop("Invalid 24-template feature inventory.")
+    return output, output_names, meta
+
+
+def variants(round_number, meta):
+    if len(meta) != 24 or len({r["name"] for r in meta}) != 24:
+        raise Stop("Incorrect candidate inventory.")
+    if round_number == 14:
+        shortlist = [
+            "innovation14__" + s.replace("__", "_") + "__ordinary_rank" for s in SHORT_SOURCES
+        ]
+        groups = {
+            "audit_shortlist": shortlist,
+            "ordinary_innovations": [r["name"] for r in meta if r["group"] == "ordinary"],
+            "robust_innovations": [r["name"] for r in meta if r["group"] == "robust"],
+            "innovation_joint": [r["name"] for r in meta],
+        }
+    else:
+        info(round_number)
+        groups = {
+            "risk_dynamics_only": [
+                r["name"] for r in meta if r["source"] == "short_long_risk_ratio"
+            ],
+            "own_history_dynamics": [r["name"] for r in meta if r["group"] == "own_history"],
+            "pool_and_risk_dynamics": [r["name"] for r in meta if r["group"] == "pool_and_risk"],
+            "prior_dynamics_joint": [r["name"] for r in meta],
+        }
+    if (
+        list(groups) != info(round_number)["variants"]
+        or [len(x) for x in groups.values()] != plan(round_number)["panel_sizes"]
+    ):
+        raise Stop("Predeclared panel sizes or order changed.")
+    if not all(set(v).issubset(r["name"] for r in meta) for v in groups.values()):
+        raise Stop("Missing declared input.")
+    return groups
+
+
+def audit_candidates(base, cube, meta, pairs, truth, audit, old_cube=None, old_names=None):
+    """Training-only diagnostics, NOT outcome-driven panel re-selection."""
+    import numpy as np
+
+    if (
+        len(base.values) < TRAIN_STOP
+        or len(cube) < TRAIN_STOP
+        or np.asarray(truth).shape != (TRAIN_STOP, len(pairs))
+    ):
+        raise Stop("Expected only the middle-fold fitting prefix for diagnostics.")
+    lo, mid, hi = 252, 798, TRAIN_STOP
+    baseline = {audit.signature(base.values[lo:hi, :, j]): n for j, n in enumerate(base.names)}
+    seen = dict(baseline)
+    old = (
+        {}
+        if old_cube is None
+        else {audit.signature(old_cube[252:1164, :, j]): n for j, n in enumerate(old_names)}
+    )
+    rows = []
+    for j, m in enumerate(meta):
+        data = cube[lo:hi, :, j]
+        sig = audit.signature(data)
+        duplicate = seen.get(sig)
+        if duplicate is None:
+            seen[sig] = m["name"]
+        daily = audit.daily_ic(cube[:hi, :, j], truth)
+        means = []
+        counts = []
+        for p in (daily[lo:mid], daily[mid:hi]):
+            z = p[np.isfinite(p)]
+            counts.append(len(z))
+            means.append(float(z.mean()) if len(z) else None)
+        finite = data[np.isfinite(data)]
+        sample = finite[:: max(1, len(finite) // 10000)]
+        hist, edges = (
+            np.histogram(sample, bins=24)
+            if len(sample)
+            else (np.zeros(24, int), np.linspace(-1, 1, 25))
+        )
+        rows.append(
+            dict(
+                **m,
+                training_coverage=float(np.isfinite(data).mean()),
+                half_1_mean_ic=means[0],
+                half_2_mean_ic=means[1],
+                half_1_dates=counts[0],
+                half_2_dates=counts[1],
+                same_sign=bool(
+                    means[0] is not None and means[1] is not None and means[0] * means[1] > 0
+                ),
+                duplicate_of=duplicate,
+                notebook13_duplicate=old.get(audit.signature(cube[252:1164, :, j])),
+                training_sha256=sig,
+                median=float(np.median(finite)) if len(finite) else None,
+                q05=float(np.quantile(finite, 0.05)) if len(finite) else None,
+                q95=float(np.quantile(finite, 0.95)) if len(finite) else None,
+                histogram=dict(
+                    counts=hist.tolist(), edges=edges.tolist(), sampled_entries=len(sample)
+                ),
+            )
+        )
+    return rows
+
+
+def append_panel(base, cube, names, chosen):
+    import numpy as np
+
+    from commodity_prediction.domain.catalog import Panel
+
+    if (
+        not chosen
+        or len(set(chosen)) != len(chosen)
+        or not set(chosen).issubset(names)
+        or set(chosen) & set(base.names)
+    ):
+        raise Stop("Undeclared, duplicate or colliding feature selection.")
+    if cube.shape[:2] != base.values.shape[:2]:
+        raise Stop("Feature dates or targets do not align.")
+    p = Panel(
+        np.concatenate([base.values, cube[:, :, [names.index(n) for n in chosen]]], axis=2),
+        base.dates,
+        base.targets,
+        base.names + chosen,
+        dict(base.source_series),
+    )
+    p.validate()
+    return p
+
+
+def smoke(round_number):
+    import numpy as np
+    import pandas as pd
+
+    rng = np.random.default_rng(20260912)
+    names = list(dict.fromkeys(SIGNALS + PRIOR_SOURCES))
+    a = rng.normal(0, 0.1, (150, 16, len(names))).astype(np.float32)
+    for j, n in enumerate(names):
+        if "risk_" in n or n.endswith("risk_63_difference"):
+            a[:, :, j] = np.abs(a[:, :, j]) + 0.01
+    pairs = pd.DataFrame(
+        dict(target=[f"target_{i}" for i in range(16)], lag=np.tile([1, 2, 3, 4], 4))
+    )
+    original = a.copy()
+    full, n, meta = feature_block(a, names, pairs, round_number)
+    changed = a.copy()
+    changed[100:] *= 3
+    other, _, _ = feature_block(changed, names, pairs, round_number)
+    np.testing.assert_array_equal(full[:100], other[:100])
+    for cut in (75, 121):
+        b, nn, _ = feature_block(a[:cut], names, pairs, round_number)
+        np.testing.assert_array_equal(full[:cut], b)
+        if n != nn:
+            raise Stop("Prefix changed feature names.")
+    np.testing.assert_array_equal(a, original)
+    variants(round_number, meta)
+    if not np.isfinite(full[100:]).all():
+        raise Stop("Synthetic complete history unexpectedly unavailable.")
+    return dict(
+        status="TWO_ROUND_CONTRACT_PASSED",
+        round=round_number,
+        input_unchanged=True,
+        future_input_perturbation_exact=True,
+        prefix_exact=True,
+        templates=24,
+        pandas_version=pd.__version__,
+        numpy_version=np.__version__,
+    )
+
+
+def fit_one(
+    root,
+    u,
+    round_number,
+    name,
+    chosen,
+    stage,
+    lineage,
+    base,
+    cube,
+    names,
+    y,
+    pairs,
+    fold,
+    config,
+    r,
+):
+    import joblib
+    import pandas as pd
+
+    from commodity_prediction.domain.attribution.run import fit_stage
+    from commodity_prediction.domain.experiment import Experiment
+    from commodity_prediction.domain.model import prepare, select
+
+    if stage.exists():
+        raise Stop("Unexpected model stage preserved; no automatic refit.")
+    panel = append_panel(base, cube, names, chosen)
+    settings = {**config, "max_features": len(panel.names), "max_abs_correlation": 1.01}
+    stats = prepare(panel, y, fold.train_stop, settings)
+    exp = Experiment(name, algorithm="histogram")
+    _, screen = select(stats, exp.candidates(panel.names), settings, False)
+    admitted = [n for n in chosen if n in screen["selected_names"]]
+    if set(screen["rejection_reasons"]) & {"feature_budget", "correlated", "unstable_sign"}:
+        raise Stop("Unexpected fit-time screening rule.")
+    if not admitted:
+        # A valid negative screen does not waste a model fit or abort the other panels.
+        r["skipped_panels"].append(
+            dict(
+                variant=name,
+                reason="No new nonconstant, nonduplicate, sufficiently observed input",
+                selection=screen,
+            )
+        )
+        u.atomic_json(report_path(root, round_number), r)
+        return
+    if r["fit_attempts_this_call"] >= 4:
+        raise Stop("Four-fit limit reached.")
+    r["fit_attempts_this_call"] += 1
+    u.atomic_json(report_path(root, round_number), r)
+    result = fit_stage(panel, y, pairs, fold, exp, settings, stats, stage, lineage)
+    saved = pd.read_parquet(stage / "predictions.parquet")
+    replay = joblib.load(stage / "model.joblib").predict(panel, START, STOP)
+    error = u.exact_predictions(saved, replay)
+    r["results"].append({**result, "new_inputs_admitted": len(admitted), "intended_inputs": chosen})
+    r["new_training_fits"] += 1
+    r["maximum_prediction_replay_error"] = max(error, r["maximum_prediction_replay_error"])
+    r["checkpoint_hashes"][name] = u.verify_stage(stage, lineage)
+    u.atomic_json(report_path(root, round_number), r)
+    emit(
+        "FEATURE_MODEL_CHECKPOINTED",
+        round=round_number,
+        variant=name,
+        completed=r["new_training_fits"],
+        limit=4,
+        official_metric=result["metrics"]["official_metric"],
+        new_inputs=len(admitted),
+    )
+    del panel, stats, replay
+    gc.collect()
+
+
+def comparison_rows(round_number, results, control, groups, metric):
+    ref = metric(control["daily_rank_correlations"], 180)
+    if not math.isclose(ref, control["official_metric"], rel_tol=0, abs_tol=1e-12):
+        raise Stop("Control metric differs from daily series.")
+    if len({r["variant"] for r in results}) != len(results):
+        raise Stop("Duplicate model results.")
+    scores = {"current_market": ref}
+    for r in results:
+        v = r["variant"]
+        if v not in groups or (
+            r["fold"],
+            r["train_stop"],
+            r["validation_start"],
+            r["validation_stop"],
+        ) != (FOLD, TRAIN_STOP, START, STOP):
+            raise Stop("Unexpected model or temporal boundaries.")
+        score = metric(r["metrics"]["daily_rank_correlations"], 180)
+        if not math.isclose(score, r["metrics"]["official_metric"], abs_tol=1e-12, rel_tol=0):
+            raise Stop("Result metric differs from daily series.")
+        if r["metrics"]["date_ids"] != list(range(START, STOP)):
+            raise Stop("Result prediction dates differ.")
+        scores[v] = score
+    if round_number == 14:
+        references = {
+            "audit_shortlist": [],
+            "ordinary_innovations": [],
+            "robust_innovations": ["ordinary_innovations"],
+            "innovation_joint": ["ordinary_innovations", "robust_innovations"],
+        }
+    else:
+        references = {
+            "risk_dynamics_only": [],
+            "own_history_dynamics": [],
+            "pool_and_risk_dynamics": ["risk_dynamics_only"],
+            "prior_dynamics_joint": ["own_history_dynamics", "pool_and_risk_dynamics"],
+        }
+    rows = []
+    qualified = []
+    for r in results:
+        v = r["variant"]
+        chosen = r["selection"]["selected_names"]
+        admitted = [n for n in groups[v] if n in chosen]
+        if r.get("intended_inputs") != groups[v] or r["new_inputs_admitted"] != len(admitted):
+            raise Stop("Feature admission counts disagree.")
+        all_admitted = set(groups[v]).issubset(chosen)
+        refs = ["current_market"] + references[v]
+        complete = all(k in scores for k in refs)
+        deltas = {k: scores[v] - scores[k] for k in refs if k in scores}
+        passed = complete and all_admitted and all(d >= GAIN for d in deltas.values())
+        rows.append(
+            dict(
+                variant=v,
+                official_metric=scores[v],
+                delta_vs_current_market=scores[v] - ref,
+                declared_comparator_deltas=deltas,
+                all_comparators_available=complete,
+                intended_inputs=len(groups[v]),
+                new_inputs_admitted=len(admitted),
+                all_intended_inputs_admitted=all_admitted,
+                passes_review_gate=bool(passed),
+            )
+        )
+        if passed:
+            qualified.append(v)
+    return rows, qualified
+
+
+def worker(root, round_number):
+    import joblib
+    import numpy as np
+    import pandas as pd
+    from threadpoolctl import threadpool_limits
+
+    from commodity_prediction.data import Fold
+    from commodity_prediction.domain.catalog import Panel
+    from commodity_prediction.domain.market_path.features import build_panel
+    from commodity_prediction.domain.run import load_panel
+    from commodity_prediction.runtime import seal_checkpoint
+    from commodity_prediction.studies.evaluation import compare_predictions, evaluate
+
+    root = Path(root)
+    audit, session, older, u = previous(root)
+    lineage, evidence = identity(root, round_number, u)
+    directory = u.safe_path(
+        root, "artifacts/two_feature_rounds/" + info(round_number)["slug"] + "/" + lineage
+    )
+    if directory.exists():
+        raise Stop("Orphan round directory preserved; review before any retry.")
+    directory.mkdir(parents=True)
+    began = time.monotonic()
+    r = dict(
+        project="commodity-prediction",
+        round=round_number,
+        status="RUNNING",
+        source_commit=SHA,
+        lineage=lineage,
+        identity=evidence,
+        plan=plan(round_number),
+        started_utc=utc(),
+        fold=FOLD,
+        new_training_fits=0,
+        fit_attempts_this_call=0,
+        control_refits=0,
+        old_experiment_refits=0,
+        maximum_prediction_replay_error=0.0,
+        results=[],
+        skipped_panels=[],
+        checkpoint_hashes={},
+        feature_gate="open",
+        promotion_allowed=False,
+        final_test_evaluations=0,
+        validation_dates=180,
+        aws_api_calls=0,
+        github_writes=False,
+        other_round_used_for_selection=False,
+    )
+
+    def save():
+        r["elapsed_seconds"] = round(time.monotonic() - began, 3)
+        u.atomic_json(report_path(root, round_number), r)
+
+    def expire(*_):
+        raise Stop("240-second round deadline; checkpoints preserved, budget not reset.")
+
+    old = signal.signal(signal.SIGALRM, expire)
+    signal.setitimer(signal.ITIMER_REAL, LIMIT)
+    try:
+        save()
+        ready = u.readiness(root)
+        u.validate_runtime(root, ready)
+        u.validate_source(root)
+        prior = read_audit(root, u, True)
+        parents = u.checkpoint_snapshot(root, ready)
+        r["audit_reliance"] = prior["reliance_summary"]["rows"]
+        r["audit_shortlist"] = prior["candidate_lab"]["shortlist"]
+        r["prior_control_pooled"] = prior["prior_control_pooled"]
+        r["contract_smoke"] = smoke(round_number)
+        emit("CONTRACT_SMOKE_PASSED", round=round_number)
+        save()
+        for name, pin in u.RAW.items():
+            if u.digest(u.safe_path(root, "data/raw/" + name)) != pin:
+                raise Stop("Raw input hash changed: " + name)
+        final = u.read_json(root / "configs/final_evaluation.json")
+        if final["evaluated"] or final["final_test_start_date_id"] != 1714:
+            raise Stop("Final-test boundary changed.")
+        x = pd.read_csv(root / "data/raw/train.csv", nrows=STOP).set_index("date_id")
+        y = (
+            pd.read_csv(root / "data/raw/train_labels.csv", nrows=STOP)
+            .set_index("date_id")
+            .replace(-999999, np.nan)
+        )
+        pairs = pd.read_csv(root / "data/raw/target_pairs.csv")
+        if (
+            len(x) != STOP
+            or x.index.tolist() != list(range(STOP))
+            or not y.index.equals(x.index)
+            or y.columns.tolist() != [f"target_{i}" for i in range(424)]
+            or pairs.target.tolist() != y.columns.tolist()
+        ):
+            raise Stop("Expected middle-period input axes.")
+        config = u.read_json(root / "configs/domain_study.json")
+        u.atomic_json(directory / "plan.json", evidence)
+        with threadpool_limits(limits=4):
+            original = load_panel(root / "artifacts" / FEATURE / "features")
+            prefix = Panel(
+                original.values[:STOP],
+                original.dates[:STOP],
+                original.targets,
+                original.names,
+                dict(original.source_series),
+            )
+            base, _ = build_panel(prefix, x, pairs, "current_market")
+            del original, prefix
+            gc.collect()
+            if base.targets != y.columns.tolist() or base.dates != x.index.tolist():
+                raise Stop("Parent panel order mismatch.")
+            cp = root / "artifacts" / PARENT / "fold_1/current_market"
+            saved = pd.read_parquet(cp / "predictions.parquet")
+            replay = joblib.load(cp / "model.joblib").predict(base, START, STOP)
+            u.exact_predictions(saved, replay)
+            control = evaluate(y.loc[saved.index], saved, pairs)
+            if not session.close(
+                control["official_metric"], CONTROL
+            ) or saved.index.tolist() != list(range(START, STOP)):
+                raise Stop("Saved middle-fold control did not match expected metric or dates.")
+            r["control"] = control
+            emit("SAVED_CONTROL_REPLAY_PASSED", round=round_number, score=CONTROL, refits=0)
+            emit("BUILD_FIXED_FEATURE_FAMILY", round=round_number, templates=24)
+            cube, names, meta = feature_block(base.values, base.names, pairs, round_number)
+            for stop in [1164, 1349]:
+                emit("VERIFY_EXACT_FEATURE_PREFIX", round=round_number, rows=stop)
+                short, nn, _ = feature_block(base.values[:stop], base.names, pairs, round_number)
+                np.testing.assert_array_equal(short, cube[:stop])
+                if names != nn:
+                    raise Stop("Prefix inventory changed.")
+            oldstage = root / "artifacts/information_audit" / AUDIT_LINEAGE / "feature_lab"
+            with np.load(oldstage / "candidates.npz", allow_pickle=False) as data:
+                oldcube = data["values"].copy()
+            oldnames = [m["name"] for m in prior["candidate_metadata"]]
+            oldbuilt, on, _ = audit.build_relative(base.values[:1164], base.names, pairs)
+            if on != oldnames:
+                raise Stop("Notebook13 source inventory changed.")
+            np.testing.assert_array_equal(oldbuilt, oldcube)
+            if round_number == 14:
+                for source in SIGNALS:
+                    oldname = (
+                        "relative_state__" + source.replace("__", "_") + "__innovation_horizon_rank"
+                    )
+                    newname = "innovation14__" + source.replace("__", "_") + "__ordinary_rank"
+                    np.testing.assert_array_equal(
+                        cube[:1164, :, names.index(newname)], oldcube[:, :, oldnames.index(oldname)]
+                    )
+            r["causal_checks"] = dict(
+                exact_prefix_stops=[1164, 1349],
+                notebook13_training_reconstruction_exact=True,
+                notebook13_six_rank_columns_exact=(round_number == 14),
+                new_direct_outcome_arguments=False,
+                inherited_contract="Parent h+1 released priors; exact prefix tests do not independently reprove the cached parent pipeline.",
+            )
+            r["feature_audit"] = audit_candidates(
+                base, cube, meta, pairs, y.iloc[:TRAIN_STOP].to_numpy(), audit, oldcube, oldnames
+            )
+            groups = variants(round_number, meta)
+            r["panels"] = groups
+            r["feature_metadata"] = meta
+            stage = directory / "features"
+            stage.mkdir()
+            np.savez_compressed(stage / "candidates.npz", values=cube, dates=np.arange(STOP))
+            u.atomic_json(
+                stage / "inventory.json",
+                dict(names=names, metadata=meta, targets=pairs.target.tolist(), panels=groups),
+            )
+            u.atomic_json(stage / "training_audit.json", r["feature_audit"])
+            seal_checkpoint(
+                stage, lineage, ["candidates.npz", "inventory.json", "training_audit.json"]
+            )
+            r["feature_checkpoint_hashes"] = u.verify_stage(stage, lineage)
+            save()
+            del oldbuilt, oldcube, short
+            gc.collect()
+            fold = Fold(FOLD, TRAIN_STOP, START, STOP)
+            for name, chosen in groups.items():
+                emit(
+                    "FIT_DECLARED_PANEL",
+                    round=round_number,
+                    variant=name,
+                    new_fits=r["new_training_fits"],
+                    limit=4,
+                )
+                fit_one(
+                    root,
+                    u,
+                    round_number,
+                    name,
+                    chosen,
+                    directory / "fold_1" / name,
+                    lineage,
+                    base,
+                    cube,
+                    names,
+                    y,
+                    pairs,
+                    fold,
+                    config,
+                    r,
+                )
+            rows, eligible = comparison_rows(
+                round_number, r["results"], control, groups, session.metric
+            )
+            daily = {"current_market": np.asarray(control["daily_rank_correlations"])}
+            daily.update(
+                {
+                    v["variant"]: np.asarray(v["metrics"]["daily_rank_correlations"])
+                    for v in r["results"]
+                }
+            )
+            contrasts = [p for p in plan(round_number)["contrasts"] if all(n in daily for n in p)]
+            r["comparisons"] = (
+                compare_predictions(daily, [180], contrasts, config) if contrasts else []
+            )
+            r.update(
+                comparison_rows=rows,
+                candidates_for_review=eligible,
+                decision="REVIEW_ON_OTHER_PERIODS" if eligible else "STOP_TESTED_PANELS",
+            )
+        r["parents_unchanged"] = parents == u.checkpoint_snapshot(root, ready)
+        if not r["parents_unchanged"]:
+            raise Stop("Parent checkpoints changed.")
+        read_audit(root, u, True)
+        u.validate_source(root)
+        r.update(
+            status="ROUND_REVIEW_READY",
+            source_unchanged=True,
+            audit_parent_unchanged=True,
+            finished_utc=utc(),
+            limitations=[
+                "Middle development fold already inspected; this is not fresh holdout evidence.",
+                "24 candidate representations are not 24 independent signals or all universally novel features.",
+                "Ordinary/robust normalization parameters use previous rows; inherited released priors retain h+1 timing.",
+                "Training IC is descriptive; univariate sign is not used to silently replace any fixed family after results.",
+                "Four fitted ablations per round use the original learner. These tests cannot rule out feature-model interactions.",
+                "Intervals are conditional within this round, not correction for both rounds or the full adaptive search.",
+                "Ranks may duplicate information, correlated features may substitute; admission is not causal importance.",
+                "No Git/cloud writes, other-fold fits, ensemble optimization, package install, final test or auto shutdown.",
+            ],
+        )
+        save()
+        u.atomic_json(directory / "review.json", r)
+        return r
+    except BaseException as exc:
+        r.update(
+            status="STOPPED",
+            error=type(exc).__name__ + ": " + str(exc),
+            traceback=traceback.format_exc(),
+            finished_utc=utc(),
+        )
+        save()
+        raise
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, old)
+
+
+def verify_complete(root, r, audit, session, u):
+    rnd = r.get("round")
+    info(rnd)
+    lineage, evidence = identity(root, rnd, u)
+    read_audit(root, u)
+    if (
+        r.get("status") not in TERMINAL
+        or r.get("lineage") != lineage
+        or r.get("identity") != evidence
+        or r.get("parents_unchanged") is not True
+        or r.get("source_unchanged") is not True
+        or r.get("audit_parent_unchanged") is not True
+        or r.get("control_refits") != 0
+        or r.get("maximum_prediction_replay_error") != 0
+        or r.get("final_test_evaluations") != 0
+        or r.get("fold") != FOLD
+        or r.get("contract_smoke", {}).get("status") != "TWO_ROUND_CONTRACT_PASSED"
+        or r.get("other_round_used_for_selection") is not False
+    ):
+        raise Stop("Not a completed verified round.")
+    groups = variants(rnd, r["feature_metadata"])
+    if groups != r.get("panels"):
+        raise Stop("Stored panels changed.")
+    done = {a["variant"] for a in r["results"]}
+    skip = {a["variant"] for a in r.get("skipped_panels", [])}
+    if (
+        done & skip
+        or done | skip != set(groups)
+        or len(done) != r["new_training_fits"]
+        or len(done) != r["fit_attempts_this_call"]
+        or len(done) > 4
+        or set(r["checkpoint_hashes"]) != done
+    ):
+        raise Stop("Incomplete, duplicated or excessive fitting inventory.")
+    rows, eligible = comparison_rows(rnd, r["results"], r["control"], groups, session.metric)
+    if rows != r["comparison_rows"] or eligible != r["candidates_for_review"]:
+        raise Stop("Stored metric or gate decision changed.")
+    expected = "REVIEW_ON_OTHER_PERIODS" if eligible else "STOP_TESTED_PANELS"
+    if r["decision"] != expected:
+        raise Stop("Stored decision differs from declared gate.")
+    if not session.close(r["control"]["official_metric"], CONTROL) or r["control"][
+        "date_ids"
+    ] != list(range(START, STOP)):
+        raise Stop("Wrong control dates or metric.")
+    d = root / "artifacts/two_feature_rounds" / info(rnd)["slug"] / lineage
+    u.verify_stage(d / "features", lineage, r["feature_checkpoint_hashes"])
+    inv = u.read_json(d / "features/inventory.json")
+    if (
+        r.get("plan") != plan(rnd)
+        or inv.get("panels") != groups
+        or inv.get("metadata") != r["feature_metadata"]
+        or u.read_json(d / "features/training_audit.json") != r["feature_audit"]
+    ):
+        raise Stop("Feature metadata or training audit differs from sealed evidence.")
+    if len(r.get("skipped_panels", [])) != len(skip):
+        raise Stop("Duplicated skipped-panel receipt.")
+    for name, pins in r["checkpoint_hashes"].items():
+        stage = d / "fold_1" / name
+        u.verify_stage(stage, lineage, pins)
+        record = next(a for a in r["results"] if a["variant"] == name)
+        if u.read_json(stage / "result.json") != {
+            k: v for k, v in record.items() if k not in ["new_inputs_admitted", "intended_inputs"]
+        }:
+            raise Stop("Unsealed result differs from saved record.")
+
+
+def run(root=ROOT, round_number=14):
+    root = Path(root)
+    info(round_number)
+    audit, session, older, u = previous(root)
+    ready = u.readiness(root)
+    u.validate_runtime(root, ready)
+    u.validate_source(root)
+    read_audit(root, u)
+    out = u.safe_path(root, "logs/manual_" + info(round_number)["slug"])
+    out.mkdir(parents=True, exist_ok=True)
+    # Shared lock forbids parallel rounds competing for the 4-core CPU/memory.
+    with u.safe_path(root, "logs/manual_two_feature_rounds.lock").open("a") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        path = report_path(root, round_number)
+        if path.exists():
+            r = u.read_json(path)
+            if r.get("status") not in TERMINAL:
+                raise Stop(
+                    "Interrupted round exists; no automatic retry or time reset. Preserve its report."
+                )
+            verify_complete(root, r, audit, session, u)
+            emit("COMPLETED_ROUND_REUSED", round=round_number, new_fits=0)
+            return {**r, "new_fits_this_notebook_call": 0}
+        lineage, _ = identity(root, round_number, u)
+        if (root / "artifacts/two_feature_rounds" / info(round_number)["slug"] / lineage).exists():
+            raise Stop("Orphan artifacts preserved; no refit.")
+        if shutil.disk_usage(root).free < 1024**3:
+            raise Stop("At least 1 GiB free required. Do not delete old projects blindly.")
+        u.atomic_json(
+            path,
+            dict(
+                status="STARTING_WORKER",
+                round=round_number,
+                lineage=lineage,
+                new_training_fits=0,
+                started_utc=utc(),
+            ),
+        )
+        cmd = [
+            ready["runtime"]["python"],
+            "-u",
+            str(Path(__file__).resolve()),
+            "--worker",
+            "--round",
+            str(round_number),
+            "--root",
+            str(root),
+        ]
+        began = time.monotonic()
+        try:
+            session._supervise_command(cmd, root, LIMIT, out / "worker.log", u.environment(root))
+        except BaseException as exc:
+            r = u.read_json(path)
+            if r.get("status") == "STARTING_WORKER":
+                r["new_training_fits"] = None
+            r.update(
+                status="STOPPED",
+                supervisor_error=type(exc).__name__ + ": " + str(exc),
+                supervised_seconds=round(time.monotonic() - began, 3),
+            )
+            u.atomic_json(path, r)
+            raise
+        r = u.read_json(path)
+        verify_complete(root, r, audit, session, u)
+        r.update(
+            supervised_seconds=round(time.monotonic() - began, 3),
+            new_fits_this_notebook_call=r["new_training_fits"],
+        )
+        u.atomic_json(path, r)
+        return r
+
+
+# The two notebooks share presentation machinery, not results or selected models.
+def charts(r):
+    import numpy as np
+    import plotly.graph_objects as go
+
+    _rnd = r["round"]
+    figs = []
+
+    def add(f, title, x="", y=""):
+        f.update_layout(
+            title=title,
+            height=520,
+            margin=dict(l=85, r=40, t=90, b=150),
+            xaxis_title=x,
+            yaxis_title=y,
+            legend=dict(orientation="h", y=-0.38),
+        )
+        figs.append(f)
+
+    a = r["audit_reliance"]
+    f = go.Figure()
+    for rep in range(2):
+        f.add_bar(
+            x=[z["family"] for z in a],
+            y=[z["pooled_metric_drop_repetitions"][rep] for z in a],
+            name=f"Audit repetition {rep + 1}",
+        )
+    add(
+        f,
+        "1 · Prior audit: time-alignment reliance, not causal importance",
+        "Saved family",
+        "Pooled metric drop when perturbed",
+    )
+    rows = r["feature_audit"]
+
+    def short(n):
+        z = n.split("__", 1)[-1]
+        for old, new in [
+            ("reference_return_lag_0_difference", "Return lag0"),
+            ("reference_return_lag_1_difference", "Return lag1"),
+            ("reference_return_lag_5_difference", "Return lag5"),
+            ("reference_risk_63_difference", "Risk spread63"),
+            ("released_priors_location_63", "Prior63"),
+            ("released_priors_location_126", "Prior126"),
+            ("own_minus_cross_horizon_pool", "Own vs horizon pool"),
+            ("own_minus_market_pool", "Own vs market pool"),
+            ("short_long_risk_ratio", "Risk63 / risk252"),
+            ("fast_minus_medium", "Fast vs medium"),
+            ("medium_minus_slow", "Medium vs slow"),
+            ("median_minus_mean", "Median vs mean"),
+        ]:
+            z = z.replace(old, new)
+        return z.replace("__", " · ").replace("_", " ")
+
+    add(
+        go.Figure(
+            go.Bar(
+                y=[short(z["name"]) for z in rows],
+                x=[z["training_coverage"] for z in rows],
+                orientation="h",
+            )
+        ),
+        "2 · Candidate coverage on the fitting interval only",
+        "Finite training fraction",
+        "Candidate",
+    )
+    figs[-1].update_layout(height=880, margin=dict(l=260, r=35, t=85, b=70))
+    f = go.Figure()
+    for group in dict.fromkeys(z["group"] for z in rows):
+        rr = [z for z in rows if z["group"] == group]
+        f.add_scatter(
+            x=[z["half_1_mean_ic"] for z in rr],
+            y=[z["half_2_mean_ic"] for z in rr],
+            mode="markers",
+            text=[short(z["name"]) for z in rr],
+            name=group,
+            hovertemplate="%{text}<br>Earlier mean IC: %{x:.4f}<br>Later mean IC: %{y:.4f}<extra></extra>",
+        )
+    f.add_hline(y=0, line_dash="dot")
+    f.add_vline(x=0, line_dash="dot")
+    add(
+        f,
+        "3 · Descriptive training associations — no validation re-selection",
+        "Earlier fitting-half mean Spearman",
+        "Later fitting-half mean Spearman",
+    )
+    f = go.Figure()
+    for z in rows:
+        if z["median"] is not None:
+            f.add_scatter(
+                x=[z["q05"], z["q95"]], y=[short(z["name"])] * 2, mode="lines", showlegend=False
+            )
+            f.add_scatter(x=[z["median"]], y=[short(z["name"])], mode="markers", showlegend=False)
+    f.update_layout(height=820)
+    add(
+        f,
+        "4 · Training distributions: 5th, 50th and 95th percentiles",
+        "Feature value",
+        "Candidate",
+    )
+    f = figs[-1]
+    f.update_layout(height=880, margin=dict(l=260, r=35, t=85, b=70))
+    cnt = r["comparison_rows"]
+    add(
+        go.Figure(
+            go.Bar(
+                x=["current_market"] + [z["variant"] for z in cnt],
+                y=[r["control"]["official_metric"]] + [z["official_metric"] for z in cnt],
+            )
+        ),
+        "5 · Same middle-period predictive comparison",
+        "Fitted panel",
+        "Official metric on 180 dates",
+    )
+    f = go.Figure()
+    refs = list(dict.fromkeys(k for z in cnt for k in z["declared_comparator_deltas"]))
+    for ref in refs:
+        f.add_bar(
+            x=[z["variant"] for z in cnt],
+            y=[z["declared_comparator_deltas"].get(ref) for z in cnt],
+            name="Versus " + ref,
+        )
+    f.add_hline(y=GAIN, line_dash="dash", annotation_text="+0.002 review gate")
+    add(
+        f,
+        "6 · Does the new representation beat its declared comparisons?",
+        "Panel",
+        "Matched metric change",
+    )
+    f = go.Figure()
+    for z in r["comparisons"]:
+        if z["block_dates"] == 20 and z["reference"] == "current_market":
+            lo, hi = z["conditional_95_interval"]
+            name = z["variant"]
+            f.add_scatter(x=[lo, hi], y=[name, name], mode="lines", showlegend=False)
+            f.add_scatter(x=[z["delta"]], y=[name], mode="markers", name=name)
+    f.add_vline(x=0, line_dash="dash")
+    add(
+        f,
+        "7 · Conditional 20-date intervals — not whole-search correction",
+        "Metric change vs saved baseline",
+        "Panel",
+    )
+    f = go.Figure()
+    control = np.asarray(r["control"]["daily_rank_correlations"])
+    for z in r["results"]:
+        f.add_scatter(
+            x=z["metrics"]["date_ids"],
+            y=np.cumsum(np.asarray(z["metrics"]["daily_rank_correlations"]) - control).tolist(),
+            name=z["variant"],
+        )
+    add(
+        f,
+        "8 · Concentration through time — NOT trading profit",
+        "Prediction origin",
+        "Cumulative daily-correlation difference",
+    )
+    f = go.Figure()
+    f.add_bar(x=[z["variant"] for z in cnt], y=[z["intended_inputs"] for z in cnt], name="Declared")
+    f.add_bar(
+        x=[z["variant"] for z in cnt], y=[z["new_inputs_admitted"] for z in cnt], name="Admitted"
+    )
+    add(f, "9 · Actual feature admission — not causal attribution", "Panel", "Added templates")
+    f = go.Figure()
+    for z in [{"variant": "current_market", "metrics": r["control"]}] + r["results"]:
+        hs = z["metrics"].get("horizon_metrics", {})
+        f.add_scatter(
+            x=list(hs),
+            y=[hs[h]["official_metric"] for h in hs],
+            mode="lines+markers",
+            name=z["variant"],
+        )
+    add(
+        f,
+        "10 · Horizon diagnostics — subsets are not additive",
+        "Prediction horizon",
+        "Subset official metric",
+    )
+    return figs
+
+
+def backup(root, r, u):
+    rnd = r["round"]
+    d = root / "artifacts/two_feature_rounds" / info(rnd)["slug"] / r["lineage"]
+    files = [d / "plan.json", d / "review.json"] + [
+        d / "features" / n for n in r["feature_checkpoint_hashes"]
+    ]
+    for variant, pins in r["checkpoint_hashes"].items():
+        files += [d / "fold_1" / variant / n for n in pins]
+    pins = {
+        str(p.relative_to(root)): u.digest(u.safe_path(root, str(p.relative_to(root))))
+        for p in files
+    }
+    if sum(p.stat().st_size for p in files) > 256 * 1024**2:
+        raise Stop("Backup larger than 256 MiB; results preserved.")
+    dest = u.safe_path(outdir(root, rnd), info(rnd)["slug"] + "_checkpoints.zip")
+    tmp = u.safe_path(dest.parent, dest.name + ".tmp")
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED, compresslevel=1) as z:
+        for p in files:
+            z.write(p, str(p.relative_to(root)))
+        z.writestr("SHA256SUMS.json", json.dumps(pins, sort_keys=True, indent=2))
+    with zipfile.ZipFile(tmp) as z:
+        if z.testzip():
+            raise Stop("Backup CRC failed.")
+        for n, h in pins.items():
+            if hashlib.sha256(z.read(n)).hexdigest() != h:
+                raise Stop("Backup read-back checksum differs.")
+    os.replace(tmp, dest)
+    return dict(
+        path=str(dest),
+        sha256=u.digest(dest),
+        bytes=dest.stat().st_size,
+        files=len(files),
+        private=True,
+        label_derived_features_models_predictions=True,
+        raw_csvs_included=False,
+        off_disk_backup_confirmed=False,
+    )
+
+
+def finish(root, r, figures):
+    root = Path(root)
+    audit, session, older, u = previous(root)
+    verify_complete(root, r, audit, session, u)
+    if len(figures) != 10:
+        raise Stop("Expected ten figures in EACH round.")
+    r = dict(r)
+    rnd = r["round"]
+    i = info(rnd)
+    dest = outdir(root, rnd) / (i["slug"] + "_dashboard.html")
+    r.update(
+        dashboard=str(dest),
+        dashboard_sha256=older.export_dashboard(
+            dest, i["title"], [(str(f.layout.title.text), f) for f in figures]
+        ),
+        plotly_figures=10,
+    )
+    try:
+        r["private_checkpoint_bundle"] = backup(root, r, u)
+    except Exception as exc:
+        r["backup_warning"] = type(exc).__name__ + ": " + str(exc)
+    r.update(
+        status="NOTEBOOK_AND_FEATURE_ROUND_READY",
+        notebook=str(root / "notebooks" / i["notebook"]),
+        updated_utc=utc(),
+    )
+    u.atomic_json(report_path(root, rnd), r)
+    return r
+
+
+def protocol(round_number):
+    i = info(round_number)
+    intro = f"""# Round {round_number}: {i["title"]}
+
+## Evidence, not promises
+Notebook13 replayed three saved models exactly with zero fits. The pooled model
+scored 0.3097087232124053 versus 0.217739151200211 for its stored training means.
+Perturbing released-prior timing lowered pooled scores by 0.136151523334791 and
+0.057388292272549435. These are two dependence diagnostics, not causal importance
+or confidence bounds. Prior reliance is not proof any new prior feature works.
+The middle fold scored 0.16704165319061334 versus mean-only 0.1824882692897385.
+Three innovation-rank features passed a training-only screen, not fitted validation.
+
+## Common comparison contract
+Both rounds are specified before either is run. Each has 24 representations,
+four separate ablation panels, one 240-second worker, ten Plotly charts, a private
+checkpoint ZIP and an independent result. They share the frozen original baseline,
+not each other's outputs, winning features or fitted models. Run sequentially.
+A negative completed round does not block the independent other round.
+Training stop1344; validation1349:1529 (180dates), warmup252. No final-test rows.
+No source/config changes to historical parents, no control refits or optimization
+of learner parameters. Admitted-only screening retains usable nonduplicate inputs;
+training associations are recorded, not used to improvise replacements after scores.
+The current downstream fit code and data-missingness rules remain unchanged.
+All feature transforms are as-of, assuming the verified parent's h+1 release rule.
+No direct new outcome argument enters either builder. Scaling windows use t-1
+and earlier; already-released inputs may update during validation with frozen models.
+Numeric checks use copied pandas/NumPy arrays, preserving Copy-on-Write compatibility.
+The six notebook13 innovation-rank arrays are reproduced exactly before round14 fits.
+Both rounds independently verify the saved notebook13 input prefix and old models.
+
+## Inventory and gate
+"""
+    if round_number == 14:
+        body = """Six source channels: return differences at lags0/1/5, risk63 difference,
+and released location63/126. For each source, over the preceding63 rows (minimum42):
+1. (x_t - historical mean) / population SD, clipped to [-12,12].
+2. Within-horizon ordinal rank of the UNCLIPPED ordinary surprise.
+3. (x_t - historical median) / IQR, clipped to [-12,12].
+4. Within-horizon ordinal rank of the UNCLIPPED robust surprise.
+Zero/insufficient scale produces missing, not infinite/saturated output. IQR is not
+multiplied by a normal-distribution conversion; this is a fixed scale definition.
+Ranking uses average ties among observed inputs, minimum3, mapped to [-1,1].
+
+24 templates = 18 newly constructed representations + 6 existing notebook13
+innovation ranks carried forward exactly. The six sources are not newly discovered
+information sources. Robust within-target scaling of these target-level channels
+is not the old asset-level robust-shock recipe, but semantic overlap is explicit.
+
+Four fits: the exact3-name audit shortlist (ordinary ranks for lag0, location126,
+lag1), all12 ordinary representations, all12 robust representations, and all24.
+The extra ordinary inputs did not all pass the previous marginal screen; they are
+fixed family-level controls for complementary nonlinear effects, not reclassified
+as passed candidates. The shortlist model tests whether broader panels dilute it.
+
+Shortlist/ordinary need +0.002 vs saved baseline. Robust needs +0.002 vs baseline
+AND ordinary. Joint needs +0.002 vs baseline AND both full separate groups.
+All intended inputs must enter a panel before it qualifies for review.
+"""
+    else:
+        body = """Six bases from already-released history:
+- (location63-location126)/risk126: fast/medium history divergence.
+- (location126-location252)/risk126: medium/slow history divergence.
+- (median63-location63)/risk63: robust/mean disagreement.
+- (location126-market_pair_pool)/risk126: own/pool disagreement.
+- (location126-canonical_cross_horizon_pool)/risk126: own/cross-horizon disagreement.
+- log(risk63/risk252): short/long uncertainty ratio.
+Risk denominators must be finite and >1e-12; nonpositive risks cannot create logs.
+
+Each base yields its level, change over5 rows, surprise relative to its preceding
+63 rows (minimum42), and its within-horizon same-date rank: six by four =24.
+Three nonrank channels are clipped [-12,12]; rank is calculated before clipping.
+Missing inputs stay missing; these levels are NOT commodity curves, economic
+forecast disagreement, or estimator confidence intervals. They summarize the
+project's historical prior estimates. Shared inputs create correlated candidates.
+
+Four fits: risk dynamics only4, own-history dynamics12 (first3 bases), pool-and-risk
+dynamics12 (last3), and the exact24-feature union. No masks added. This is neither
+static rank state nor signal/outcome response regression from earlier experiments.
+
+Risk-only/own-history need +0.002 vs saved baseline. Pool/risk needs +0.002 vs
+baseline AND risk-only. Joint needs +0.002 vs baseline AND both12-feature groups.
+All intended inputs must enter a panel before it qualifies for review.
+"""
+    tail = """
+## Leakage, uncertainty, and stopping
+The full prediction label vector is read for fitting/evaluation only up to origin1528;
+feature builders accept the previously sealed parent array, not y. Parent release
+provenance is inherited, not independently re-proven by the new prefix test.
+Exact full-target prefix checks at1164/1349 and future-perturbation smoke tests precede
+fits. Missingness/constant/duplicate checks use fitting data only. Exact duplicates
+are audited against the active baseline, within this round, and against the prior
+18-candidate training cube; not every historical representation.
+
+The +0.002 rule allocates compute, not establishes significance. Paired block
+intervals10/20/40 dates, 2000 draws and simultaneous within-family bounds are
+conditional on these models and do not correct repeated development inspection.
+No automatic extra folds or promotions. A useful candidate requires later temporal
+replication and a matched removal; a negative panel remains closed unchanged.
+The fixed learner is an experimental control, not proof its capacity is sufficient.
+
+Both setup and notebooks preserve existing differing files. No blind retries or
+budget resets: interrupted states require diagnosis. Successful stages persist;
+completed results reopen without fitting. Long tasks have heartbeat logs and hard
+supervision. A shared lock prevents parallel rounds. Export errors cannot justify
+retraining completed models. Backups contain private derived features and models;
+download privately, not to ChatGPT/public GitHub. Stop space, never delete its disk.
+
+## Primary sources and scope
+1. sklearn RobustScaler documentation (median/IQR method and outlier sensitivity):
+https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.RobustScaler.html
+Our causal rolling implementation is NOT a fit of a whole-dataset RobustScaler.
+2. Campbell & Thompson, Predicting the Equity Premium Out of Sample, NBER11468:
+https://www.nber.org/papers/w11468
+Historical means are substantive benchmarks; small in-sample associations do not
+justify abandoning out-of-sample controls. Their equity study does not validate
+these commodity features or the numerical +0.002 threshold.
+3. Moreira & Muir, Volatility-Managed Portfolios, Journal of Finance (2017):
+https://onlinelibrary.wiley.com/doi/abs/10.1111/jofi.12513
+Risk normalization motivates a test, not a claim of short-horizon return predictability.
+4. Repository source and uploaded notebook13 report pin the actual implementations,
+source inputs, delayed-prior contract and all starting performance figures.
+
+All files from this installer are LOCAL additions. No AWS API/Git writes, source
+reset, environment installation, ensemble, final-test evaluation or autonomous work.
+"""
+    return intro + body + tail
+
+
+def notebook_document(round_number):
+    i = info(round_number)
+    cells = []
+
+    def md(s):
+        cells.append(
+            dict(
+                cell_type="markdown",
+                metadata={},
+                id=f"round{round_number}-{len(cells):02}",
+                source=s,
+            )
+        )
+
+    def code(s):
+        cells.append(
+            dict(
+                cell_type="code",
+                metadata={},
+                id=f"round{round_number}-{len(cells):02}",
+                source=s,
+                execution_count=None,
+                outputs=[],
+            )
+        )
+
+    md(
+        f"# Commodity prediction · Round {round_number}\n## {i['title']}\n\n"
+        "**24 candidate representations · at most four new CPU fits · ten interactive charts.** "
+        "A separate study versus the frozen original baseline, not a continuation of the other round's winning model. "
+        "No final test, package install, old control refit, or automatic other-fold run."
+    )
+    code(
+        "from pathlib import Path\nimport importlib.util\nimport pandas as pd\n"
+        "ROOT=Path('/home/sagemaker-user/projects/commodity-prediction-manual')\n"
+        f"ROUND={round_number}\n"
+        "spec=importlib.util.spec_from_file_location('manual_two_rounds',ROOT/'scripts/commodity_two_feature_rounds.py')\n"
+        "support=importlib.util.module_from_spec(spec)\nspec.loader.exec_module(support)\n"
+        "audit,session,older,u=support.previous(ROOT)\nready=u.readiness(ROOT)\nu.validate_runtime(ROOT,ready)\nu.validate_source(ROOT)\n"
+        "prior=support.read_audit(ROOT,u)\nprint('Source:',support.SHA)\nprint('Runtime:',ready['runtime']['python'])\n"
+    )
+    md(
+        "## Evidence from notebook13\n\nReleased-prior time alignment was the most influential perturbed family in this audit. "
+        "This is reliance of an already-fitted model, not causal importance or proof the new features will help. "
+        "Only three innovation ranks passed the earlier marginal training screen."
+    )
+    code(
+        "display(pd.DataFrame(prior['reliance_summary']['rows']))\n"
+        "display(pd.DataFrame({'training_only_shortlist':prior['candidate_lab']['shortlist']}))\n"
+    )
+    md(
+        "## Declare comparisons before execution\n\nThe full protocol in `docs/manual_"
+        + i["slug"]
+        + ".md` "
+        "states each formula, timing assumption, overlap and stop rule. Both rounds are frozen together; "
+        "do not edit the second after observing the first. Coverage and two-half IC are audited, but not used to "
+        "replace fixed feature panels after validation. The learner is unchanged."
+    )
+    code(
+        "declaration=support.plan(ROUND)\ndisplay(pd.DataFrame({'panel':declaration['variants'],'added_templates':declaration['panel_sizes']}))\n"
+        "print('Training stop:',support.TRAIN_STOP,'validation:',support.START,'through',support.STOP-1)\n"
+        "print('SAME-PERIOD control:',support.CONTROL)\nprint('240-second worker. Four new fits maximum. No other folds.')\n"
+    )
+    md(
+        "## Execute once\n\nThis cell starts the worker, replay and up to four new fits. "
+        "Do not launch both notebooks simultaneously. Each round has its own240-second allowance. "
+        "STOPPED means diagnose; STOP_TESTED_PANELS means a completed negative experiment. "
+        "The latter is not a software failure and does not block the independently declared next round."
+    )
+    code(
+        "report=support.run(ROOT,ROUND)\nprint('RESULT:',report['status'])\nprint('DECISION:',report['decision'])\n"
+        "print('New fits this call:',report['new_fits_this_notebook_call'])\nfigures=support.charts(report)\n"
+    )
+    captions = [
+        (
+            "Starting evidence",
+            "Two previous block permutations are not statistical confidence limits. No permutation outputs are used as forecasting features.",
+        ),
+        (
+            "Usable coverage",
+            "Finite training coverage is not proof of predictive value. Missing input histories remain missing.",
+        ),
+        (
+            "Training stability",
+            "Mean daily associations on two chronological fitting halves are descriptive. They do not select a validation winner.",
+        ),
+        (
+            "Distributions and limits",
+            "Medians and outer quantiles reveal saturation, asymmetry and low variation. Correlated transforms are not independent information sources.",
+        ),
+        (
+            "Matched model scores",
+            "All scores in this chart cover the same180 middle-period dates. Never compare directly to the pooled535-date score.",
+        ),
+        (
+            "Incremental value",
+            "A panel must beat its declared references, not merely the weakest model. Thresholds allocate further compute; no model is promoted.",
+        ),
+        (
+            "Uncertainty",
+            "Shown bounds condition on this round's fitted models. Both rounds and historical adaptive research create additional uncorrected multiplicity.",
+        ),
+        (
+            "Time concentration",
+            "Cumulative correlation differences are NOT investment profits and do not establish out-of-time stability.",
+        ),
+        (
+            "Admission",
+            "Recorded fit-time screening shows exactly which new inputs reached the learner. A failed admission gate prevents promotion.",
+        ),
+        (
+            "Horizon behavior",
+            "Subset correlations are diagnostics. They do not add up to the full424-target official metric.",
+        ),
+    ]
+    for j, (title, text) in enumerate(captions):
+        md("## " + title + "\n\n" + text)
+        code(f"figures[{j}].show()\n")
+    md(
+        "## Save evidence before moving on\n\nDownload the JSON and HTML; keep the private model/feature ZIP off-disk. "
+        "Save this notebook. A completed negative result is evidence, not a reason to repeat a run. "
+        "Round15 remains independent of round14; neither launches extra folds. Stop the SageMaker space when finished."
+    )
+    code(
+        "report=support.finish(ROOT,report,figures)\ndisplay(pd.DataFrame(report['comparison_rows']))\n"
+        "print('RESULT:',report['status'])\nprint('DECISION:',report['decision'])\nprint('REPORT:',support.report_path(ROOT,ROUND))\n"
+        "print('DASHBOARD:',report['dashboard'])\nprint('PRIVATE ZIP:',report.get('private_checkpoint_bundle',{}).get('path',report.get('backup_warning')))\n"
+        "print('Ctrl+S. Download evidence; stop space after the session. No automatic shutdown.')\n"
+    )
+    md(
+        "## Research sources and cautions\n\n"
+        "[Robust scaling method](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.RobustScaler.html) · "
+        "[Historical-mean forecasting benchmarks](https://www.nber.org/papers/w11468) · "
+        "[Risk normalization](https://onlinelibrary.wiley.com/doi/abs/10.1111/jofi.12513). "
+        "These motivate hypotheses, not commodity score guarantees. Full formulas, actual source lineage and limitations are in the local protocol."
+    )
+    return dict(
+        cells=cells,
+        metadata=dict(
+            kernelspec=dict(
+                display_name="Commodity - manual (verified)",
+                language="python",
+                name="commodity-manual",
+            ),
+            language_info=dict(name="python", version="3.12"),
+            commodity_round=round_number,
+        ),
+        nbformat=4,
+        nbformat_minor=5,
+    )
+
+
+def same_notebook_sources(a, b):
+    def source(c):
+        return "".join(c["source"]) if isinstance(c["source"], list) else c["source"]
+
+    return [(c["cell_type"], source(c)) for c in a["cells"]] == [
+        (c["cell_type"], source(c)) for c in b["cells"]
+    ]
+
+
+def install(root=ROOT):
+    root = Path(root)
+    audit, session, older, u = previous(root)
+    u.validate_source(root)
+    read_audit(root, u)
+    emit("INSTALL_TWO_INDEPENDENT_ROUNDS", new_training_fits=0)
+    payloads = {
+        u.safe_path(root, "scripts/commodity_two_feature_rounds.py"): Path(__file__).read_bytes()
+    }
+    notebooks = {}
+    for rnd in (14, 15):
+        i = info(rnd)
+        nb = notebook_document(rnd)
+        p = u.safe_path(root, "notebooks/" + i["notebook"])
+        notebooks[p] = nb
+        payloads[p] = (json.dumps(nb, indent=1) + "\n").encode()
+        payloads[u.safe_path(root, "configs/manual_" + i["slug"] + ".json")] = (
+            json.dumps(plan(rnd), sort_keys=True, indent=2) + "\n"
+        ).encode()
+        payloads[u.safe_path(root, "docs/manual_" + i["slug"] + ".md")] = protocol(rnd).encode()
+    for p, body in payloads.items():
+        if p.exists():
+            if p in notebooks:
+                if not same_notebook_sources(u.read_json(p), notebooks[p]):
+                    raise Stop("Notebook edits preserved: " + str(p))
+            elif p.read_bytes() != body:
+                raise Stop("Existing differing file preserved: " + str(p))
+    for p, body in payloads.items():
+        if not p.exists():
+            u.write_new(p, body)
+    print("RESULT: TWO_FEATURE_ROUNDS_READY", flush=True)
+    for rnd in (14, 15):
+        print(f"ROUND_{rnd}: " + str(root / "notebooks" / info(rnd)["notebook"]), flush=True)
+    print(
+        "KERNEL: Commodity - manual (verified)\nRun sequentially, never simultaneously. Setup performed zero fits.",
+        flush=True,
+    )
+    return dict(new_training_fits=0, files=[str(p) for p in payloads])
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, default=ROOT)
+    parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--round", type=int, choices=[14, 15])
+    parser.add_argument(
+        "--run-round",
+        type=int,
+        choices=[14, 15],
+        help="Terminal alternative in the verified Python environment; runs and exports ONE round.",
+    )
+    args = parser.parse_args()
+    old = None
+    try:
+        if args.worker:
+            if args.round is None:
+                raise Stop("Worker requires explicit round.")
+            worker(args.root, args.round)
+        elif args.run_round:
+            if args.round is not None:
+                raise Stop("Do not combine --round and --run-round.")
+            r = run(args.root, args.run_round)
+            r = finish(args.root, r, charts(r))
+            print("RESULT:", r["status"])
+            print("REPORT:", report_path(args.root, args.run_round))
+        else:
+            if args.round is not None:
+                raise Stop("Use a notebook or --run-round; no implicit fit.")
+
+            def expire(*_):
+                raise Stop("90-second setup limit reached.")
+
+            old = signal.signal(signal.SIGALRM, expire)
+            signal.alarm(90)
+            install(args.root)
+    except BaseException as exc:
+        print("RESULT: STOPPED\nERROR: " + type(exc).__name__ + ": " + str(exc), flush=True)
+        print(
+            "Preserve report/log. Do not repeat unchanged. Stop space manually; never delete it.",
+            flush=True,
+        )
+        return 2
+    finally:
+        if old is not None:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

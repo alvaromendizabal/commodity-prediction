@@ -1,0 +1,38 @@
+{
+  "comparisons": [
+    {
+      "delta_vs_current_market": -0.013693000265007305,
+      "official_metric": 0.15334865292560604,
+      "passes_review_gate": false,
+      "variant": "context_identity"
+    },
+    {
+      "delta_vs_current_market": -0.03339269206789605,
+      "official_metric": 0.1336489611227173,
+      "passes_review_gate": false,
+      "variant": "context_shocks"
+    },
+    {
+      "delta_vs_current_market": -0.03815395814298597,
+      "official_metric": 0.12888769504762737,
+      "passes_review_gate": false,
+      "variant": "context_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "decision": "STOP_TESTED_TARGET_CONTEXT_PANELS",
+  "elapsed_seconds": 69.782,
+  "evaluation_origins": 180,
+  "evidence_path": "reports/manual_research/study_11.json",
+  "lineage": "c2d8078948d72467b75dc30f692ad9cbf4f38b4ff1f74600b00e2aea63413d2c",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 3,
+  "notebook": 11,
+  "plotly_figures": 10,
+  "report_sha256": "7a577e40c4c0c87de13da8de573e529214220fd5f5b46bae9ee8c42950f33bf5",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_TARGET_CONTEXT_READY",
+  "supervised_seconds": 74.281,
+  "title": "Instrument context"
+}

@@ -1,0 +1,32 @@
+{
+  "comparisons": [
+    {
+      "matched_delta": 0.0037857512993234588,
+      "official_metric": 0.40716683872228493,
+      "variant": "normalized_price"
+    },
+    {
+      "matched_delta": 0.0011570101567784374,
+      "official_metric": 0.4045380975797399,
+      "variant": "volume_confirmation"
+    },
+    {
+      "matched_delta": -0.017653958760301403,
+      "official_metric": 0.38572712866266007,
+      "variant": "normalized_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "decision": "REVIEW_BEFORE_REMAINING_FOLDS",
+  "evaluation_origins": 180,
+  "evidence_path": "reports/manual_research/study_04.json",
+  "lineage": "0bec922e64f09f4d051e2ded7b8d9e91b2e6a06e3f7e80af8ac1f4f044df8027",
+  "new_training_fits": 3,
+  "notebook": 4,
+  "plotly_figures": 6,
+  "report_sha256": "19e0c7c14d3bdf01c244ccd573e94b240f95eb1673dba16b631cfc9775ae1815",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_FIRST_FOLD_REVIEW_READY",
+  "title": "Normalization first-period screen"
+}

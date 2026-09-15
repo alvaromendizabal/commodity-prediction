@@ -1,0 +1,108 @@
+{
+  "audited_parent": "38e222706a234b1f8b1cf05e430581ae4660b588a184e012d9dca9cdfcc11a6d",
+  "automatic_promotion": false,
+  "aws_api_calls": 0,
+  "candidate_templates": 24,
+  "contrasts": [
+    [
+      "audit_shortlist",
+      "current_market"
+    ],
+    [
+      "ordinary_innovations",
+      "current_market"
+    ],
+    [
+      "robust_innovations",
+      "current_market"
+    ],
+    [
+      "innovation_joint",
+      "current_market"
+    ],
+    [
+      "robust_innovations",
+      "ordinary_innovations"
+    ],
+    [
+      "innovation_joint",
+      "ordinary_innovations"
+    ],
+    [
+      "innovation_joint",
+      "robust_innovations"
+    ],
+    [
+      "ordinary_innovations",
+      "audit_shortlist"
+    ]
+  ],
+  "control_refits": 0,
+  "declaration_timing": "Both rounds frozen together after notebook13, before either new result. Previously inspected middle development period; no test-set claim.",
+  "feature_gate": "open",
+  "final_test_evaluations": 0,
+  "fixed_audit_shortlist": [
+    "relative_state__reference_return_lag_0_difference__innovation_horizon_rank",
+    "relative_state__released_priors_location_126__innovation_horizon_rank",
+    "relative_state__reference_return_lag_1_difference__innovation_horizon_rank"
+  ],
+  "fold": 1,
+  "forms": [
+    "ordinary_z",
+    "ordinary_rank",
+    "robust_z",
+    "robust_rank"
+  ],
+  "github_writes": false,
+  "inherited_released_label_inputs": true,
+  "learner": "Unchanged parent histogram settings and preprocessing. Family inputs appended to original current_market, never to the other round.",
+  "magnitude_clip": 12.0,
+  "min_history": 42,
+  "new_direct_label_access_in_feature_builder": false,
+  "new_fit_limit": 4,
+  "newly_constructed_representation_templates": 18,
+  "novelty": "Counts denote representations, not independent new information. Exact duplicate audit covers active baseline, notebook-13 candidates, and this round; not every abandoned historical array.",
+  "other_folds": false,
+  "other_round_dependency": false,
+  "panel_sizes": [
+    3,
+    12,
+    12,
+    24
+  ],
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "reference_delay": 1,
+  "release_contract": "Existing horizon+1 parent priors; do not weaken.",
+  "reused_notebook13_representations": 6,
+  "review_gain": 0.002,
+  "robust_scale": "IQR, not SD-equivalent IQR and not sklearn RobustScaler fitting; per-target trailing window only.",
+  "round": 14,
+  "rule": "Shortlist and ordinary: +0.002 over saved control. Robust: +0.002 over saved AND ordinary. Joint: +0.002 over saved AND both separate full groups. All intended inputs admitted; exact replay. Review only.",
+  "saved_same_fold_control": 0.16704165319061334,
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "sources": [
+    "reference__return_lag_0_difference",
+    "reference__return_lag_1_difference",
+    "reference__return_lag_5_difference",
+    "reference__risk_63_difference",
+    "released_priors__location_63",
+    "released_priors__location_126"
+  ],
+  "study": "innovation_ablation",
+  "training_diagnostic_split": 798,
+  "training_diagnostic_start": 252,
+  "training_screen": "Check finite coverage, constants and exact duplicates with parent fit-time preprocessing; audit two-half IC and redundancy on training only. Panels are fixed: IC signs do not select validation-driven replacements.",
+  "training_stop_exclusive": 1344,
+  "transforms_update": "Trailing input statistics may update sequentially; existing priors may use only already-released earlier outcomes. Forecaster stays frozen during validation.",
+  "uncertainty": "Within-round conditional 10/20/40-date block intervals; not independent confirmation or full adaptive-search correction.",
+  "validation_start": 1349,
+  "validation_stop_exclusive": 1529,
+  "variants": [
+    "audit_shortlist",
+    "ordinary_innovations",
+    "robust_innovations",
+    "innovation_joint"
+  ],
+  "window": 63,
+  "worker_limit_seconds": 240.0
+}

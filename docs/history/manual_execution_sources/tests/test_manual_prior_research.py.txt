@@ -1,0 +1,393 @@
+"""USER-RUN contract tests for rounds16/17; no private data or cloud calls.
+
+Contains one tiny actual repository-histogram fit on synthetic data. The test
+runner records real failures/skips and exits nonzero; it never writes a success
+receipt on failure. Prepared but not executed by the assistant.
+"""
+from __future__ import annotations
+import argparse
+from contextlib import contextmanager
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+from unittest.mock import patch
+
+import numpy as np
+import pandas as pd
+
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'scripts'));sys.path.insert(0,str(ROOT/'src'))
+import commodity_prior_research as m
+
+
+def fixture(T=160,J=16):
+    rng=np.random.default_rng(20260912)
+    names=['released_priors__'+s for s in m.PRIOR_NAMES]
+    values=rng.normal(0,.03,(T,J,len(names))).astype(np.float32)
+    for k,s in enumerate(m.PRIOR_NAMES):
+        if s.startswith('risk_'):values[:,:,k]=np.abs(values[:,:,k])+.02
+    pairs=pd.DataFrame({'target':[f'target_{j}' for j in range(J)],'lag':np.tile([1,2,3,4],J//4)})
+    y=rng.normal(0,.03,(T,J));risk=np.full((T,J),.05)
+    return values,names,pairs,y,risk
+
+
+class PriorFormulaTests(unittest.TestCase):
+    def setUp(self):self.a,self.names,self.pairs,self.y,self.risk=fixture()
+    def test_24_prior_features(self):
+        c,n,meta=m.prior_block(self.a,self.names,self.pairs)
+        self.assertEqual(c.shape,(160,16,24));self.assertEqual(len(set(n)),24);self.assertEqual(len(meta),24)
+    def test_prior_panels_exact_union(self):
+        c,n,meta=m.prior_block(self.a,self.names,self.pairs);g=m.groups(16,meta)
+        self.assertEqual([len(x) for x in g.values()],[4,12,12,24])
+        self.assertEqual(g['prior_dynamics_joint'],g['own_history_dynamics']+g['pool_and_risk_dynamics'])
+    def test_prior_prefix(self):
+        full,_,_=m.prior_block(self.a,self.names,self.pairs)
+        for cut in [70,100,149]:
+            with self.subTest(cut=cut):np.testing.assert_array_equal(m.prior_block(self.a[:cut],self.names,self.pairs)[0],full[:cut])
+    def test_prior_future_perturbation(self):
+        a=self.a.copy();a[100:]*=9
+        np.testing.assert_array_equal(m.prior_block(a,self.names,self.pairs)[0][:100],m.prior_block(self.a,self.names,self.pairs)[0][:100])
+    def test_prior_no_input_mutation(self):
+        old=self.a.copy();m.prior_block(self.a,self.names,self.pairs);np.testing.assert_array_equal(old,self.a)
+    def test_prior_readonly_input(self):
+        self.a.setflags(write=False);m.prior_block(self.a,self.names,self.pairs)
+    def test_prior_equation_level(self):
+        c,n,_=m.prior_block(self.a,self.names,self.pairs)
+        q=lambda s:self.a[:,:,self.names.index('released_priors__'+s)].astype(float)
+        expected=np.clip((q('location_63')-q('location_126'))/q('risk_126'),-12,12).astype(np.float32)
+        np.testing.assert_array_equal(c[:,:,n.index('prior_dynamics15__fast_minus_medium__level')],expected)
+    def test_prior_equation_change(self):
+        c,n,_=m.prior_block(self.a,self.names,self.pairs)
+        raw=(self.a[:,:,0].astype(float)-self.a[:,:,1].astype(float))/self.a[:,:,5].astype(float)
+        expected=np.clip(pd.DataFrame(raw).diff(5).to_numpy(copy=True),-12,12).astype(np.float32)
+        np.testing.assert_array_equal(c[:,:,n.index('prior_dynamics15__fast_minus_medium__change_5')],expected)
+    def test_prior_zero_risk_missing(self):
+        self.a[100,:,self.names.index('released_priors__risk_126')]=0
+        c,n,_=m.prior_block(self.a,self.names,self.pairs)
+        self.assertTrue(np.isnan(c[100,:,n.index('prior_dynamics15__fast_minus_medium__level')]).all())
+    def test_prior_old_implementation_parity(self):
+        # Real previous helper from this project; only its pure feature function runs.
+        path=ROOT/'scripts/commodity_two_feature_rounds.py'
+        spec=importlib.util.spec_from_file_location('old_prior_formula_test',path)
+        old=importlib.util.module_from_spec(spec);spec.loader.exec_module(old)
+        got,n,_=m.prior_block(self.a,self.names,self.pairs);expected,on,_=old.feature_block(self.a,self.names,self.pairs,15)
+        self.assertEqual(n,on);np.testing.assert_array_equal(got,expected)
+    def test_prior_missing_required_source_fails(self):
+        with self.assertRaises(m.Stop):m.prior_block(self.a[:,:,:-1],self.names[:-1],self.pairs)
+    def test_prior_duplicate_names_fail(self):
+        names=self.names.copy();names[1]=names[0]
+        with self.assertRaises(m.Stop):m.prior_block(self.a,names,self.pairs)
+    def test_prior_bad_horizon_fails(self):
+        self.pairs.loc[0,'lag']=5
+        with self.assertRaises(m.Stop):m.prior_block(self.a,self.names,self.pairs)
+    def test_prior_duplicate_target_fails(self):
+        self.pairs.loc[1,'target']='target_0'
+        with self.assertRaises(m.Stop):m.prior_block(self.a,self.names,self.pairs)
+    def test_prior_infinity_fails(self):
+        self.a[99,0,0]=np.inf
+        with self.assertRaises(m.Stop):m.prior_block(self.a,self.names,self.pairs)
+    def test_prior_final_boundary_fails(self):
+        a=np.zeros((1705,16,len(self.names)),np.float32)
+        with self.assertRaises(m.Stop):m.prior_block(a,self.names,self.pairs)
+    def test_rank_three_observation_minimum(self):
+        p=self.pairs.iloc[:2].copy();p['lag']=1
+        q=m.horizon_rank(np.array([[1.,2.]]),p);self.assertTrue(np.isnan(q).all())
+    def test_surprise_excludes_current_reference(self):
+        a=np.linspace(0,10,90)[:,None];a[70]=20
+        z=m.historical_surprise(a)
+        h=a[7:70,0]
+        self.assertAlmostEqual(z[70,0],(20-h.mean())/h.std(ddof=0),places=10)
+
+
+class EventHistoryTests(unittest.TestCase):
+    def setUp(self):self.a,self.names,self.pairs,self.y,self.risk=fixture()
+    def test_24_event_features(self):
+        c,n,meta=m.event_block(self.y,self.risk,self.pairs)
+        self.assertEqual(c.shape,(160,16,24));self.assertEqual(len(set(n)),24)
+        self.assertEqual([len(x) for x in m.groups(17,meta).values()],[6,15,15,24])
+    def test_event_group_union(self):
+        c,n,meta=m.event_block(self.y,self.risk,self.pairs);g=m.groups(17,meta)
+        self.assertEqual(set(g['event_joint']),set(g['event_location'])|set(g['event_shape']))
+        self.assertEqual(set(g['event_location'])&set(g['event_shape']),set(g['event_clock_only']))
+    def test_release_boundary_each_horizon(self):
+        for j,h in enumerate([1,2,3,4]):
+            changed=self.y.copy();changed[90,j]=100
+            a,_,_=m.event_block(self.y,self.risk,self.pairs);b,_,_=m.event_block(changed,self.risk,self.pairs)
+            with self.subTest(horizon=h):
+                np.testing.assert_array_equal(a[:90+h+1,j],b[:90+h+1,j])
+                self.assertFalse(np.array_equal(a[90+h+1,j],b[90+h+1,j],equal_nan=True))
+    def test_observed_event_not_calendar_window(self):
+        self.y[:,0]=np.nan;origin=np.arange(0,150,3);self.y[origin,0]=np.arange(len(origin))/100
+        c,n,_=m.event_block(self.y,self.risk,self.pairs);t=100;valid=origin[origin+2<=t][-8:]
+        expected=self.y[valid,0].mean()/.05
+        self.assertAlmostEqual(c[t,0,n.index('event_history17__k8__mean_over_risk')],expected,places=5)
+    def test_event_mean_independent_reference(self):
+        c,n,_=m.event_block(self.y,self.risk,self.pairs)
+        for j in [0,3,9]:
+            t=120;cut=t-int(self.pairs.iloc[j]['lag'])-1
+            for k in [8,21,63]:
+                z=self.y[:cut+1,j];z=z[np.isfinite(z)][-k:]
+                with self.subTest(target=j,k=k):self.assertAlmostEqual(c[t,j,n.index(f'event_history17__k{k}__mean_over_risk')],z.mean()/.05,places=5)
+    def test_event_median_independent_reference(self):
+        c,n,_=m.event_block(self.y,self.risk,self.pairs);t=120;j=2;k=21;cut=t-4
+        self.assertAlmostEqual(c[t,j,n.index(f'event_history17__k{k}__median_over_risk')],np.median(self.y[cut-k+1:cut+1,j])/.05,places=5)
+    def test_event_shape_is_scale_invariant(self):
+        a,n,meta=m.event_block(self.y,self.risk,self.pairs);b,_,_=m.event_block(self.y*7,self.risk*7,self.pairs)
+        np.testing.assert_allclose(a,b,atol=2e-6,rtol=2e-6,equal_nan=True)
+    def test_event_future_perturbation(self):
+        z=self.y.copy();z[100:]*=20
+        a,_,_=m.event_block(self.y,self.risk,self.pairs);b,_,_=m.event_block(z,self.risk,self.pairs)
+        np.testing.assert_array_equal(a[:100],b[:100])
+    def test_event_prefix(self):
+        full,_,_=m.event_block(self.y,self.risk,self.pairs)
+        for end in [75,115,149]:
+            with self.subTest(end=end):np.testing.assert_array_equal(full[:end],m.event_block(self.y[:end],self.risk[:end],self.pairs)[0])
+    def test_no_mutation_readonly_and_copy_on_write(self):
+        y=self.y.copy();risk=self.risk.copy();y.setflags(write=False);risk.setflags(write=False)
+        with pd.option_context('mode.copy_on_write',True):m.event_block(y,risk,self.pairs)
+        np.testing.assert_array_equal(y,self.y);np.testing.assert_array_equal(risk,self.risk)
+    def test_missing_events_not_forward_filled(self):
+        self.y[:,0]=np.nan;self.y[:7,0]=1
+        c,_,_=m.event_block(self.y,self.risk,self.pairs)
+        self.assertTrue(np.isnan(c[:,0]).all())
+    def test_missing_sentinel_and_inf_equivalent(self):
+        a=self.y.copy();a[::5,0]=np.nan;b=a.copy();b[::5,0]=-999999;c=a.copy();c[::5,0]=np.inf
+        np.testing.assert_array_equal(m.event_block(a,self.risk,self.pairs)[0],m.event_block(b,self.risk,self.pairs)[0])
+        np.testing.assert_array_equal(m.event_block(a,self.risk,self.pairs)[0],m.event_block(c,self.risk,self.pairs)[0])
+    def test_zero_is_real_event(self):
+        self.y[:,0]=0;c,n,_=m.event_block(self.y,self.risk,self.pairs)
+        self.assertEqual(c[100,0,n.index('event_history17__k63__mean_over_risk')],0)
+        self.assertEqual(c[100,0,n.index('event_history17__k63__positive_balance')],0)
+    def test_all_constant_shapes_are_finite(self):
+        self.y[:,0]=.02;c,n,_=m.event_block(self.y,self.risk,self.pairs)
+        self.assertEqual(c[100,0,n.index('event_history17__k8__tail_asymmetry')],0)
+        self.assertEqual(c[100,0,n.index('event_history17__k8__semivariance_balance')],1)
+    def test_current_staleness_changes_clocks_not_event_mean(self):
+        self.y[100:,0]=np.nan;c,n,_=m.event_block(self.y,self.risk,self.pairs)
+        i=n.index('event_history17__k8__mean_over_risk');clock=n.index('event_history17__k8__mean_release_age')
+        self.assertEqual(c[120,0,i],c[130,0,i]);self.assertGreater(c[130,0,clock],c[120,0,clock])
+    def test_nonpositive_scale_does_not_invent_values(self):
+        self.risk[100,0]=0;c,n,_=m.event_block(self.y,self.risk,self.pairs)
+        self.assertTrue(np.isnan(c[100,0,n.index('event_history17__k8__mean_over_risk')]))
+        self.assertTrue(np.isfinite(c[100,0,n.index('event_history17__k8__positive_balance')]))
+    def test_minimum_event_count_boundary(self):
+        c,n,_=m.event_block(self.y,self.risk,self.pairs);i=n.index('event_history17__k8__mean_over_risk')
+        self.assertTrue(np.isnan(c[8,0,i]));self.assertTrue(np.isfinite(c[9,0,i]))
+    def test_clock_equation_consecutive_observations(self):
+        c,n,_=m.event_block(self.y,self.risk,self.pairs)
+        self.assertAlmostEqual(c[100,0,n.index('event_history17__k8__mean_release_age')],np.log1p(3.5/8),places=6)
+        self.assertAlmostEqual(c[100,0,n.index('event_history17__k8__longest_release_gap')],np.log1p(1/8),places=6)
+    def test_wrong_shapes_fail(self):
+        with self.assertRaises(m.Stop):m.event_block(self.y,self.risk[:10],self.pairs)
+    def test_event_final_boundary_fail(self):
+        with self.assertRaises(m.Stop):m.event_block(np.zeros((1350,16)),np.ones((1350,16)),self.pairs)
+    def test_event_invalid_horizon_fail(self):
+        self.pairs.loc[0,'lag']=0
+        with self.assertRaises(m.Stop):m.event_block(self.y,self.risk,self.pairs)
+    def test_clock_group_no_outcome_magnitudes(self):
+        changed=self.y*9
+        a,n,meta=m.event_block(self.y,self.risk,self.pairs);b,_,_=m.event_block(changed,self.risk,self.pairs)
+        ix=[i for i,z in enumerate(meta) if z['group']=='clock'];np.testing.assert_array_equal(a[:,:,ix],b[:,:,ix])
+    def test_no_infinite_features(self):
+        self.y[80,0]=0;self.y[90,0]=-0.02;c,_,_=m.event_block(self.y,self.risk,self.pairs)
+        self.assertFalse(np.isinf(c).any())
+
+
+class SafetyTests(unittest.TestCase):
+    def test_round_limits_and_independence(self):
+        self.assertEqual(m.plan(16)['new_fit_limit'],8);self.assertEqual(m.plan(17)['new_fit_limit'],4)
+        self.assertFalse(m.plan(17)['dependency_on_round16']);self.assertEqual(m.plan(16)['new_feature_templates'],0)
+    def test_round_rejects_boolean(self):
+        with self.assertRaises(m.Stop):m.require_round(True)
+    def test_path_traversal_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            for p in ['../a','/tmp/a','a/../../b','a\\b']:
+                with self.subTest(path=p),self.assertRaises(m.Stop):m.safe(Path(d),p)
+    def test_symlink_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);(root/'link').symlink_to(root)
+            with self.assertRaises(m.Stop):m.safe(root,'link/a')
+    def test_preserves_different_existing_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'notebook.ipynb';p.write_bytes(b'USER WORK')
+            with self.assertRaises(m.Stop):m.write_new(p,b'NEW')
+            self.assertEqual(p.read_bytes(),b'USER WORK')
+    def test_identical_install_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'x';self.assertTrue(m.write_new(p,b'a'));self.assertFalse(m.write_new(p,b'a'))
+    def test_atomic_json_roundtrip(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'r.json';m.atomic_json(p,{'status':'in-progress','fits':0});self.assertEqual(m.read_json(p)['fits'],0)
+    def test_nonfinite_receipt_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(ValueError):m.atomic_json(Path(d)/'r.json',{'metric':float('nan')})
+    def test_checkpoint_corruption_stops(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d);(p/'x').write_bytes(b'first');pins=m.seal(p,'lineage',['x']);m.verify(p,'lineage',pins)
+            (p/'x').write_bytes(b'other')
+            with self.assertRaises(m.Stop):m.verify(p,'lineage',pins)
+    def test_checkpoint_wrong_lineage_stops(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d);(p/'x').write_bytes(b'first');m.seal(p,'old',['x'])
+            with self.assertRaises(m.Stop):m.verify(p,'new')
+    def test_intentional_pause_preserves_reusable_stage(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d);(p/'data').write_bytes(b'completed work');pins=m.seal(p,'same',['data'])
+            try:raise m.Pause('Intentional interruption after checkpoint')
+            except m.Pause:pass
+            self.assertEqual(m.verify(p,'same',pins),pins);self.assertEqual((p/'data').read_bytes(),b'completed work')
+    def test_supervisor_stops_long_child(self):
+        with tempfile.TemporaryDirectory() as d:
+            began=time.monotonic()
+            with self.assertRaises(m.Stop):m.supervise([sys.executable,'-c','import time; time.sleep(20)'],Path(d),.5,Path(d)/'worker.log',os.environ.copy())
+            self.assertLess(time.monotonic()-began,12)
+    def test_failed_child_not_success(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(m.Stop):m.supervise([sys.executable,'-c','raise RuntimeError("synthetic")'],Path(d),5,Path(d)/'worker.log',os.environ.copy())
+    def test_matching_daily_metric(self):
+        x=np.array([.1,-.2,.3,.4]);r={'daily_rank_correlations':x.tolist(),'date_ids':[10,11,12,13],'official_metric':float(x.mean()/x.std(ddof=0))}
+        self.assertEqual(m.metrics_valid(r,[10,11,12,13]),r['official_metric'])
+    def test_metric_date_mismatch(self):
+        with self.assertRaises(m.Stop):m.metrics_valid({'daily_rank_correlations':[.1,.2],'date_ids':[5,6],'official_metric':3},[6,7])
+    def test_metric_value_mismatch(self):
+        with self.assertRaises(m.Stop):m.metrics_valid({'daily_rank_correlations':[.1,.2],'date_ids':[5,6],'official_metric':-3},[5,6])
+    def test_degenerate_metric_rejected(self):
+        with self.assertRaises(m.Stop):m.metrics_valid({'daily_rank_correlations':[.1,.1],'date_ids':[5,6],'official_metric':1},[5,6])
+    def test_missing_preflight_is_closed(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(m.Stop):m.test_gate(Path(d))
+
+
+class RealRepositorySmoke(unittest.TestCase):
+    def test_tiny_repository_model_and_exact_replay(self):
+        """One deliberately tiny synthetic fit, separate from private experiment fits."""
+        import joblib
+        from threadpoolctl import threadpool_limits
+        from commodity_prediction.domain.catalog import Panel
+        from commodity_prediction.domain.model import prepare,select,fit
+        from commodity_prediction.domain.experiment import Experiment
+        rng=np.random.default_rng(42);T,J,P=100,4,3
+        a=rng.normal(size=(T,J,P)).astype(np.float32);names=['synthetic__a','synthetic__b','synthetic__c']
+        panel=Panel(a,list(range(T)),[f'target_{j}' for j in range(J)],names,{})
+        y=pd.DataFrame(.01*a[:,:,0]+rng.normal(0,.01,(T,J)),index=panel.dates,columns=panel.targets)
+        config=json.loads((ROOT/'configs/domain_study.json').read_text())
+        config.update(warmup_dates=5,max_features=P,max_abs_correlation=1.01,histogram_iterations=2,histogram_min_samples_leaf=8)
+        with threadpool_limits(limits=1):
+            stats=prepare(panel,y,70,config);sel,_=select(stats,Experiment('tiny',algorithm='histogram').candidates(names),config,False)
+            self.assertEqual(len(sel),3)
+            model=fit(stats,sel,panel,y,'histogram',config)
+            self.assertIsNotNone(model.estimator)
+            p=model.predict(panel,75,90)
+            self.assertTrue(np.isfinite(p.to_numpy()).all())
+            with tempfile.TemporaryDirectory() as d:
+                path=Path(d)/'model.joblib';joblib.dump(model,path)
+                pd.testing.assert_frame_equal(p,joblib.load(path).predict(panel,75,90),check_exact=True)
+    def test_official_metric_independent_known_example(self):
+        from commodity_prediction.metrics import daily_rank_correlations, correlation_sharpe
+        truth=pd.DataFrame([[1.,2.,3.],[1.,2.,3.],[1.,2.,3.],[1.,3.,2.]],columns=['a','b','c'])
+        prediction=pd.DataFrame([[1.,2.,3.],[3.,2.,1.],[1.,3.,2.],[1.,2.,3.]],columns=['a','b','c'])
+        daily=daily_rank_correlations(truth,prediction)
+        np.testing.assert_allclose(np.asarray(daily),[1.,-1.,.5,.5],atol=1e-12)
+        self.assertAlmostEqual(correlation_sharpe(daily),1/3,places=12)
+    def test_real_parquet_write_and_read(self):
+        df=pd.DataFrame({'target_0':[.2,.3],'target_1':[.4,.5]},index=pd.Index([1,2],name='date_id'))
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'p.parquet';df.to_parquet(p);pd.testing.assert_frame_equal(df,pd.read_parquet(p),check_exact=True)
+
+
+
+class HeartbeatRegressionTests(unittest.TestCase):
+    def test_worker_stage_has_separate_key(self):
+        p=m.heartbeat_fields({'stage':'BUILD_FEATURES','task':'features','completed_tasks':0,'fit_attempts_total':0})
+        self.assertEqual(p['worker_stage'],'BUILD_FEATURES');self.assertNotIn('stage',p)
+    def test_real_emit_with_worker_progress(self):
+        import io
+        from contextlib import redirect_stdout
+        out=io.StringIO()
+        with redirect_stdout(out):m.emit('WORKER_HEARTBEAT',**m.heartbeat_fields({'stage':'fit','task':'x'}))
+        value=json.loads(out.getvalue());self.assertEqual(value['stage'],'WORKER_HEARTBEAT');self.assertEqual(value['worker_stage'],'fit')
+    def test_actual_supervisor_heartbeat_with_saved_state(self):
+        import io
+        from contextlib import redirect_stdout
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);state=root/'state.json';m.atomic_json(state,{'stage':'FEATURES','task':'synthetic','completed_tasks':0})
+            buf=io.StringIO()
+            with redirect_stdout(buf):
+                elapsed=m.supervise([sys.executable,'-c','import time;time.sleep(0.7)'],root,4,
+                    root/'worker.log',os.environ.copy(),state,heartbeat_seconds=.02)
+            rows=[json.loads(v) for v in buf.getvalue().splitlines() if v.startswith('{')]
+            self.assertTrue(any(v.get('worker_stage')=='FEATURES' for v in rows));self.assertLess(elapsed,4)
+    def test_empty_state_still_emits(self):
+        self.assertEqual(set(m.heartbeat_fields({})),{'worker_stage','worker_task','worker_completed_tasks','worker_fit_attempts_total'})
+    def test_reserved_event_fields_do_not_override(self):
+        v=m.heartbeat_fields({'stage':'x','utc':'wrong','elapsed_seconds':999})
+        self.assertNotIn('utc',v);self.assertNotIn('elapsed_seconds',v)
+    def test_invalid_heartbeat_interval_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(m.Stop):m.supervise([sys.executable,'-c','pass'],Path(d),2,Path(d)/'log',os.environ.copy(),heartbeat_seconds=0)
+
+
+class RecoveryBoundaryTests(unittest.TestCase):
+    def state(self):
+        return dict(status='STOPPED',supervisor_error="TypeError: emit() got multiple values for argument 'stage'",
+            cumulative_supervised_seconds=15.4,new_training_fits=0,fit_attempts_total=0,completed_tasks=0,supervisor_calls=1)
+    def test_known_failure_preserves_elapsed(self):
+        import commodity_research_release as rel
+        r=self.state();self.assertEqual(rel.check_failed_state(r),15.4);self.assertEqual(r['cumulative_supervised_seconds'],15.4)
+    def test_unknown_failure_rejected(self):
+        import commodity_research_release as rel
+        r=self.state();r['supervisor_error']='MemoryError'
+        with self.assertRaises(rel.Stop):rel.check_failed_state(r)
+    def test_unknown_elapsed_not_assumed_zero(self):
+        import commodity_research_release as rel
+        r=self.state();r.pop('cumulative_supervised_seconds')
+        with self.assertRaises(rel.Stop):rel.check_failed_state(r)
+    def test_nonfinite_elapsed_rejected(self):
+        import commodity_research_release as rel
+        r=self.state();r['cumulative_supervised_seconds']=float('nan')
+        with self.assertRaises(rel.Stop):rel.check_failed_state(r)
+    def test_incomplete_fit_cannot_be_refitted_automatically(self):
+        import commodity_research_release as rel
+        r=self.state();r['fit_attempts_total']=1
+        with self.assertRaises(rel.Stop):rel.check_failed_state(r)
+    def test_completed_fit_counter_preserved(self):
+        import commodity_research_release as rel
+        r=self.state();r.update(new_training_fits=1,fit_attempts_total=1,completed_tasks=1)
+        rel.check_failed_state(r);self.assertEqual(r['new_training_fits'],1)
+    def test_additional_worker_error_requires_review(self):
+        import commodity_research_release as rel
+        r=self.state();r['error']='ValueError: bad data'
+        with self.assertRaises(rel.Stop):rel.check_failed_state(r)
+    def test_negative_fit_counter_rejected(self):
+        import commodity_research_release as rel
+        r=self.state();r['new_training_fits']=-1
+        with self.assertRaises(rel.Stop):rel.check_failed_state(r)
+    def test_prepared_stage_manifest_cannot_hide_corruption(self):
+        import commodity_research_release as rel
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);(root/'data').write_bytes(b'complete');pins=m.seal(root,'L',['data'])
+            self.assertEqual(rel.verify_manifest(root,'L',pins),pins)
+            (root/'data').write_bytes(b'changed')
+            with self.assertRaises(rel.Stop):rel.verify_manifest(root,'L',pins)
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser();p.add_argument('--receipt',required=True,type=Path);args=p.parse_args()
+    began=time.monotonic();suite=unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
+    result=unittest.TextTestRunner(verbosity=2).run(suite)
+    status='TESTS_PASSED' if result.wasSuccessful() and not result.skipped else 'TESTS_FAILED'
+    receipt={'status':status,'tests_run':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),
+             'skipped':len(result.skipped),'elapsed_seconds':round(time.monotonic()-began,3),
+             'numpy':np.__version__,'pandas':pd.__version__,'python':sys.version,
+             'synthetic_repository_fit_limit':1,'private_forecasting_fits':0,
+             'code_sha256':hashlib.sha256(Path(m.__file__).read_bytes()).hexdigest(),
+             'test_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    m.atomic_json(args.receipt,receipt)
+    print('RESULT:',status,flush=True)
+    raise SystemExit(0 if status=='TESTS_PASSED' else 1)

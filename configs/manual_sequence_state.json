@@ -1,0 +1,85 @@
+{
+  "acceptance": "Every declared delta >=0.002; at least one non-clock input admitted for numerical panels; exact replays and integrity checks. Review only.",
+  "account_operations": 0,
+  "automatic_promotion": false,
+  "baseline_score": 0.39061886486364056,
+  "candidate_templates": 24,
+  "comparators": {
+    "sequence_clock": [
+      "current_market"
+    ],
+    "sequence_joint": [
+      "current_market",
+      "sequence_clock",
+      "sequence_magnitude",
+      "sequence_transitions"
+    ],
+    "sequence_magnitude": [
+      "current_market",
+      "sequence_clock"
+    ],
+    "sequence_transitions": [
+      "current_market",
+      "sequence_clock"
+    ]
+  },
+  "distinction": "Ordered serial dependence, unlike unordered event moments in round17.",
+  "feature_gate": "open",
+  "final_test_evaluations": 0,
+  "fold": 2,
+  "forms": [
+    "pair_coverage",
+    "mean_pair_release_age",
+    "lag_correlation",
+    "signed_persistence",
+    "sequence_innovation",
+    "conditional_sign_response",
+    "positive_transition_bias",
+    "negative_transition_bias"
+  ],
+  "memory_rss_limit_bytes": 15032385536,
+  "minimum_gain": 0.002,
+  "model": "Original histogram configuration, preprocessing and target scaling; no tuning or online refitting.",
+  "network_calls": 0,
+  "new_control_refits": 0,
+  "new_fit_limit": 4,
+  "other_round_results_used_for_selection": false,
+  "package_installs": 0,
+  "pair_spacing": "h origins between outcomes in each serial pair; NOT a claim that the rolling pairs are mutually independent.",
+  "paired_moments": "Both moments and sign-transition counts use matching finite pairs.",
+  "panel_sizes": [
+    6,
+    15,
+    15,
+    24
+  ],
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "prerequisite_new_rounds": "The corrected preflight; no score from rounds16/17/19 enters this plan.",
+  "release_delay": "per-target h+1",
+  "round": 18,
+  "scale": "Sequence innovation divided by the existing causal released risk at prediction time.",
+  "seed": 42,
+  "selected_new_features": "Fixed groups; only training missingness/constant/duplicate screening.",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "study": "sequence_state",
+  "threads": 4,
+  "train_stop": 1524,
+  "uncertainty": "Paired 10/20/40-origin blocks, conditional on fitted models. No full adaptive-search correction.",
+  "validation_origins": 175,
+  "validation_scope": "Previously inspected last development period, NOT an untouched final holdout.",
+  "validation_start": 1529,
+  "validation_stop": 1704,
+  "variants": [
+    "sequence_clock",
+    "sequence_magnitude",
+    "sequence_transitions",
+    "sequence_joint"
+  ],
+  "warmup_dates": 252,
+  "windows": [
+    21,
+    63,
+    126
+  ],
+  "worker_limit_seconds": 240.0
+}

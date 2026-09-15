@@ -1,0 +1,817 @@
+#!/usr/bin/env python3
+"""Install notebook 04; run ONLY the existing first-fold normalization experiment.
+
+Default CLI installs local notebook/support files, without training or network calls.
+The notebook starts a supervised worker: one exact control replay, at most three
+new fits, checkpoint verification and a strict stop-before-more-folds boundary.
+No AWS API, package installation, Git writes, full-study entry point or final test.
+"""
+from __future__ import annotations
+
+import argparse
+import contextlib
+import fcntl
+import hashlib
+import html
+import importlib.metadata
+import json
+import math
+import os
+from pathlib import Path, PurePosixPath
+import queue
+import re
+import signal
+import shutil
+import subprocess
+import sys
+import threading
+import time
+import tomllib
+import zipfile
+from datetime import datetime, timezone
+
+SHA = "d142a4cb57a5c4b2880f9341619e13a735b1cddc"
+CHILD = "0bec922e64f09f4d051e2ded7b8d9e91b2e6a06e3f7e80af8ac1f4f044df8027"
+PARENT = "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605"
+FEATURE = "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba"
+ROOT = Path("/home/sagemaker-user/projects/commodity-prediction-manual")
+NOTEBOOK = "04_normalization_first_fold.ipynb"
+VARIANTS = ("normalized_price", "volume_confirmation", "normalized_joint")
+COUNTS = dict(zip(VARIANTS, (7, 7, 14)))
+CONTROL_SCORE = 0.40338108742296147
+GAIN = 0.002
+LIMIT = 300.0
+RAW = {
+ "train.csv": "6b0cb8794921494c01b187295046160aec18e9957e733e547b3c98cb80195c9c",
+ "train_labels.csv": "65c89598c5d9a45ca7b6c1df2a0420aaf3cba05f46916aa66682977502b243b1",
+ "target_pairs.csv": "06de5c4a9babcd0aef150e68d0a1b8e6ab1ddabf24406f7326f595ead84ad1e1",
+}
+MODEL_HASHES = {
+ "model.joblib": "4233cd1ccf1cac8b9c41595a37b8d0276b770004186fc9450c33f9be71d4b0f5",
+ "predictions.parquet": "2819a1a27b1bbeda4113957d1afb3f7b941010f7ed625743d001a1f2d37f3843",
+ "result.json": "a0ba2b101cfb28878e0bbd94677f4df25d4a0c63258159f787e0dc42a47f38fa",
+ "manifest.json": "b90315d9ee571106f7eecf31babcb5797a128460c97a687623426c69f0d8cb3f",
+}
+TERMINAL = {"FIRST_FOLD_REVIEW_READY", "NOTEBOOK_AND_FIRST_FOLD_REVIEW_READY"}
+
+
+class Stop(RuntimeError):
+    """A diagnosed stop; do not repeat an unchanged failure."""
+
+
+def utc():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def emit(stage, **fields):
+    print(json.dumps({"utc": utc(), "stage": stage, **fields}, allow_nan=False), flush=True)
+
+
+def safe_path(base: Path, relative: str) -> Path:
+    rel = PurePosixPath(relative)
+    if not rel.parts or rel.is_absolute() or ".." in rel.parts or "\\" in relative:
+        raise Stop("Unsafe relative path")
+    if base.is_symlink():
+        raise Stop("Symlinked base directory")
+    path = base
+    for part in rel.parts:
+        path /= part
+        if path.is_symlink():
+            raise Stop(f"Symlinked input/output path: {path}")
+    return path
+
+
+def digest(path):
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 2 * 1024**3:
+        raise Stop(f"Expected bounded regular file: {path}")
+    before = path.stat()
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for block in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(block)
+    after = path.stat()
+    if (before.st_size, before.st_mtime_ns, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_ino):
+        raise Stop(f"Input changed while hashing: {path}")
+    return h.hexdigest()
+
+
+def read_json(path):
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 20 * 1024**2:
+        raise Stop(f"Required small JSON file missing or unsafe: {path}")
+    return json.loads(path.read_text())
+
+
+def atomic_json(path, obj):
+    safe_path(path.parent, path.name)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = safe_path(path.parent, path.name + ".tmp")
+    with tmp.open("w") as f:
+        json.dump(obj, f, indent=2, sort_keys=True, allow_nan=False)
+        f.write("\n"); f.flush(); os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def write_new(path, body):
+    safe_path(path.parent, path.name)
+    if path.exists():
+        if path.read_bytes() != body:
+            raise Stop(f"Existing file differs and was preserved: {path}")
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("xb") as f:
+        f.write(body); f.flush(); os.fsync(f.fileno())
+    return True
+
+
+def folder(root):
+    return safe_path(root, "logs/manual_first_fold")
+
+
+def report_path(root):
+    return folder(root) / "commodity_first_fold_report.json"
+
+
+def child_dir(root):
+    return safe_path(root, "artifacts/" + CHILD)
+
+
+def environment(root):
+    env = os.environ.copy()
+    for name in ("PYTHONHOME", "VIRTUAL_ENV", "GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE"):
+        env.pop(name, None)
+    env.update(PYTHONPATH=str(root / "src"), PYTHONNOUSERSITE="1", PYTHONDONTWRITEBYTECODE="1",
+               OMP_NUM_THREADS="4", OPENBLAS_NUM_THREADS="4", MKL_NUM_THREADS="4",
+               NUMEXPR_NUM_THREADS="4", GIT_OPTIONAL_LOCKS="0", GIT_TERMINAL_PROMPT="0",
+               GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull)
+    return env
+
+
+def git_read(root, *args):
+    result = subprocess.run(["git", "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false",
+                             "-C", str(root), *args], env=environment(root),
+                            text=True, capture_output=True, timeout=15, check=False)
+    if result.returncode:
+        raise Stop("Git read failed: " + result.stderr[-1500:])
+    return result.stdout.strip()
+
+
+def readiness(root):
+    r = read_json(safe_path(root, "logs/manual_readiness/commodity_manual_readiness.json"))
+    if r.get("status") != "NOTEBOOK_AND_FEATURE_AUDIT_READY" or r.get("source_commit") != SHA:
+        raise Stop("Notebook 03 readiness result or pinned source does not match")
+    if r.get("lineage", {}).get("child_lineage") != CHILD:
+        raise Stop("The reviewed normalization child lineage changed")
+    if r.get("focused_tests", {}).get("passed") != 30 or r.get("final_test_evaluations") != 0:
+        raise Stop("Missing 30-test evidence or final-test gate changed")
+    if r.get("runtime", {}).get("version", [])[:2] != [3, 12]:
+        raise Stop("The verified Python 3.12 environment is missing")
+    return r
+
+
+def validate_source(root):
+    if root.is_symlink() or not root.is_dir():
+        raise Stop("Use the existing commodity-prediction-manual working folder")
+    if git_read(root, "rev-parse", "HEAD") != SHA:
+        raise Stop("Source revision changed; do not reset or pull mid-experiment")
+    if git_read(root, "diff", "HEAD", "--name-only"):
+        raise Stop("Tracked source changes must be reviewed; nothing was overwritten")
+    # Notebook 03/04 and this new helper are intentional untracked additions.
+    for record in git_read(root, "ls-files", "--stage", "-z").split("\0"):
+        if not record:
+            continue
+        meta, name = record.split("\t", 1)
+        mode, expected, stage = meta.split()
+        if stage != "0" or mode not in {"100644", "100755"}:
+            raise Stop("Unexpected tracked link/submodule/index conflict")
+        p = safe_path(root, name)
+        body = p.read_bytes()
+        actual = hashlib.sha1(b"blob " + str(len(body)).encode() + b"\0" + body).hexdigest()
+        if actual != expected:
+            raise Stop("Tracked bytes changed: " + name)
+
+
+def validate_runtime(root, r):
+    if list(sys.version_info[:2]) != [3, 12] or sys.prefix != r["runtime"]["prefix"]:
+        raise Stop("Select the existing Commodity - manual (verified) kernel")
+    lock = tomllib.loads((root / "uv.lock").read_text())
+    recorded = r["runtime"]["packages"]
+    for name, expected in recorded.items():
+        entries = {p["version"] for p in lock["package"] if p["name"].replace("_", "-") == name}
+        if entries != {expected} or importlib.metadata.version(name) != expected:
+            raise Stop("Locked package mismatch: " + name)
+    import commodity_prediction
+    if not Path(commodity_prediction.__file__).resolve().is_relative_to((root / "src").resolve()):
+        raise Stop("Kernel imported another working copy")
+
+
+def verify_stage(path, lineage, pins=None):
+    m = read_json(safe_path(path, "manifest.json"))
+    if m.get("lineage") != lineage or not isinstance(m.get("files"), dict) or not m["files"]:
+        raise Stop("Missing or wrong checkpoint lineage: " + str(path))
+    hashes = {}
+    for name, expected in m["files"].items():
+        if not re.fullmatch(r"[0-9a-f]{64}", expected):
+            raise Stop("Invalid checkpoint hash")
+        got = digest(safe_path(path, name))
+        if got != expected:
+            raise Stop("Checkpoint checksum mismatch: " + str(path / name))
+        hashes[name] = got
+    hashes["manifest.json"] = digest(path / "manifest.json")
+    if pins is not None and hashes != pins:
+        raise Stop("Checkpoint differs from the returned, inspected readiness report")
+    return hashes
+
+
+def checkpoint_snapshot(root, r):
+    out = {}
+    for row in r["recovered_stages"]:
+        rel = "artifacts/" + row["lineage"] + "/" + row["stage"]
+        out[rel] = verify_stage(safe_path(root, rel), row["lineage"], row["files"])
+    if len(out) != 5:
+        raise Stop("Expected exactly five recovered parent stages")
+    return out
+
+
+def budget_used(root):
+    path = child_dir(root) / "runtime_budget.json"
+    if not path.exists():
+        return 0.0
+    value = read_json(path)
+    x = value.get("seconds")
+    if isinstance(x, bool) or not isinstance(x, (float, int)) or not math.isfinite(x) or x < 0 or value.get("limit") != LIMIT:
+        raise Stop("Invalid cumulative budget; do not replace it")
+    return float(x)
+
+
+def account_time(root, previous, elapsed):
+    directory = child_dir(root)
+    directory.mkdir(parents=True, exist_ok=True)
+    # Include this supervised worker's preflight/replay as well as study time.
+    used = max(budget_used(root), previous + elapsed)
+    atomic_json(directory / "runtime_budget.json", {"seconds": used, "limit": 300})
+    return used
+
+
+def exact_predictions(saved, replay):
+    import numpy as np
+    import pandas as pd
+    pd.testing.assert_frame_equal(saved, replay, check_names=False, check_exact=True)
+    if not np.isfinite(saved.to_numpy()).all():
+        raise Stop("Nonfinite predictions are not valid replay evidence")
+    return float(np.max(np.abs(saved.to_numpy() - replay.to_numpy())))
+
+
+def daily_score(daily):
+    import numpy as np
+    a = np.asarray(daily, dtype=float)
+    if a.shape != (180,) or not np.isfinite(a).all() or (np.abs(a) > 1 + 1e-12).any():
+        raise Stop("First-fold daily-correlation array must have 180 finite correlations")
+    if a.std(ddof=0) <= 0:
+        raise Stop("Undefined daily-correlation Sharpe ratio")
+    return float(a.mean() / a.std(ddof=0))
+
+
+def strict_control_replay(root, evidence, parent):
+    """Read development inputs only; deserialize the pinned owned model after hashing."""
+    import gc
+    import joblib
+    import pandas as pd
+    from threadpoolctl import threadpool_limits
+    from commodity_prediction.domain.market_path.run import load_inputs
+    from commodity_prediction.domain.market_path.features import build_panel
+    from commodity_prediction.studies.evaluation import evaluate
+    p = safe_path(root, f"artifacts/{PARENT}/fold_0/current_market")
+    verify_stage(p, PARENT, MODEL_HASHES)
+    with threadpool_limits(limits=4):
+        x, y, pairs, original, folds = load_inputs(root, FEATURE)
+        fold = folds[0]
+        if (fold.number, fold.train_stop, fold.validation_start, fold.validation_stop) != (0, 1164, 1169, 1349):
+            raise Stop("Reviewed first-fold boundaries changed")
+        base, _ = build_panel(original, x, pairs, "current_market")
+        saved = pd.read_parquet(p / "predictions.parquet")
+        model = joblib.load(p / "model.joblib")
+        replay = model.predict(base, 1169, 1349)
+        error = exact_predictions(saved, replay)
+        if saved.index.tolist() != list(range(1169, 1349)):
+            raise Stop("Control validation dates differ")
+        score = evaluate(y.loc[saved.index], saved, pairs)
+        actual = score["official_metric"]
+        historical = parent["summaries"]["current_market"]["fold_scores"][0]
+        if not math.isclose(actual, CONTROL_SCORE, rel_tol=0, abs_tol=1e-12) or not math.isclose(actual, historical, rel_tol=0, abs_tol=1e-12):
+            raise Stop("Recomputed matched first-fold control differs from preserved evidence")
+        result = {"official_metric": actual, "maximum_prediction_replay_error": error,
+                  "model_sha256": MODEL_HASHES["model.joblib"], "control_refits": 0,
+                  "daily_rank_correlations": score["daily_rank_correlations"],
+                  "validation_start": 1169, "validation_stop_exclusive": 1349,
+                  "training_stop_exclusive": 1164, "prediction_rows": len(saved)}
+        del x, y, original, base, model, replay, saved
+    gc.collect()
+    return result
+
+
+def validate_probe(probe, control):
+    if probe.get("status") != "first_fold_completed" or probe.get("lineage") != CHILD or probe.get("parent_lineage") != PARENT:
+        raise Stop("The result is not this declared first-fold experiment")
+    if probe.get("validation_dates") != 180 or probe.get("model_checkpoints") != 3:
+        raise Stop("The result must contain exactly 3 first-fold checkpoints and 180 dates")
+    if probe.get("holdout_evaluated") is not False or probe.get("feature_gate") != "open":
+        raise Stop("Feature/final-evaluation gates changed")
+    fits = probe.get("fits_this_invocation")
+    if isinstance(fits, bool) or not isinstance(fits, int) or not 0 <= fits <= 3:
+        raise Stop("Unexpected number of new fits")
+    if probe.get("maximum_prediction_replay_error") != 0.0:
+        raise Stop("New model predictions did not replay exactly")
+    if set(probe.get("summaries", {})) != set(VARIANTS) or len(probe.get("results", [])) != 3:
+        raise Stop("Missing or unexpected feature variant")
+    if probe.get("minimum_gain") != GAIN:
+        raise Stop("Predeclared gain threshold changed")
+    seen, rows = set(), []
+    for row in probe["results"]:
+        name = row["variant"]
+        if name not in VARIANTS or name in seen or (row["fold"], row["train_stop"], row["validation_start"], row["validation_stop"]) != (0, 1164, 1169, 1349):
+            raise Stop("Duplicated variant or unreviewed fold")
+        seen.add(name)
+        s = probe["summaries"][name]
+        value = daily_score(s["daily_rank_correlations"])
+        if not math.isclose(s["official_metric"], value, abs_tol=1e-12, rel_tol=0) or not math.isclose(row["metrics"]["official_metric"], value, abs_tol=1e-12, rel_tol=0):
+            raise Stop("Recorded score and daily metric disagree")
+        delta = value - control["official_metric"]
+        if not math.isclose(probe["matched_deltas"][name], delta, rel_tol=0, abs_tol=1e-12):
+            raise Stop("Matched delta uses the wrong control or dates")
+        selection = row["selection"]
+        if selection["candidate_templates"] != selection["retained_templates"] + selection["rejected_templates"]:
+            raise Stop("Feature-screening counts do not balance")
+        added = [n for n in selection["selected_names"] if n.startswith("market_normalization__")]
+        if len(added) != row["added_retained_templates"] or not added or len(added) > COUNTS[name]:
+            raise Stop("No usable or incorrectly counted new feature")
+        if any(k in selection["rejection_reasons"] for k in ("feature_budget", "correlated", "unstable_sign")):
+            raise Stop("Unexpected screening exclusion")
+        rows.append({"variant": name, "official_metric": value, "matched_delta": delta,
+                     "candidate_templates": selection["candidate_templates"],
+                     "retained_templates": selection["retained_templates"],
+                     "rejected_templates": selection["rejected_templates"],
+                     "new_templates_declared": COUNTS[name], "new_templates_retained": len(added),
+                     "new_selected_names": added, "rejection_reasons": selection["rejection_reasons"]})
+    permitted = max(r["matched_delta"] for r in rows) >= GAIN
+    if probe["continue_allowed"] is not permitted:
+        raise Stop("Recorded gate does not follow its declared threshold")
+    return rows
+
+
+def freeze_checkpoint_files(root):
+    """Only this child's three first-fold stages; missing seals prohibit refitting."""
+    directory = child_dir(root)
+    records = {}
+    if not directory.exists():
+        return records
+    if (directory / "summary/manifest.json").exists() or (directory / "fold_1").exists() or (directory / "fold_2").exists():
+        raise Stop("A later/full study already exists; inspect it, do not run the probe again")
+    for name in VARIANTS:
+        p = safe_path(directory, "fold_0/" + name)
+        if not p.exists():
+            continue
+        if not (p / "manifest.json").is_file():
+            if any(p.iterdir()):
+                raise Stop("Unsealed partial fit retained; diagnosis required: " + str(p))
+            continue
+        records[name] = verify_stage(p, CHILD)
+    return records
+
+
+def bundle_checkpoints(root):
+    files = []
+    for name in VARIANTS:
+        stage = child_dir(root) / "fold_0" / name
+        hashes = verify_stage(stage, CHILD)
+        files.extend(stage / f for f in hashes)
+    for name in ("probe.json", "lineage.json", "runtime_budget.json"):
+        p = child_dir(root) / name
+        if not p.is_file():
+            raise Stop("Missing durable first-fold metadata: " + name)
+        files.append(p)
+    manifest = {str(p.relative_to(root)): digest(p) for p in files}
+    name = folder(root) / "normalization_first_fold_checkpoints.zip"
+    temporary = safe_path(name.parent, name.name + ".tmp")
+    with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=3) as z:
+        for p in files:
+            z.write(p, str(p.relative_to(root)))
+        z.writestr("SHA256SUMS.json", json.dumps(manifest, indent=2, sort_keys=True))
+    with zipfile.ZipFile(temporary) as z:
+        if z.testzip() is not None:
+            raise Stop("Private checkpoint ZIP CRC verification failed")
+        for key, h in manifest.items():
+            if hashlib.sha256(z.read(key)).hexdigest() != h:
+                raise Stop("Private checkpoint ZIP content mismatch")
+    os.replace(temporary, name)
+    return {"path": str(name), "sha256": digest(name), "bytes": name.stat().st_size,
+            "private": True, "files": len(manifest), "raw_data_included": False,
+            "off_disk_backup": False, "download_reminder": "Download locally; do NOT attach models to chat or publish them."}
+
+
+def worker(root):
+    import gc
+    started = time.monotonic()
+    r, previous = readiness(root), budget_used(root)
+    if previous >= LIMIT:
+        raise Stop("Cumulative study budget exhausted; do not extend it automatically")
+    sys.path.insert(0, str(root / "src"))
+    validate_runtime(root, r)
+    from commodity_prediction.domain.market_normalization.run import declarations, preflight, run_study
+    out = {"project": "commodity-prediction", "status": "RUNNING", "source_commit": SHA,
+           "lineage": CHILD, "parent_lineage": PARENT, "started_utc": utc(),
+           "feature_gate": "open", "final_test_evaluations": 0, "aws_api_calls": 0,
+           "github_writes": False, "control_refits": 0, "new_training_fits": 0, "helper_sha256": digest(Path(__file__)),
+           "remaining_folds_run": False, "first_fold_review_required": True}
+    canonical_lock = safe_path(root, "logs/market_normalization.lock")
+    with canonical_lock.open("a") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        before = freeze_checkpoint_files(root)
+        try:
+            emit("verify_inputs_before_model_loading", new_fits=0)
+            for relative, h in RAW.items():
+                if digest(safe_path(root, "data/raw/" + relative)) != h:
+                    raise Stop("Raw input checksum changed: " + relative)
+            frozen = checkpoint_snapshot(root, r)
+            lineage, evidence = declarations(root)
+            if lineage != CHILD or evidence["parent_lineage"] != PARENT:
+                raise Stop("Live source/data lineage differs")
+            parent = preflight(root, evidence)
+            emit("strict_saved_control_replay", new_fits=0)
+            control = strict_control_replay(root, evidence, parent)
+            atomic_json(folder(root) / "control_replay.json", control)
+            emit("CONTROL_REPLAY_PASSED", maximum_error=control["maximum_prediction_replay_error"],
+                 official_metric=control["official_metric"], control_refits=0)
+            # Charge replay time to the same cumulative budget; no reset between invocations.
+            account_time(root, previous, time.monotonic() - started)
+            out["new_training_fits"] = None  # Unknown until the runner returns; do not misreport a partial failure as zero fits.
+            out["fit_stage_entered"] = True
+            atomic_json(report_path(root), out)
+            emit("bounded_three_fit_probe", maximum_new_fits=3, completed_cached=len(before))
+            result = run_study(root, first_fold=True, sync=False)
+            rows = validate_probe(result, control)
+            after = freeze_checkpoint_files(root)
+            if len(after) != 3 or any(after[k] != v for k, v in before.items()):
+                raise Stop("Completed checkpoints changed or are incomplete")
+            if result["fits_this_invocation"] != 3 - len(before):
+                raise Stop("New-fit count disagrees with the checkpoint inventory")
+            if checkpoint_snapshot(root, r) != frozen:
+                raise Stop("A frozen parent changed during the experiment")
+            validate_source(root)
+            used = account_time(root, previous, time.monotonic() - started)
+            if used >= LIMIT:
+                raise Stop("Budget reached; retain completed artifacts and review before more work")
+            out.update(status="FIRST_FOLD_REVIEW_READY", new_training_fits=result["fits_this_invocation"],
+                       model_checkpoints=3, cached_fits_reused=len(before),
+                       maximum_new_prediction_replay_error=result["maximum_prediction_replay_error"],
+                       control=control, probe=result, comparison_rows=rows,
+                       checkpoint_hashes=after, parents_unchanged=True,
+                       cumulative_seconds=used, study_limit_seconds=300,
+                       validation_start=1169, validation_stop_exclusive=1349, validation_dates=180,
+                       gate_passed=result["continue_allowed"], minimum_gain=GAIN,
+                       decision=("REVIEW_BEFORE_REMAINING_FOLDS" if result["continue_allowed"] else "STOP_THIS_FORMULATION"),
+                       limitations=["One previously used development fold, not a three-fold or leaderboard score.",
+                                    "Passing the threshold only earns a review for more folds; it does not promote a model.",
+                                    "No full adaptive-research multiplicity correction is performed in this first-fold screen.",
+                                    "Private checkpoints remain on the same EBS disk until downloaded or separately backed up.",
+                                    "The canonical runner is unchanged; this wrapper enforces strict control replay and manual stopping."])
+            atomic_json(report_path(root), out)
+            emit("FIRST_FOLD_REVIEW_READY", decision=out["decision"], new_fits=out["new_training_fits"],
+                 cumulative_seconds=used, report=str(report_path(root)))
+        except BaseException as exc:
+            with contextlib.suppress(Exception):
+                out["verified_completed_variants_at_stop"] = list(freeze_checkpoint_files(root))
+            out.update(status="STOPPED", error=type(exc).__name__ + ": " + str(exc),
+                       action="Preserve all completed artifacts. Do not rerun unchanged or reset the time budget.")
+            atomic_json(report_path(root), out)
+            raise
+        finally:
+            out["finished_utc"] = utc()
+            out["worker_elapsed_seconds"] = round(time.monotonic() - started, 3)
+            out["cumulative_seconds"] = account_time(root, previous, time.monotonic() - started)
+            atomic_json(report_path(root), out)
+            gc.collect()
+    return out
+
+
+def stop_process(p):
+    if p.poll() is not None:
+        return
+    with contextlib.suppress(ProcessLookupError):
+        os.killpg(p.pid, signal.SIGTERM)
+    try:
+        p.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(p.pid, signal.SIGKILL)
+        p.wait(timeout=2)
+
+
+def supervise(args, root, seconds):
+    """Stream output while retaining an independent process-group hard deadline."""
+    path = folder(root) / "first_fold_console.log"
+    p = subprocess.Popen(args, cwd=root, env=environment(root), stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, text=True, bufsize=1, start_new_session=True)
+    messages = queue.Queue()
+    def drain():
+        try:
+            for line in p.stdout:
+                messages.put(line)
+        finally:
+            messages.put(None)
+    reader = threading.Thread(target=drain, daemon=True)
+    reader.start()
+    start, last, closed = time.monotonic(), time.monotonic(), False
+    try:
+        with path.open("a") as log:
+            log.write("\n--- supervised invocation " + utc() + " ---\n")
+            while not (closed and p.poll() is not None):
+                if time.monotonic() - start >= seconds:
+                    raise Stop("Cumulative study deadline reached; worker stopped, checkpoints retained")
+                try:
+                    text = messages.get(timeout=0.25)
+                    if text is None:
+                        closed = True
+                    else:
+                        print(text, end="", flush=True); log.write(text); log.flush()
+                except queue.Empty:
+                    pass
+                if time.monotonic() - last >= 15:
+                    line = json.dumps({"utc": utc(), "heartbeat": True,
+                                       "worker_elapsed_seconds": round(time.monotonic()-start, 1),
+                                       "seconds_available_this_invocation": round(seconds, 2)})
+                    print(line, flush=True); log.write(line + "\n"); log.flush()
+                    last = time.monotonic()
+        p.wait(timeout=2)
+        if p.returncode:
+            raise Stop("First-fold worker exited with an error; inspect its report and log, do not rerun unchanged")
+    except BaseException:
+        stop_process(p)
+        raise
+    finally:
+        reader.join(timeout=1)
+        if p.stdout:
+            p.stdout.close()
+
+
+def run_first_fold(root=ROOT):
+    root = Path(root)
+    r = readiness(root)
+    validate_runtime(root, r)
+    validate_source(root)
+    if shutil.disk_usage(root).free < 256 * 1024**2:
+        raise Stop("Less than 256 MiB free; preserve existing files and inspect storage before fitting")
+    output = folder(root)
+    output.mkdir(parents=True, exist_ok=True)
+    lock_path = safe_path(output, "supervisor.lock")
+    with lock_path.open("a") as lock:
+        try:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as e:
+            raise Stop("A first-fold worker is already running. Do not start another.") from e
+        previous_report = read_json(report_path(root)) if report_path(root).exists() else None
+        if previous_report and previous_report.get("status") in TERMINAL:
+            validate_probe(previous_report["probe"], previous_report["control"])
+            current = freeze_checkpoint_files(root)
+            if current != previous_report["checkpoint_hashes"]:
+                raise Stop("Completed first-fold checkpoint bytes changed")
+            if not previous_report.get("private_checkpoint_bundle"):
+                with contextlib.suppress(Exception):
+                    previous_report["private_checkpoint_bundle"] = bundle_checkpoints(root)
+                    atomic_json(report_path(root), previous_report)
+            emit("COMPLETED_PROBE_REUSED", new_fits=0)
+            return {**previous_report, "new_training_fits_this_notebook_call": 0}
+        if previous_report:
+            raise Stop("A prior unsuccessful/interrupted invocation is recorded. Return the report before retrying; no new fits started.")
+        already = freeze_checkpoint_files(root)
+        previous = budget_used(root)
+        if previous >= LIMIT:
+            raise Stop("Cumulative 300-second study budget is exhausted")
+        installed = root / "scripts/commodity_first_fold.py"
+        setup = read_json(output / "setup.json")
+        if digest(installed) != setup.get("helper_sha256"):
+            raise Stop("Installed helper changed since notebook setup")
+        marker = {"project": "commodity-prediction", "status": "STARTING_WORKER", "started_utc": utc(),
+                  "source_commit": SHA, "lineage": CHILD, "new_training_fits": 0,
+                  "cached_checkpoints_before": len(already), "helper_sha256": digest(installed), "feature_gate": "open", "final_test_evaluations": 0}
+        atomic_json(report_path(root), marker)
+        start = time.monotonic()
+        try:
+            supervise([r["runtime"]["python"], "-B", "-u", str(installed), "--worker"], root, LIMIT - previous)
+            result = read_json(report_path(root))
+            if result.get("status") != "FIRST_FOLD_REVIEW_READY":
+                raise Stop("Worker did not finish a verified first-fold report")
+        except BaseException as exc:
+            result = read_json(report_path(root))
+            if result.get("status") == "STARTING_WORKER":
+                result["new_training_fits"] = None
+            result.update(status="STOPPED", supervisor_error=type(exc).__name__ + ": " + str(exc),
+                          cumulative_seconds=account_time(root, previous, time.monotonic() - start),
+                          report=str(report_path(root)),
+                          action="Do not repeat unchanged. Return the JSON report; sealed fits remain preserved.")
+            atomic_json(report_path(root), result)
+            print("RESULT: STOPPED\nREPORT: " + str(report_path(root)), flush=True)
+            raise
+        # Artifact packaging is independent of model execution. Failure cannot erase the result.
+        result["new_training_fits_this_notebook_call"] = result["new_training_fits"]
+        try:
+            result["private_checkpoint_bundle"] = bundle_checkpoints(root)
+        except Exception as exc:
+            result["bundle_warning"] = type(exc).__name__ + ": " + str(exc)
+        atomic_json(report_path(root), result)
+        return result
+
+
+def charts(report):
+    import numpy as np
+    import plotly.graph_objects as go
+    rows, control = report["comparison_rows"], report["control"]
+    names = [r["variant"] for r in rows]
+    figures = []
+    fig = go.Figure(go.Bar(x=["current_market", *names],
+                         y=[control["official_metric"], *[r["official_metric"] for r in rows]],
+                         text=[f'{v:.6f}' for v in [control["official_metric"], *[r["official_metric"] for r in rows]]],
+                         textposition="outside", cliponaxis=False))
+    fig.update_layout(title="First-fold official metric · identical 180 validation dates", yaxis_title="Mean daily rank correlation / population standard deviation")
+    figures.append(("first_fold_scores", fig))
+    fig = go.Figure(go.Bar(x=names, y=[r["matched_delta"] for r in rows],
+                         text=[f'{r["matched_delta"]:+.6f}' for r in rows], textposition="outside"))
+    fig.add_hline(y=0, line_dash="dot")
+    fig.add_hline(y=GAIN, line_dash="dash", annotation_text="+0.002 review threshold")
+    fig.update_layout(title="Matched feature effect · change versus the frozen control", yaxis_title="First-fold score difference")
+    figures.append(("matched_feature_deltas", fig))
+    dates = list(range(1169, 1349))
+    all_daily = {"current_market": control["daily_rank_correlations"], **{n: report["probe"]["summaries"][n]["daily_rank_correlations"] for n in names}}
+    fig = go.Figure()
+    for n, a in all_daily.items():
+        fig.add_trace(go.Scatter(x=dates, y=a, name=n, mode="lines"))
+    fig.update_layout(title="Daily cross-sectional rank correlation · no hidden final dates", xaxis_title="Observation date_id", yaxis_title="Spearman correlation", hovermode="x unified")
+    figures.append(("daily_rank_correlations", fig))
+    fig = go.Figure()
+    for n in names:
+        a = np.asarray(all_daily[n]) - np.asarray(all_daily["current_market"])
+        fig.add_trace(go.Scatter(x=dates, y=np.cumsum(a).tolist(), name=n, mode="lines"))
+    fig.update_layout(title="Where incremental rank information accumulates · not trading returns", xaxis_title="Observation date_id", yaxis_title="Cumulative daily correlation difference", hovermode="x unified")
+    figures.append(("cumulative_rank_difference", fig))
+    fig = go.Figure()
+    for key, title in (("retained_templates", "Retained"), ("rejected_templates", "Rejected")):
+        fig.add_trace(go.Bar(x=names, y=[r[key] for r in rows], name=title))
+    fig.update_layout(title="Training-only feature screening · full augmented panel", barmode="stack", yaxis_title="Candidate templates")
+    figures.append(("feature_screening", fig))
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=names, y=[r["new_templates_declared"] for r in rows], name="New declared templates"))
+    fig.add_trace(go.Bar(x=names, y=[r["new_templates_retained"] for r in rows], name="New retained templates"))
+    fig.update_layout(title="Did the model actually receive the proposed new representation?", barmode="group", yaxis_title="New normalization templates")
+    figures.append(("new_feature_admission", fig))
+    for _, f in figures:
+        f.update_layout(height=470, margin=dict(l=65, r=30, t=85, b=100), font=dict(size=14),
+                        legend=dict(orientation="h", y=-0.27))
+    return figures
+
+
+def finish_notebook(root, report, figures):
+    import plotly.io as pio
+    directory = folder(root)
+    parts = ["<!doctype html><html><head><meta charset='utf-8'><title>Commodity · first-fold feature review</title></head><body>",
+             "<h1>Commodity prediction · first-fold normalization review</h1>",
+             "<p>One development fold, not a leaderboard result. Higher is better. No final-test evaluation.</p>",
+             "<p><strong>Decision: " + html.escape(report["decision"]) + "</strong>. No additional folds ran automatically.</p>"]
+    for i, (slug, fig) in enumerate(figures):
+        parts.append(pio.to_html(fig, full_html=False, include_plotlyjs=(i == 0), div_id=slug))
+    parts.append("</body></html>")
+    path = directory / "first_fold_dashboard.html"
+    safe_path(directory, path.name)
+    path.write_text("\n".join(parts))
+    # Read back numeric results and hashes; charts never trigger model fitting.
+    current = read_json(report_path(root))
+    validate_probe(current["probe"], current["control"])
+    current.update(status="NOTEBOOK_AND_FIRST_FOLD_REVIEW_READY", plotly_figures=len(figures),
+                   last_notebook_call_new_fits=report.get("new_training_fits_this_notebook_call", report["new_training_fits"]),
+                   dashboard=str(path), dashboard_sha256=digest(path), updated_utc=utc(),
+                   notebook=str(root / "notebooks" / NOTEBOOK),
+                   next="Save notebook 04, download the report and private checkpoint bundle, then stop space. Review before any other folds.")
+    atomic_json(report_path(root), current)
+    return current
+
+
+def notebook_document():
+    cells = []
+    def md(text):
+        cells.append({"cell_type":"markdown", "metadata":{}, "source":text.splitlines(keepends=True)})
+    def code(text):
+        cells.append({"cell_type":"code", "metadata":{}, "execution_count":None, "outputs":[], "source":text.splitlines(keepends=True)})
+    md("# 04 · Does market normalization add predictive information?\n\n"
+       "**Bounded first-fold feature ablation.** Reuse the verified runtime and saved `current_market` control. "
+       "Test normalized intraday/overnight/range features, abnormal-volume confirmation, and their exact union. "
+       "The model and training-only preprocessing policy stay fixed. This is not a final model or leaderboard evaluation.\n\n"
+       "**Run All starts at most three new CPU fits in this notebook.** The supervised worker has at most the remaining portion "
+       "of a 300-second cumulative budget, with 15-second heartbeats. It will never start the other folds. "
+       "Verified completed results are reused. An earlier failed invocation stops for diagnosis rather than silently retrying.\n\n"
+       "Use kernel **Commodity - manual (verified)**. Keep all old project folders: the runtime is borrowed without modification.")
+    code("from pathlib import Path\nimport os, json, importlib.util\nfrom IPython.display import display, Markdown\nimport pandas as pd\n"
+         "ROOT = Path(os.environ.get('COMMODITY_MANUAL_PROJECT', '/home/sagemaker-user/projects/commodity-prediction-manual'))\n"
+         "spec = importlib.util.spec_from_file_location('first_fold_support', ROOT / 'scripts/commodity_first_fold.py')\n"
+         "support = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(support)\n"
+         "ready = support.readiness(ROOT)\nsupport.validate_runtime(ROOT, ready)\n"
+         "print('Source:', ready['source_commit'])\nprint('Kernel verified. No fitting has started yet.')\n")
+    md("## Predeclared comparison\n\n"
+       "Training origins: **0–1163** (the frozen model's warmup still applies). Purge: **1164–1168**. "
+       "Validation: **1169–1348**, 180 dates. New input reference windows exclude the current bar. "
+       "The canonical loader reads development data only (first 1,709 rows); final origins **1714–1960** remain untouched.\n\n"
+       "The matched control is **0.4033810874 on this fold**, not its **0.3097087232 pooled three-fold score**. "
+       "Continue to a later review only when at least one matched gain is **≥ 0.002**, with all integrity/replay checks passed. "
+       "A negative screen stops this formulation, not the overall feature-research program.\n\n"
+       "Hypotheses were recorded before these outcomes in `docs/market-normalization-research.md` and `configs/market_normalization.json`. "
+       "Related domain literature is motivation, not evidence that these features work on this data.")
+    code("display(pd.DataFrame([['Normalized price', 7], ['Volume confirmation', 7], ['Exact union', 14]],\n"
+         "                     columns=['New representation', 'Added candidate templates']))\n")
+    md("## Run the first-fold experiment — one supervised invocation\n\n"
+       "Before any fit, the exact owned control-model checksum is checked, its predictions are replayed with zero tolerance, "
+       "and its official score is recomputed on the same dates. The existing repository runner then fits or reuses each declared variant. "
+       "It saves a separate model/predictions/result manifest after each successful fit. **Do not start a second worker.**\n\n"
+       "If this cell fails, retain the last error, `logs/manual_first_fold/commodity_first_fold_report.json`, "
+       "and the console log. Do not erase budgets or checkpoints. The supervisor terminates the process group at its deadline.")
+    code("report = support.run_first_fold(ROOT)\n"
+         "display(Markdown('**First-fold result: ' + report['decision'] + '**'))\n"
+         "print('New fits this notebook run:', report.get('new_training_fits_this_notebook_call', report['new_training_fits']), '| Saved models:', report['model_checkpoints'])\n"
+         "print('Control replay error:', report['control']['maximum_prediction_replay_error'])\n"
+         "print('Additional folds run:', report['remaining_folds_run'])\n"
+         "display(pd.DataFrame(report['comparison_rows']).drop(columns=['new_selected_names', 'rejection_reasons']))\n"
+         "figures = support.charts(report)\n")
+    titles = ["1. Same-fold official scores", "2. Matched changes and the continuation threshold",
+              "3. Daily rank-correlation behavior", "4. Temporal concentration of incremental information",
+              "5. Training-only feature-screening counts", "6. Admission of the new feature families"]
+    for i, title in enumerate(titles):
+        md("## " + title)
+        code(f"figures[{i}][1].show(renderer='plotly_mimetype')\n")
+    md("## Interpretation and checkpoint\n\n"
+       "A score above the control on one fold is a screen, not proof of stability. The cumulative-correlation figure is "
+       "a diagnostic, **not cumulative investment return**. No loss function, model family, seed or tuning sweep changed "
+       "alongside the feature representation. Later folds and matched uncertainty remain separate, review-gated work.\n\n"
+       "The private checkpoint ZIP contains the new models, validation predictions and their manifests. Download it to your "
+       "computer for an off-disk copy; **do not upload the ZIP to chat or public GitHub**. Neither this script nor notebook "
+       "stops SageMaker automatically. Save with Ctrl+S, download the small JSON report and this executed notebook, then Stop space.")
+    code("completed = support.finish_notebook(ROOT, report, figures)\n"
+         "print('RESULT:', completed['status'])\nprint('DECISION:', completed['decision'])\n"
+         "print('REPORT:', support.report_path(ROOT))\nprint('DASHBOARD:', completed['dashboard'])\n"
+         "print('PRIVATE BACKUP:', completed.get('private_checkpoint_bundle', {}).get('path', completed.get('bundle_warning', 'Not created')))\n"
+         "print('STOP: Save notebook 04 and stop the space. Do not run other folds yet.')\n")
+    for i, c in enumerate(cells):
+        c["id"] = f"normalization-probe-{i:02d}"
+    return {"nbformat":4,"nbformat_minor":5,"metadata":{
+        "kernelspec":{"name":"commodity-manual","display_name":"Commodity - manual (verified)","language":"python"},
+        "language_info":{"name":"python","version":"3.12"},
+        "commodity_first_fold":{"version":1,"max_new_fits":3,"max_cumulative_seconds":300,"other_folds_enabled":False}},"cells":cells}
+
+
+def same_notebook_source(a, b):
+    def signature(n):
+        return [(c["cell_type"], "".join(c["source"])) for c in n["cells"]]
+    return signature(a) == signature(b)
+
+
+def install(root=ROOT):
+    root = Path(root)
+    readiness(root)
+    validate_source(root)
+    output = folder(root)
+    output.mkdir(parents=True, exist_ok=True)
+    installed = safe_path(root, "scripts/commodity_first_fold.py")
+    write_new(installed, Path(__file__).read_bytes())
+    nb = notebook_document()
+    path = safe_path(root, "notebooks/" + NOTEBOOK)
+    if path.exists():
+        if not same_notebook_source(read_json(path), nb):
+            raise Stop("Existing notebook 04 differs; it was NOT replaced")
+    else:
+        write_new(path, (json.dumps(nb, indent=1) + "\n").encode())
+    atomic_json(output / "setup.json", {"status":"FIRST_FOLD_NOTEBOOK_READY","utc":utc(),
+                "source_commit":SHA,"helper_sha256":digest(installed),"notebook":str(path),
+                "training_started":False,"new_fits":0,"github_writes":False,"aws_api_calls":0})
+    print("RESULT: FIRST_FOLD_NOTEBOOK_READY\nNOTEBOOK: " + str(path) +
+          "\nKERNEL: Commodity - manual (verified)\nThe notebook, not this setup command, runs up to three fits.", flush=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
+    args = parser.parse_args()
+    try:
+        if args.worker:
+            worker(ROOT)
+        else:
+            def setup_deadline(signum, frame):
+                raise Stop("Notebook installation exceeded 45 seconds; no training was started")
+            signal.signal(signal.SIGALRM, setup_deadline)
+            signal.alarm(45)
+            try:
+                install(ROOT)
+            finally:
+                signal.alarm(0)
+    except (Exception, KeyboardInterrupt) as exc:
+        print("RESULT: STOPPED\nERROR: " + type(exc).__name__ + ": " + str(exc) +
+              "\nDo not repeat unchanged; preserve the report/error. Stop space after downloading it.", flush=True)
+        raise SystemExit(2)
+
+
+if __name__ == "__main__":
+    main()

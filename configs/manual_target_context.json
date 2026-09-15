@@ -1,0 +1,65 @@
+{
+  "anchor_limit": 16,
+  "anchor_selection": "Count appearances in supplied target-pair metadata; descending count, lexical tie-break; no label or validation selection.",
+  "aws_api_calls": 0,
+  "contrasts": [
+    [
+      "context_identity",
+      "current_market"
+    ],
+    [
+      "context_shocks",
+      "current_market"
+    ],
+    [
+      "context_joint",
+      "current_market"
+    ],
+    [
+      "context_joint",
+      "context_identity"
+    ],
+    [
+      "context_joint",
+      "context_shocks"
+    ]
+  ],
+  "control_refits": 0,
+  "feature_gate": "open",
+  "final_test_evaluations": 0,
+  "fold": 1,
+  "forecast_learner": "Unchanged histogram learner, parameters and training preprocessing; all nonduplicate usable candidates admitted.",
+  "further_folds": false,
+  "gate": "Identity and shocks panels: >=0.002 over saved same-fold current_market. Joint: >=0.002 over both saved current_market and fitted identity-only. Required numerical admission and exact replay. Review only.",
+  "github_writes": false,
+  "hyperparameter_search": false,
+  "identity_features": "For each anchor: signed membership (left minus right) and unsigned membership (left plus right).",
+  "max_templates_by_variant": [
+    32,
+    32,
+    64
+  ],
+  "metadata_only_anchor_selection": true,
+  "new_feature_labels_used": false,
+  "new_fit_limit": 3,
+  "no_arbitrary_ordinal_codes": true,
+  "numerical_features": "For each anchor: its standardized current return times signed membership and unsigned membership. Unrelated targets get structural zero; missing observations on a member target stay NaN.",
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "period_choice": "Middle development fold selected after observing its weaker historical baseline, before these new scores. Not a fresh holdout or global multiplicity correction.",
+  "price_feature": "Finite positive close/FX log return divided by trailing 63-row population standard deviation through t-1 (42 observations minimum, floor 1e-6), clipped to [-12,12].",
+  "prior_rank_lineage": "736913e32506fcd3f9379d5b1d166e611a819848f0699ada7c50f71d8c0ecbbd",
+  "promotion_allowed": false,
+  "review_gain": 0.002,
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "study": "metadata_aligned_instrument_context_fold_1",
+  "training_stop_exclusive": 1344,
+  "validation_start": 1349,
+  "validation_stop_exclusive": 1529,
+  "variants": [
+    "context_identity",
+    "context_shocks",
+    "context_joint"
+  ],
+  "warmup_dates": 252,
+  "worker_limit_seconds": 240.0
+}

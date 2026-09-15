@@ -1,0 +1,741 @@
+#!/usr/bin/env python3
+"""Install notebook 11; test instrument identity and identity-aligned price shocks.
+
+Default: install local files only. Notebook: at most three fixed-learner fits on
+existing development fold 1, with a 240-second worker limit. No cloud or Git
+writes, package installs, old-model refits, final-test use or automatic shutdown.
+"""
+from __future__ import annotations
+
+import argparse
+from collections import Counter
+from datetime import datetime, timezone
+import fcntl
+import gc
+import hashlib
+import importlib.util
+import json
+import math
+import os
+from pathlib import Path
+import shutil
+import signal
+import time
+import zipfile
+
+ROOT = Path('/home/sagemaker-user/projects/commodity-prediction-manual')
+SHA = 'd142a4cb57a5c4b2880f9341619e13a735b1cddc'
+PARENT = '04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605'
+FEATURE = '52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba'
+RANK_LINEAGE = '736913e32506fcd3f9379d5b1d166e611a819848f0699ada7c50f71d8c0ecbbd'
+RANK_REPORT_HASH = '9eae64662af41f6fb9409cd96faf2414ca6ae219f75e2d46556263e5dc356fec'
+SESSION_HASH = '7efef4574d55bd9aad8da8ecf4e7f4ba7cc54907412dcfb4a754100d9e34f88f'
+TRAIN_STOP, START, STOP = 1344, 1349, 1529
+FOLD = 1
+CONTROL = 0.16704165319061334
+LIMIT, GAIN = 240.0, 0.002
+MAX_ANCHORS, WINDOW, MIN_HISTORY = 16, 63, 42
+NOTEBOOK = '11_target_context_ablation.ipynb'
+VARIANTS = ('context_identity', 'context_shocks', 'context_joint')
+TERMINAL = {'TARGET_CONTEXT_REVIEW_READY', 'NOTEBOOK_AND_TARGET_CONTEXT_READY'}
+
+class Stop(RuntimeError):
+    """Preserve evidence; no unchanged automatic retries."""
+
+def utc():
+    return datetime.now(timezone.utc).isoformat()
+
+def emit(stage, **fields):
+    print(json.dumps(dict(utc=utc(), stage=stage, **fields), allow_nan=False), flush=True)
+
+def previous(root):
+    p = Path(root) / 'scripts/commodity_session_ablation.py'
+    if p.is_symlink() or not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest() != SESSION_HASH:
+        raise Stop('The unchanged notebook-07 support is missing or modified; preserve it.')
+    spec = importlib.util.spec_from_file_location('context11_session_utilities', p)
+    session = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(session)
+    older, u = session.previous(Path(root))
+    return session, older, u
+
+def output_dir(root):
+    return Path(root) / 'logs/manual_target_context'
+
+def report_path(root):
+    return output_dir(root) / 'commodity_target_context_report.json'
+
+def plan():
+    return dict(
+        study='metadata_aligned_instrument_context_fold_1', source_commit=SHA,
+        parent_lineage=PARENT, prior_rank_lineage=RANK_LINEAGE,
+        fold=FOLD, training_stop_exclusive=TRAIN_STOP, warmup_dates=252,
+        validation_start=START, validation_stop_exclusive=STOP,
+        anchor_limit=MAX_ANCHORS,
+        anchor_selection='Count appearances in supplied target-pair metadata; descending count, lexical tie-break; no label or validation selection.',
+        price_feature='Finite positive close/FX log return divided by trailing 63-row population standard deviation through t-1 (42 observations minimum, floor 1e-6), clipped to [-12,12].',
+        identity_features='For each anchor: signed membership (left minus right) and unsigned membership (left plus right).',
+        numerical_features='For each anchor: its standardized current return times signed membership and unsigned membership. Unrelated targets get structural zero; missing observations on a member target stay NaN.',
+        variants=list(VARIANTS), max_templates_by_variant=[32,32,64],
+        no_arbitrary_ordinal_codes=True, metadata_only_anchor_selection=True,
+        new_feature_labels_used=False, forecast_learner='Unchanged histogram learner, parameters and training preprocessing; all nonduplicate usable candidates admitted.',
+        new_fit_limit=3, control_refits=0, worker_limit_seconds=LIMIT,
+        review_gain=GAIN,
+        gate='Identity and shocks panels: >=0.002 over saved same-fold current_market. Joint: >=0.002 over both saved current_market and fitted identity-only. Required numerical admission and exact replay. Review only.',
+        contrasts=[[n,'current_market'] for n in VARIANTS] + [['context_joint','context_identity'],['context_joint','context_shocks']],
+        period_choice='Middle development fold selected after observing its weaker historical baseline, before these new scores. Not a fresh holdout or global multiplicity correction.',
+        further_folds=False, hyperparameter_search=False, feature_gate='open', promotion_allowed=False,
+        final_test_evaluations=0, aws_api_calls=0, github_writes=False)
+
+def validate_prior(r):
+    if (r.get('status') != 'NOTEBOOK_AND_RANK_STATE_READY'
+        or r.get('lineage') != RANK_LINEAGE or r.get('source_commit') != SHA
+        or r.get('decision') != 'STOP_TESTED_RANK_STATE_PANELS'
+        or r.get('new_training_fits') != 3 or r.get('control_refits') != 0
+        or r.get('parents_unchanged') is not True
+        or r.get('maximum_prediction_replay_error') != 0.0
+        or r.get('final_test_evaluations') != 0):
+        raise Stop('Notebook-10 completion differs from the reviewed negative result.')
+    expected = {'rank_global':0.39057738874696596, 'rank_horizon_relative':0.399073467379463,
+                'rank_joint':0.388566691746714}
+    rows=r.get('comparison_rows',[])
+    if len(rows)!=3 or {v['variant'] for v in rows}!=set(expected):
+        raise Stop('Prior rank result inventory differs.')
+    if any(not math.isclose(v['official_metric'],expected[v['variant']],abs_tol=1e-12,rel_tol=0) for v in rows):
+        raise Stop('Prior rank scores changed.')
+
+def read_prior(root,u,verify_artifacts=False):
+    p=u.safe_path(root,'logs/manual_rank_state/commodity_rank_state_report.json')
+    if u.digest(p)!=RANK_REPORT_HASH:
+        raise Stop('Notebook-10 report changed; preserve and return the current report.')
+    r=u.read_json(p); validate_prior(r)
+    if verify_artifacts:
+        directory=u.safe_path(root,'artifacts/rank_state_ablation/'+RANK_LINEAGE)
+        u.verify_stage(directory/'features',RANK_LINEAGE,r['feature_checkpoint_hashes'])
+        for name,pins in r['checkpoint_hashes'].items():
+            u.verify_stage(directory/'fold_0'/name,RANK_LINEAGE,pins)
+    return r
+
+def identity(root,u):
+    declaration=plan()
+    if u.read_json(u.safe_path(root,'configs/manual_target_context.json'))!=declaration:
+        raise Stop('Target-context experiment declaration changed.')
+    evidence=dict(plan=declaration,helper_sha256=u.digest(Path(__file__)),
+                  rank_report_sha256=RANK_REPORT_HASH,session_helper_sha256=SESSION_HASH,
+                  domain_config_sha256=u.digest(root/'configs/domain_study.json'))
+    lineage=hashlib.sha256(json.dumps(evidence,sort_keys=True).encode()).hexdigest()
+    return lineage,evidence
+
+def metadata_map(pairs):
+    import pandas as pd
+    if (not isinstance(pairs,pd.DataFrame) or pairs.empty or not pairs.columns.is_unique
+        or not {'target','pair','lag'}.issubset(pairs.columns)
+        or pairs[['target','pair','lag']].isna().any().any()
+        or pairs.target.duplicated().any() or pd.api.types.is_bool_dtype(pairs.lag)
+        or not pairs.lag.isin([1,2,3,4]).all()
+        or not pairs.target.map(lambda s:isinstance(s,str) and bool(s)).all()):
+        raise Stop('Invalid ordered target/pair/horizon metadata.')
+    legs=[]
+    for value in pairs.pair:
+        if not isinstance(value,str):
+            raise Stop('Pair identifiers must be strings.')
+        row=value.split(' - ')
+        if len(row) not in (1,2) or len(set(row))!=len(row) or any(not a or a!=a.strip() for a in row):
+            raise Stop('Invalid or repeated target legs.')
+        legs.append(row)
+    counts=Counter(a for row in legs for a in row)
+    anchors=sorted(counts,key=lambda a:(-counts[a],a))[:MAX_ANCHORS]
+    return legs,anchors,counts
+
+def build_context(x,pairs):
+    """Metadata and raw market observations only; no outcome argument exists."""
+    import numpy as np
+    import pandas as pd
+    legs,anchors,counts=metadata_map(pairs)
+    if (not isinstance(x,pd.DataFrame) or x.empty or len(x)>STOP or not x.columns.is_unique
+        or not pd.api.types.is_integer_dtype(x.index) or x.index.tolist()!=list(range(len(x)))
+        or any(a not in x.columns for row in legs for a in row)
+        or not all(pd.api.types.is_numeric_dtype(x[a]) and not pd.api.types.is_bool_dtype(x[a]) for a in anchors)):
+        raise Stop('Bounded, numeric, contiguous market inputs and all target assets are required.')
+    signed=np.array([[int(row[0]==a)-int(len(row)==2 and row[1]==a) for a in anchors]
+                     for row in legs],dtype=np.float32)
+    present=np.abs(signed)
+    raw=x[anchors].to_numpy(dtype=float,copy=True)
+    valid=np.isfinite(raw)&(raw>0)
+    logs=np.full_like(raw,np.nan)
+    np.log(raw,out=logs,where=valid)
+    returns=pd.DataFrame(logs,index=x.index,columns=anchors).diff()
+    sigma=returns.shift(1).rolling(WINDOW,min_periods=MIN_HISTORY).std(ddof=0).clip(lower=1e-6)
+    shocks=(returns/sigma).clip(-12,12).to_numpy(dtype=float,copy=True)
+    arrays=[]; names=[]; kinds=[]
+    for j,a in enumerate(anchors):
+        for label,weights in [('signed',signed[:,j]),('present',present[:,j])]:
+            arrays.append(np.broadcast_to(weights,(len(x),len(pairs))))
+            names.append(f'target_context__identity_{label}__{a}'); kinds.append('identity')
+    for j,a in enumerate(anchors):
+        for label,weights in [('signed',signed[:,j]),('present',present[:,j])]:
+            arrays.append(np.where(weights[None,:]!=0,shocks[:,j,None]*weights[None,:],0))
+            names.append(f'target_context__shock_{label}__{a}'); kinds.append('shock')
+    block=np.stack(arrays,axis=2).astype(np.float32)
+    if np.isinf(block).any() or len(names)!=len(set(names)):
+        raise Stop('Invalid target-context features.')
+    membership=present.sum(axis=1)
+    metadata=dict(anchors=anchors,anchor_counts=[int(counts[a]) for a in anchors],
+        unique_underlyings=len(counts),targets=len(pairs),templates=len(names),
+        identity_templates=2*len(anchors),shock_templates=2*len(anchors),
+        targets_with_anchor=int((membership>0).sum()),targets_without_anchor=int((membership==0).sum()),
+        fully_anchored_targets=sum(all(a in anchors for a in row) for row in legs),
+        names=names,kinds=kinds,
+        selection='Supplied target metadata only; no observed-label counts or outcome values.')
+    return block,names,metadata
+
+def variant_names(names,variant):
+    if variant not in VARIANTS or len(names)!=len(set(names)):
+        raise Stop('Unknown panel or duplicate column names.')
+    identity=[n for n in names if n.startswith('target_context__identity_')]
+    shocks=[n for n in names if n.startswith('target_context__shock_')]
+    if not identity or len(identity)!=len(shocks) or identity+shocks!=names:
+        raise Stop('Incomplete identity/shock feature definition.')
+    return identity if variant=='context_identity' else shocks if variant=='context_shocks' else names
+
+def append_panel(base,block,names,variant):
+    import numpy as np
+    from commodity_prediction.domain.catalog import Panel
+    chosen=variant_names(names,variant)
+    if block.shape != (len(base.dates),len(base.targets),len(names)) or set(names)&set(base.names):
+        raise Stop('New context array does not align with the frozen panel.')
+    indices=[names.index(n) for n in chosen]
+    panel=Panel(np.concatenate([base.values,block[:,:,indices]],axis=2),
+                base.dates,base.targets,base.names+chosen,dict(base.source_series))
+    panel.validate()
+    return panel
+
+def smoke():
+    import numpy as np
+    import pandas as pd
+    rng=np.random.default_rng(20260912)
+    x=pd.DataFrame(np.exp(np.cumsum(rng.normal(0,.015,(100,3)),axis=0)),columns=['A','B','C'])
+    p=pd.DataFrame({'target':['target_0','target_1','target_2'],
+                    'pair':['A - B','B - A','C'],'lag':[1,2,4]})
+    before=x.copy(deep=True)
+    a,n,m=build_context(x,p)
+    b,_,_=build_context(x.iloc[:77],p)
+    np.testing.assert_array_equal(a[:77],b)
+    changed=x.copy(deep=True);changed.iloc[80:]*=2
+    c,_,_=build_context(changed,p)
+    np.testing.assert_array_equal(a[:80],c[:80])
+    pd.testing.assert_frame_equal(x,before,check_exact=True)
+    bad=x.copy(deep=True);bad.loc[80,'A']=np.inf
+    broken,bnames,_=build_context(bad,p)
+    j=bnames.index('target_context__shock_signed__A')
+    if not np.isnan(broken[80,0,j]) or broken[80,2,j]!=0:
+        raise Stop('Invalid member quote or structural nonmember encoding is incorrect.')
+    return dict(status='TARGET_CONTEXT_TIMING_SMOKE_PASSED',future_perturbation_exact=True,
+                prefix_exact=True,input_unchanged=True,pandas_version=pd.__version__,numpy_version=np.__version__)
+
+def audit_features(block,names,meta,base,pairs):
+    import numpy as np
+    def signature(a):
+        a=np.array(a,dtype=np.float32,copy=True,order='C');a[np.isnan(a)]=np.nan
+        return hashlib.sha256(a.tobytes()).hexdigest()
+    history={signature(base.values[252:TRAIN_STOP,:,i]):n for i,n in enumerate(base.names)}
+    legs,anchors,_=metadata_map(pairs)
+    rows=[]
+    for i,name in enumerate(names):
+        values=block[252:TRAIN_STOP,:,i]
+        anchor=anchors[(i%(2*len(anchors)))//2]
+        members=np.array([anchor in row for row in legs])
+        z=values[:,members]; finite=z[np.isfinite(z)]
+        sig=signature(values); duplicate=history.get(sig)
+        if duplicate is None: history[sig]=name
+        rows.append(dict(name=name,kind=meta['kinds'][i],anchor=anchor,
+                         applicable_targets=int(members.sum()),
+                         finite_fraction_all=float(np.isfinite(values).mean()),
+                         finite_fraction_members=float(np.isfinite(z).mean()),
+                         q05_members=float(np.quantile(finite,.05)) if len(finite) else None,
+                         q95_members=float(np.quantile(finite,.95)) if len(finite) else None,
+                         exact_duplicate_of=duplicate,training_sha256=sig))
+    return rows
+
+def fit_one(root,u,name,stage,lineage,base,block,names,y,pairs,fold,config,report):
+    import joblib
+    import pandas as pd
+    from commodity_prediction.domain.model import prepare,select
+    from commodity_prediction.domain.attribution.run import fit_stage
+    from commodity_prediction.domain.experiment import Experiment
+    if name not in VARIANTS or stage.exists():
+        raise Stop('Undeclared/existing context stage; no automatic refit.')
+    panel=append_panel(base,block,names,name)
+    settings={**config,'max_features':len(panel.names),'max_abs_correlation':1.01}
+    stats=prepare(panel,y,fold.train_stop,settings)
+    experiment=Experiment(name,algorithm='histogram')
+    _,audit=select(stats,experiment.candidates(panel.names),settings,False)
+    admitted=[n for n in audit['selected_names'] if n.startswith('target_context__')]
+    numeric=[n for n in admitted if n.startswith('target_context__shock_')]
+    if not admitted or (name!='context_identity' and not numeric):
+        raise Stop('No proposed usable inputs survived training-only checks; no fit started.')
+    if set(audit['rejection_reasons'])&{'feature_budget','correlated','unstable_sign'}:
+        raise Stop('Undeclared screening exclusion.')
+    if report['fit_attempts_this_call']>=3:
+        raise Stop('Three-fit limit exhausted.')
+    report['fit_attempts_this_call']+=1;u.atomic_json(report_path(root),report)
+    result=fit_stage(panel,y,pairs,fold,experiment,settings,stats,stage,lineage)
+    saved=pd.read_parquet(stage/'predictions.parquet')
+    replay=joblib.load(stage/'model.joblib').predict(panel,START,STOP)
+    error=u.exact_predictions(saved,replay)
+    recorded={**result,'context_inputs_admitted':len(admitted),'shock_inputs_admitted':len(numeric)}
+    report['results'].append(recorded);report['new_training_fits']+=1
+    report['maximum_prediction_replay_error']=max(error,report['maximum_prediction_replay_error'])
+    report['checkpoint_hashes'][name]=u.verify_stage(stage,lineage)
+    u.atomic_json(report_path(root),report)
+    emit('CONTEXT_MODEL_VERIFIED',variant=name,completed=report['new_training_fits'],total=3,
+         fold=FOLD,official_metric=result['metrics']['official_metric'])
+    del panel,stats,replay;gc.collect()
+
+def decisions(results,control,metric):
+    if len(results)!=3 or {r['variant'] for r in results}!=set(VARIANTS):
+        raise Stop('Incomplete context result inventory.')
+    baseline=metric(control['daily_rank_correlations'],180)
+    if not math.isclose(baseline,control['official_metric'],rel_tol=0,abs_tol=1e-12):
+        raise Stop('Control metric differs from its daily scores.')
+    scores={r['variant']:metric(r['metrics']['daily_rank_correlations'],180) for r in results}
+    rows=[];eligible=[]
+    for r in results:
+        name=r['variant'];score=scores[name]
+        if r.get('fold')!=FOLD or r.get('train_stop')!=TRAIN_STOP or r.get('validation_start')!=START or r.get('validation_stop')!=STOP:
+            raise Stop('Fitted result belongs to a different training/validation period.')
+        if not math.isclose(score,r['metrics']['official_metric'],rel_tol=0,abs_tol=1e-12):
+            raise Stop('Result metric differs from daily scores.')
+        selected=r['selection']['selected_names']
+        admitted=sum(n.startswith('target_context__') for n in selected)
+        numeric=sum(n.startswith('target_context__shock_') for n in selected)
+        if admitted!=r['context_inputs_admitted'] or numeric!=r['shock_inputs_admitted'] or not admitted:
+            raise Stop('Input-admission evidence differs.')
+        delta=score-baseline; d_identity=score-scores['context_identity']
+        gate=delta>=GAIN and (name=='context_identity' or numeric>0)
+        if name=='context_joint': gate=gate and d_identity>=GAIN
+        row=dict(variant=name,official_metric=score,delta_vs_current_market=delta,
+                 delta_vs_identity=d_identity,context_inputs_admitted=admitted,
+                 shock_inputs_admitted=numeric,passes_review_gate=bool(gate))
+        rows.append(row)
+        if gate: eligible.append(name)
+    return rows,eligible
+
+def worker(root):
+    import numpy as np
+    import pandas as pd
+    import joblib
+    from threadpoolctl import threadpool_limits
+    from commodity_prediction.data import Fold
+    from commodity_prediction.domain.catalog import Panel
+    from commodity_prediction.domain.run import load_panel
+    from commodity_prediction.domain.market_path.features import build_panel
+    from commodity_prediction.studies.evaluation import evaluate,compare_predictions
+    from commodity_prediction.runtime import seal_checkpoint
+    root=Path(root);session,older,u=previous(root)
+    lineage,evidence=identity(root,u)
+    directory=u.safe_path(root,'artifacts/target_context/'+lineage)
+    if directory.exists(): raise Stop('Existing context directory preserved; no blind rerun.')
+    directory.mkdir(parents=True)
+    began=time.monotonic()
+    r=dict(project='commodity-prediction',status='RUNNING',source_commit=SHA,lineage=lineage,
+        identity=evidence,plan=plan(),started_utc=utc(),new_training_fits=0,fit_attempts_this_call=0,
+        control_refits=0,old_rank_model_refits=0,maximum_prediction_replay_error=0.0,
+        results=[],checkpoint_hashes={},feature_gate='open',promotion_allowed=False,
+        fold=FOLD,validation_dates=180,final_test_evaluations=0,aws_api_calls=0,github_writes=False)
+    def save():
+        r['elapsed_seconds']=round(time.monotonic()-began,3);u.atomic_json(report_path(root),r)
+    def expire(*_): raise Stop('240-second context deadline reached; completed stages retained.')
+    handler=signal.signal(signal.SIGALRM,expire);signal.setitimer(signal.ITIMER_REAL,LIMIT)
+    try:
+        save();ready=u.readiness(root);u.validate_runtime(root,ready);u.validate_source(root)
+        prior=read_prior(root,u,True);parents=u.checkpoint_snapshot(root,ready)
+        r['prior_rank_comparisons']=prior['comparison_rows'];r['prior_control_pooled']=prior['prior_control_pooled']
+        r['historical_fold_controls']=list(older.CONTROL_SCORES)
+        emit('CHECK_CONTEXT_TIMING');r['contract_smoke']=smoke();save()
+        for name,pin in u.RAW.items():
+            if u.digest(u.safe_path(root,'data/raw/'+name))!=pin: raise Stop('Raw checksum changed: '+name)
+        final=u.read_json(root/'configs/final_evaluation.json')
+        if final['evaluated'] or final['final_test_start_date_id']!=1714: raise Stop('Final-test boundary changed.')
+        x=pd.read_csv(root/'data/raw/train.csv',nrows=STOP).set_index('date_id')
+        y=pd.read_csv(root/'data/raw/train_labels.csv',nrows=STOP).set_index('date_id').replace(-999999,np.nan)
+        pairs=pd.read_csv(root/'data/raw/target_pairs.csv')
+        if (len(x)!=STOP or x.index.tolist()!=list(range(STOP)) or not x.index.equals(y.index)
+            or list(y.columns)!=[f'target_{i}' for i in range(424)] or pairs.target.tolist()!=list(y.columns)):
+            raise Stop('Middle-fold input axes changed.')
+        config=u.read_json(root/'configs/domain_study.json');u.atomic_json(directory/'plan.json',evidence)
+        with threadpool_limits(limits=4):
+            original=load_panel(root/'artifacts'/FEATURE/'features')
+            prefix=Panel(original.values[:STOP],original.dates[:STOP],original.targets,original.names,dict(original.source_series))
+            base,_=build_panel(prefix,x,pairs,'current_market')
+            del prefix,original;gc.collect()
+            cp=root/'artifacts'/PARENT/'fold_1/current_market'
+            saved=pd.read_parquet(cp/'predictions.parquet')
+            replay=joblib.load(cp/'model.joblib').predict(base,START,STOP)
+            u.exact_predictions(saved,replay)
+            control=evaluate(y.loc[saved.index],saved,pairs)
+            if not session.close(control['official_metric'],CONTROL) or saved.index.tolist()!=list(range(START,STOP)):
+                raise Stop('Saved middle-fold control did not replay at the expected score.')
+            r['control']=control;emit('SAVED_FOLD_1_CONTROL_REPLAY_PASSED',score=CONTROL,refits=0)
+            emit('BUILD_METADATA_ALIGNED_CONTEXT',max_anchors=MAX_ANCHORS)
+            block,names,meta=build_context(x,pairs)
+            prefixes=[TRAIN_STOP,START,STOP-1]
+            for stop in prefixes:
+                short,sn,sm=build_context(x.iloc[:stop],pairs)
+                np.testing.assert_array_equal(short,block[:stop])
+                if sn!=names or sm['anchors']!=meta['anchors']: raise Stop('Metadata selection changed with time prefix.')
+            r['causal_checks']=dict(exact_prefixes=prefixes,new_feature_labels_used=False,
+                                    target_metadata_only_anchor_selection=True)
+            r['context_metadata']=meta;r['feature_audit']=audit_features(block,names,meta,base,pairs)
+            stage=directory/'features';stage.mkdir()
+            np.savez_compressed(stage/'context.npz',values=block,dates=np.arange(STOP))
+            u.atomic_json(stage/'inventory.json',dict(metadata=meta,targets=pairs.target.tolist(),plan=plan()))
+            seal_checkpoint(stage,lineage,['context.npz','inventory.json'])
+            r['feature_checkpoint_hashes']=u.verify_stage(stage,lineage);save()
+            fold=Fold(FOLD,TRAIN_STOP,START,STOP)
+            for name in VARIANTS:
+                emit('FIT_CONTEXT_PANEL',variant=name,completed=r['new_training_fits'],total=3,fold=FOLD)
+                fit_one(root,u,name,directory/'fold_1'/name,lineage,base,block,names,y,pairs,fold,config,r)
+            rows,eligible=decisions(r['results'],control,session.metric)
+            daily={'current_market':np.asarray(control['daily_rank_correlations'])}
+            daily.update({v['variant']:np.asarray(v['metrics']['daily_rank_correlations']) for v in r['results']})
+            r['comparisons']=compare_predictions(daily,[180],plan()['contrasts'],config)
+            r.update(comparison_rows=rows,candidates_for_review=eligible,
+                decision='REVIEW_TARGET_CONTEXT_ON_OTHER_PERIODS' if eligible else 'STOP_TESTED_TARGET_CONTEXT_PANELS')
+        r['parents_unchanged']=parents==u.checkpoint_snapshot(root,ready)
+        if not r['parents_unchanged']: raise Stop('Frozen parent checkpoint changed.')
+        read_prior(root,u,True);u.validate_source(root)
+        r.update(status='TARGET_CONTEXT_REVIEW_READY',source_unchanged=True,rank_parent_unchanged=True,
+            finished_utc=utc(),limitations=[
+            'The middle fold was chosen after observing historical weakness, before this experiment. It is not a fresh holdout.',
+            'Five contrasts condition on fitted models; no full adaptive-search multiplicity correction.',
+            'Membership adds entity identity; it is not external fundamental data or proof of causal exposure.',
+            'Top 16 are chosen from target metadata frequency, not importance. Omitted underlyings and applicability are reported.',
+            'Static identity and return interactions can be redundant with existing pooled representations; exact active-panel duplicates are audited.',
+            'Training on a fixed universe is not evidence of generalization to unseen instruments.',
+            'Numerical split changes depend on the fixed learner. A negative result does not exhaust raw-input or learned-representation approaches.',
+            'Private ZIP remains on the same disk until downloaded; no cloud/Git writes or automatic shutdown.'])
+        save();u.atomic_json(directory/'review.json',r);return r
+    except BaseException as exc:
+        r.update(status='STOPPED',error=type(exc).__name__+': '+str(exc),finished_utc=utc());save();raise
+    finally:
+        signal.setitimer(signal.ITIMER_REAL,0);signal.signal(signal.SIGALRM,handler)
+
+def verify_complete(root,r,session,u):
+    lineage,evidence=identity(root,u);read_prior(root,u)
+    if (r.get('status') not in TERMINAL or r.get('lineage')!=lineage or r.get('identity')!=evidence
+        or r.get('new_training_fits')!=3 or r.get('fit_attempts_this_call')!=3
+        or r.get('control_refits')!=0 or r.get('maximum_prediction_replay_error')!=0
+        or r.get('final_test_evaluations')!=0 or r.get('parents_unchanged') is not True
+        or r.get('source_unchanged') is not True or r.get('rank_parent_unchanged') is not True
+        or r.get('fold')!=FOLD or set(r.get('checkpoint_hashes',{}))!=set(VARIANTS)
+        or not session.close(r.get('control',{}).get('official_metric',float('nan')),CONTROL)
+        or r.get('control',{}).get('date_ids')!=list(range(START,STOP))):
+        raise Stop('Not a complete verified target-context study.')
+    rows,eligible=decisions(r['results'],r['control'],session.metric)
+    decision='REVIEW_TARGET_CONTEXT_ON_OTHER_PERIODS' if eligible else 'STOP_TESTED_TARGET_CONTEXT_PANELS'
+    if rows!=r['comparison_rows'] or eligible!=r['candidates_for_review'] or decision!=r['decision']:
+        raise Stop('Stored decision differs from the declared computation.')
+    directory=root/'artifacts/target_context'/lineage
+    u.verify_stage(directory/'features',lineage,r['feature_checkpoint_hashes'])
+    for name,pins in r['checkpoint_hashes'].items():
+        stage=directory/'fold_1'/name;u.verify_stage(stage,lineage,pins)
+        record=next(v for v in r['results'] if v['variant']==name)
+        if u.read_json(stage/'result.json')!={k:v for k,v in record.items() if k not in ['context_inputs_admitted','shock_inputs_admitted']}:
+            raise Stop('Report differs from sealed fitted result.')
+
+def run(root=ROOT):
+    root=Path(root);session,older,u=previous(root)
+    ready=u.readiness(root);u.validate_runtime(root,ready);u.validate_source(root);read_prior(root,u)
+    out=u.safe_path(root,'logs/manual_target_context');out.mkdir(parents=True,exist_ok=True)
+    with u.safe_path(out,'supervisor.lock').open('a') as lock:
+        fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+        if report_path(root).exists():
+            r=u.read_json(report_path(root))
+            if r.get('status') not in TERMINAL:
+                raise Stop('Interrupted context run exists. Preserve its report; no automatic retry or budget reset.')
+            verify_complete(root,r,session,u);emit('COMPLETED_CONTEXT_REUSED',new_fits=0)
+            return {**r,'new_fits_this_notebook_call':0}
+        lineage,_=identity(root,u)
+        if (root/'artifacts/target_context'/lineage).exists(): raise Stop('Orphan context directory preserved; no refit.')
+        if shutil.disk_usage(root).free<1024**3: raise Stop('Need 1 GiB free; do not delete old projects blindly.')
+        u.atomic_json(report_path(root),dict(status='STARTING_WORKER',lineage=lineage,new_training_fits=0,started_utc=utc()))
+        args=[ready['runtime']['python'],'-u',str(Path(__file__).resolve()),'--worker','--root',str(root)]
+        began=time.monotonic()
+        try:
+            session._supervise_command(args,root,LIMIT,out/'target_context_worker.log',u.environment(root))
+        except BaseException as exc:
+            r=u.read_json(report_path(root))
+            if r.get('status')=='STARTING_WORKER': r['new_training_fits']=None
+            r.update(status='STOPPED',supervisor_error=type(exc).__name__+': '+str(exc),
+                     supervised_seconds=round(time.monotonic()-began,3))
+            u.atomic_json(report_path(root),r);raise
+        r=u.read_json(report_path(root));verify_complete(root,r,session,u)
+        r.update(supervised_seconds=round(time.monotonic()-began,3),new_fits_this_notebook_call=3)
+        u.atomic_json(report_path(root),r);return r
+
+def charts(r):
+    import numpy as np
+    import plotly.graph_objects as go
+    figs=[]
+    def add(f,title,x,y):
+        f.update_layout(title=title,height=470,margin=dict(l=80,r=35,t=95,b=100),
+                        xaxis_title=x,yaxis_title=y,legend=dict(orientation='h',y=-.3))
+        figs.append(f)
+    old=r['prior_rank_comparisons']
+    add(go.Figure(go.Bar(x=[v['variant'] for v in old],y=[v['delta_vs_current_market'] for v in old])),
+        '1 · Completed rank-state test — first fold, not new results','Rank panel','First-fold delta')
+    add(go.Figure(go.Bar(x=['Fold 0','Fold 1 — this experiment','Fold 2'],y=r['historical_fold_controls'])),
+        '2 · Historical control periods — not three new fits','Development period','Existing official metric')
+    meta=r['context_metadata']
+    add(go.Figure(go.Bar(x=meta['anchors'],y=meta['anchor_counts'])),
+        '3 · Recurring underlyings selected without outcomes','Anchor instrument','Target-metadata appearances')
+    add(go.Figure(go.Pie(labels=['At least one anchor','No selected anchor'],
+                        values=[meta['targets_with_anchor'],meta['targets_without_anchor']],hole=.5)),
+        '4 · Actual target coverage — not assumed complete',None,None)
+    audit=[v for v in r['feature_audit'] if v['kind']=='shock']
+    add(go.Figure(go.Scatter(x=[v['anchor'] for v in audit],y=[v['finite_fraction_members'] for v in audit],
+                             mode='markers',text=[v['name'] for v in audit])),
+        '5 · Usable shock observations on member targets only','Anchor instrument','Training observed fraction')
+    rows=r['comparison_rows'];names=[v['variant'] for v in rows]
+    add(go.Figure(go.Bar(x=['current_market']+names,y=[r['control']['official_metric']]+[v['official_metric'] for v in rows])),
+        '6 · Same middle-fold 180-date comparison','Representation','Official metric on fold 1')
+    f=go.Figure()
+    f.add_bar(x=names,y=[v['delta_vs_current_market'] for v in rows],name='Versus original control')
+    f.add_bar(x=names,y=[v['delta_vs_identity'] for v in rows],name='Versus identity-only')
+    f.update_layout(barmode='group');f.add_hline(y=GAIN,line_dash='dash',annotation_text='+0.002 review gate')
+    add(f,'7 · Separate identity from additional price information','Representation','Matched metric change')
+    f=go.Figure()
+    for v in r['comparisons']:
+        if v['block_dates']==20 and v['reference']=='current_market':
+            lo,hi=v['conditional_95_interval'];f.add_scatter(x=[lo,hi],y=[v['variant']]*2,mode='lines',showlegend=False)
+            f.add_scatter(x=[v['delta']],y=[v['variant']],mode='markers',name=v['variant'])
+    f.add_vline(x=0,line_dash='dash')
+    add(f,'8 · Conditional 20-date intervals — not whole-search correction','Delta versus original control','Panel')
+    f=go.Figure();daily=np.asarray(r['control']['daily_rank_correlations'])
+    for v in r['results']:
+        f.add_scatter(x=list(range(START,STOP)),y=np.cumsum(np.asarray(v['metrics']['daily_rank_correlations'])-daily).tolist(),name=v['variant'])
+    add(f,'9 · Correlation-change concentration — NOT trading profit','Prediction origin','Cumulative correlation difference')
+    f=go.Figure()
+    f.add_bar(x=names,y=[v['context_inputs_admitted']-v['shock_inputs_admitted'] for v in rows],name='Identity admitted')
+    f.add_bar(x=names,y=[v['shock_inputs_admitted'] for v in rows],name='Shock interactions admitted')
+    f.update_layout(barmode='stack')
+    add(f,'10 · Actual admitted inputs after training-only duplicate checks','Representation','New input templates')
+    return figs
+
+def private_backup(root,r,u):
+    base=root/'artifacts/target_context'/r['lineage']
+    paths=[base/'plan.json',base/'review.json']+[base/'features'/n for n in r['feature_checkpoint_hashes']]
+    for name in VARIANTS: paths += [base/'fold_1'/name/n for n in r['checkpoint_hashes'][name]]
+    pins={str(p.relative_to(root)):u.digest(u.safe_path(root,str(p.relative_to(root)))) for p in paths}
+    if sum(p.stat().st_size for p in paths)>256*1024**2: raise Stop('Backup exceeds 256 MiB; fitted stages preserved.')
+    dest=u.safe_path(output_dir(root),'target_context_checkpoints.zip');tmp=u.safe_path(dest.parent,dest.name+'.tmp')
+    with zipfile.ZipFile(tmp,'w',zipfile.ZIP_DEFLATED,compresslevel=1) as z:
+        for p in paths:z.write(p,str(p.relative_to(root)))
+        z.writestr('SHA256SUMS.json',json.dumps(pins,sort_keys=True,indent=2))
+    with zipfile.ZipFile(tmp) as z:
+        if z.testzip():raise Stop('Backup CRC verification failed.')
+        for name,h in pins.items():
+            if hashlib.sha256(z.read(name)).hexdigest()!=h:raise Stop('Backup checksum differs.')
+    os.replace(tmp,dest)
+    return dict(path=str(dest),sha256=u.digest(dest),bytes=dest.stat().st_size,files=len(paths),
+                private=True,contains_features_models_predictions=True,off_disk_backup_confirmed=False,
+                raw_csvs_included=False)
+
+def finish(root,report,figures):
+    root=Path(root);session,older,u=previous(root);verify_complete(root,report,session,u)
+    if len(figures)!=10:raise Stop('Expected ten Plotly figures.')
+    r=dict(report);path=output_dir(root)/'target_context_dashboard.html'
+    r.update(dashboard=str(path),dashboard_sha256=older.export_dashboard(path,'Instrument context feature ablation',
+             [(str(f.layout.title.text),f) for f in figures]),plotly_figures=10)
+    try:r['private_checkpoint_bundle']=private_backup(root,r,u)
+    except Exception as exc:r['backup_warning']=type(exc).__name__+': '+str(exc)
+    r.update(status='NOTEBOOK_AND_TARGET_CONTEXT_READY',notebook=str(root/'notebooks'/NOTEBOOK),updated_utc=utc())
+    u.atomic_json(report_path(root),r);return r
+
+def protocol_markdown():
+    return '''# Target-leg identity and aligned shocks — notebook 11
+
+## Prior measured result
+Notebook 10 completed three rank-state fits with exact replay. Global rank state
+scored 0.390577, within-horizon/relative rank 0.399073, and their union 0.388567
+versus the first-fold control 0.403381. All intended inputs were admitted. Do not
+rerun those panels unchanged. The pooled 535-date leader remains 0.309709.
+
+## Distinct representation hypothesis
+The active pooled panel projects many asset-level values into shared difference
+and sum columns and exposes market/horizon descriptors. It does not provide one
+explicit column per underlying instrument in these new names. A similar price
+shock may have different predictive implications for different underlyings.
+
+Select at most 16 recurring underlyings from provided target-pair metadata by
+appearance count, descending, with lexical tie-breaking. No outcomes, raw-price
+variance or validation score select anchors. This is a deliberate bounded probe,
+not a claim that frequency equals predictive importance or covers every target.
+For each anchor define signed left-minus-right membership and unsigned membership.
+Compute its current log return, normalized by its own 63-row population standard
+deviation through t-1 (42 returns minimum, scale floor 1e-6, clip to [-12,12]).
+Multiply that shock by each membership. The three panels add identity only,
+identified shocks only, and their exact union (at most 32, 32, 64 templates).
+No arbitrary integer target codes, target encodings, labels or external data enter
+this builder. This is information-preserving target alignment, not a new data feed.
+
+Structural nonmembership is zero. An anchor target with a missing/nonfinite or
+nonpositive quote keeps a missing shock, not a fabricated zero. There is no price
+forward-fill. Pair reversal negates signed membership and leaves unsigned
+membership invariant; signed shock interactions follow the same parity. Current
+shocks are never in their own normalization window. Prefix and perturbation
+checks run before fitting. Daily rows retain the dataset's supplied alignment;
+no synchronized exchange-time claim or anonymous-date reconstruction is made.
+
+## Controlled comparison and evaluation period
+Use the existing histogram learner and preprocessing. Training-only duplicate,
+constant and missingness exclusions remain; all usable candidates fit within the
+expanded exact panel budget. Do not tune hyperparameters. Compare against saved
+fold 1 current_market (0.16704165319061334), train stop 1344, warmup 252, validation
+origins 1349-1528 (180 dates). Existing model is replayed, never refitted.
+
+The middle fold was chosen after seeing its weaker historic baseline, before the
+new results. This reduces another search round on fold 0 but DOES NOT create a
+fresh holdout. It is an exploratory period-specific diagnostic. No pooled score
+is updated by it, and any advancement must be evaluated on other periods before
+promotion. Negative first-fold families are not being rerun on another fold.
+
+## Decision and budget
+At most three new models in a 240-second worker, 15-second heartbeats, exact saved
+prediction replay, separately sealed model stages, and preservation of parents.
+Identity-only/shocks-only earn review at +0.002 versus original control. Joint
+must reach +0.002 versus both original and identity-only controls. Numerical
+panels must actually admit numerical inputs. This is a cost-allocation gate, not
+proof of statistical significance or a leaderboard record. Five declared contrasts
+are reported with the existing conditional 10/20/40-date block procedure. Those
+intervals do not correct the whole adaptive search. No automatic other folds,
+model promotion, ensemble, final test, package installation or AWS/Git writes.
+Completed results reuse without fitting. Interrupted stages stop for diagnosis;
+no automatic budget reset, no overwriting edited notebooks or previous studies.
+
+## Coverage, overlap and limitations
+Anchor counts, members/nonmembers, actual finite member observations, exact
+training-array duplicate checks against the active baseline, and admitted inputs
+are exposed. No claim of exhaustive numerical deduplication against the entire
+historical feature catalog. Existing graph/PCA/proxy and FX-conditioned families
+are not relabeled: this probe uses explicit identities and their OWN shocks,
+not statistical incoming peers or newly estimated covariance clusters.
+
+A gain can be driven by target identity rather than dynamic financial information;
+identity-only is an explicit control. A loss can reflect fixed-learner interactions
+as well as weak features. Many unproductive panels do not establish that algorithms
+are irrelevant or that high-value representations are exhausted.
+
+## Research rationale — outside the uploaded result
+The 25th-place participant reports grouping targets using target_pairs market
+metadata and restricting market-relevant inputs. The 97th-place participant
+reports instrument A/B identifiers among inputs. These motivate, but do not
+validate, this different one-hot membership/own-shock ablation. We do not reproduce
+their learner, ensemble, label blending or retrospective validation practices.
+Primary sources reviewed for this design:
+- https://www.kaggle.com/competitions/mitsui-commodity-prediction-challenge/writeups/25th-place-silver-mitsui-commodity-prediction
+- https://www.kaggle.com/competitions/mitsui-commodity-prediction-challenge/writeups/97th-place-solution
+
+Shared raw-input learned representations and ranking-aware losses remain distinct
+research axes. Authentic carry, inventories, positioning, macro vintages and
+weather require verified mapping, availability and rights; do not invent them.
+
+## Manual outputs
+Save notebook 11. Download the report, dashboard and private checkpoint ZIP, then
+stop the space without deleting it. Only the report and executed notebook return
+to chat. Downloaded ZIP is private, not public GitHub content. Source and notebook
+additions are local until explicitly published; no automatic Git synchronization.
+'''
+
+def notebook_document():
+    cells=[]
+    def md(s):cells.append(dict(cell_type='markdown',metadata={},id=f'context11-{len(cells):02}',source=s))
+    def code(s):cells.append(dict(cell_type='code',metadata={},id=f'context11-{len(cells):02}',source=s,execution_count=None,outputs=[]))
+    md('# Commodity prediction · Instrument-aware feature context\n\n'
+       '**One bounded milestone:** three fixed-learner ablations on the middle development period. '
+       'Do not rerun notebooks 03–10. No final test, old-model refits, or automatic continuation. '
+       'This is exploratory feature research, not a claim that more columns guarantee a higher score.')
+    code("from pathlib import Path\nimport importlib.util\nimport pandas as pd\nROOT=Path('/home/sagemaker-user/projects/commodity-prediction-manual')\n"
+         "spec=importlib.util.spec_from_file_location('context11_notebook',ROOT/'scripts/commodity_target_context.py')\n"
+         "support=importlib.util.module_from_spec(spec)\nspec.loader.exec_module(support)\n"
+         "session,older,u=support.previous(ROOT)\nready=u.readiness(ROOT)\nu.validate_runtime(ROOT,ready)\nu.validate_source(ROOT)\nprior=support.read_prior(ROOT,u)\n"
+         "print('Verified source:',support.SHA)\nprint('Existing Python:',ready['runtime']['python'])\n")
+    md('## The completed result and the next question\n\n'
+       'All rank-state panels missed the original baseline. They are closed unchanged. '
+       'The next question is whether price signals need explicit underlying identity to be useful in a pooled learner.')
+    code("display(pd.DataFrame(prior['comparison_rows']))\nprint('Previous decision:',prior['decision'])\n")
+    md('## Predeclared representation and period\n\n'
+       'Anchor membership comes only from target-pair metadata. The 16 most recurring underlyings are a bounded probe, '
+       'not a claim of highest predictive importance. Raw prices supply each anchor’s own current shock. '
+       'The first two panels separate static identity from identity-aligned dynamic information; the third is their exact union. '
+       'The middle fold has been inspected historically and is NOT a fresh holdout.')
+    code("display(pd.DataFrame({'panel':support.VARIANTS,'maximum_added_templates':[32,32,64]}))\n"
+         "print('Training stop:',support.TRAIN_STOP,'validation:',support.START,'through',support.STOP-1)\n"
+         "print('Same-period saved control:',support.CONTROL)\nprint('At most three new fits; 240-second worker.')\n")
+    md('## Execute once\n\n'
+       'The worker verifies saved files, timing, numerical behavior and exact baseline replay before fitting. '
+       'It reads the same saved parent cube; it does not reconstruct earlier studies or alter their checkpoints. '
+       'Stop at an error. Successful stages survive a later failure; no unchanged retry or time-budget reset.')
+    code("report=support.run(ROOT)\nprint('RESULT:',report['status'])\n"
+         "print('New fits this call:',report['new_fits_this_notebook_call'])\nprint('DECISION:',report['decision'])\nfigures=support.charts(report)\n")
+    sections=[
+      ('Prior negative evidence','These are the completed FIRST-fold rank results, not the new middle-fold experiment.'),
+      ('Why this period?','The historical middle-fold control is weaker. The choice is explicit and exploratory; it does not justify cherry-picking or updating a pooled score.'),
+      ('Which identities are represented?','Metadata frequency chooses anchors, not outcomes. It is a compute-conscious coverage heuristic, not predictive feature ranking.'),
+      ('Coverage is measured','Some targets may not contain a chosen anchor. Their new inputs are structural zero; old features remain. No full-universe coverage is assumed.'),
+      ('Missingness on applicable targets','Finite coverage is computed only among member targets over the training interval, so unrelated structural zeros cannot inflate it.'),
+      ('Same-date comparison','Every new score uses fold 1 origins 1349–1528. Do not compare these numbers directly with fold 0 or the three-fold pooled metric.'),
+      ('Disentangle identity and price information','A joint-panel gain must exceed both original and identity-only controls to earn review. No automatic other folds or promotion.'),
+      ('Uncertainty','Conditional block intervals use the existing protocol. They do not cover the entire sequence of adaptive feature choices.'),
+      ('Is a gain concentrated?','Cumulative correlation differences are not investment returns or trading profit.'),
+      ('What actually reached the models?','Constants, duplicates and missingness can remove redundant inputs. This chart records admission, not causal or permutation importance.')]
+    for i,(title,text) in enumerate(sections):md('## '+title+'\n\n'+text);code(f'figures[{i}].show()\n')
+    md('## Save the evidence and stop\n\n'
+       'A positive review gate only earns replication. A negative result closes these panels unchanged. '
+       'Save the notebook with Ctrl+S; download report, self-contained dashboard and private backup; then Stop space, not Delete space.')
+    code("report=support.finish(ROOT,report,figures)\ndisplay(pd.DataFrame(report['comparison_rows']))\n"
+         "print('RESULT:',report['status'])\nprint('DECISION:',report['decision'])\nprint('REPORT:',support.report_path(ROOT))\n"
+         "print('DASHBOARD:',report['dashboard'])\nprint('PRIVATE BACKUP:',report.get('private_checkpoint_bundle',{}).get('path',report.get('backup_warning')))\n"
+         "print('Save notebook, download private evidence, then STOP SPACE. No automatic shutdown.')\n")
+    md('## Primary-source motivation\n\n'
+       'The design is inspired by metadata-aware representations, not a reproduction of these complete systems. '
+       'Their leaderboard results are not comparable measurements on our folds.\n\n'
+       '- [25th-place target grouping](https://www.kaggle.com/competitions/mitsui-commodity-prediction-challenge/writeups/25th-place-silver-mitsui-commodity-prediction)\n'
+       '- [97th-place instrument-identifier inputs](https://www.kaggle.com/competitions/mitsui-commodity-prediction-challenge/writeups/97th-place-solution)\n'
+       '- Detailed assumptions and exclusion rules: `docs/manual_target_context.md`.')
+    return dict(cells=cells,metadata=dict(kernelspec=dict(display_name='Commodity - manual (verified)',language='python',name='commodity-manual'),
+               language_info=dict(name='python',version='3.12'),commodity_milestone='instrument-context-fold-1'),nbformat=4,nbformat_minor=5)
+
+def install(root=ROOT):
+    root=Path(root);session,older,u=previous(root);u.validate_source(root);read_prior(root,u)
+    nb=notebook_document()
+    paths={u.safe_path(root,'scripts/commodity_target_context.py'):Path(__file__).read_bytes(),
+           u.safe_path(root,'configs/manual_target_context.json'):(json.dumps(plan(),sort_keys=True,indent=2)+'\n').encode(),
+           u.safe_path(root,'docs/manual_target_context.md'):protocol_markdown().encode(),
+           u.safe_path(root,'notebooks/'+NOTEBOOK):(json.dumps(nb,indent=1)+'\n').encode()}
+    def cell_source(c):return ''.join(c['source']) if isinstance(c['source'],list) else c['source']
+    for p,b in paths.items():
+        if p.exists():
+            if p.suffix=='.ipynb':
+                existing=u.read_json(p)
+                if [(c['cell_type'],cell_source(c)) for c in existing['cells']]!=[(c['cell_type'],cell_source(c)) for c in nb['cells']]:
+                    raise Stop('Existing notebook edits preserved: '+str(p))
+            elif p.read_bytes()!=b:raise Stop('Existing different file preserved: '+str(p))
+    for p,b in paths.items():
+        if not p.exists():u.write_new(p,b)
+    print('RESULT: TARGET_CONTEXT_NOTEBOOK_READY\nNOTEBOOK: '+str(root/'notebooks'/NOTEBOOK)+'\nKERNEL: Commodity - manual (verified)',flush=True)
+    return dict(new_training_fits=0,files=[str(p) for p in paths])
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--root',type=Path,default=ROOT);p.add_argument('--worker',action='store_true',help=argparse.SUPPRESS)
+    args=p.parse_args()
+    try:
+        if args.worker:worker(args.root)
+        else:install(args.root)
+    except BaseException as exc:
+        print('RESULT: STOPPED\nERROR: '+type(exc).__name__+': '+str(exc),flush=True)
+        print('Preserve report/error. Do not repeat unchanged. Stop space manually, never Delete space.',flush=True)
+        return 2
+    return 0
+
+if __name__=='__main__':raise SystemExit(main())

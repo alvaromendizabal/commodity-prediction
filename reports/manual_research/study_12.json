@@ -1,0 +1,41 @@
+{
+  "comparisons": [
+    {
+      "all_intended_inputs_admitted": true,
+      "delta_vs_current_market": -0.012615600773473457,
+      "official_metric": 0.1544260524171399,
+      "passes_review_gate": false,
+      "variant": "response_drivers"
+    },
+    {
+      "all_intended_inputs_admitted": true,
+      "delta_vs_current_market": -0.00180411857763213,
+      "official_metric": 0.1652375346129812,
+      "passes_review_gate": false,
+      "variant": "response_encoded"
+    },
+    {
+      "all_intended_inputs_admitted": true,
+      "delta_vs_current_market": -0.008180785020204778,
+      "official_metric": 0.15886086817040856,
+      "passes_review_gate": false,
+      "variant": "response_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "decision": "STOP_TESTED_RESPONSE_PANELS",
+  "elapsed_seconds": 56.988,
+  "evaluation_origins": 180,
+  "evidence_path": "reports/manual_research/study_12.json",
+  "lineage": "e50f47658517d7ca35fa9e112c388b208c75cf240fb1508d49066a3dd179fcf0",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 3,
+  "notebook": 12,
+  "plotly_figures": 10,
+  "report_sha256": "7e5fc8b133129149d2d2332e351889bd9c1d2a45b39c0a8670408fd72aea77af",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_RESPONSE_READY",
+  "supervised_seconds": 62.605,
+  "title": "Delayed response encoding"
+}

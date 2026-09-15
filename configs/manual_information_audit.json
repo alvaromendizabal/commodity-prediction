@@ -1,0 +1,83 @@
+{
+  "aws_api_calls": 0,
+  "candidate_fits_allowed": false,
+  "candidate_kinds": [
+    "global_rank",
+    "horizon_rank",
+    "innovation_horizon_rank"
+  ],
+  "candidate_outcome_access": "Only training outcomes through 1163 for association screening. Historical priors are inherited as already-causal inputs; no new label-based feature estimation.",
+  "candidate_sources": [
+    "reference__return_lag_0_difference",
+    "reference__return_lag_1_difference",
+    "reference__return_lag_5_difference",
+    "reference__risk_63_difference",
+    "released_priors__location_63",
+    "released_priors__location_126"
+  ],
+  "candidate_templates": 18,
+  "control_refits": 0,
+  "families": [
+    "reference",
+    "released_priors",
+    "tail_risk",
+    "market_path"
+  ],
+  "family_permutation_block_rows": 20,
+  "feature_gate": "open",
+  "final_test_evaluations": 0,
+  "folds": [
+    {
+      "number": 0,
+      "train_stop": 1164,
+      "validation_start": 1169,
+      "validation_stop": 1349
+    },
+    {
+      "number": 1,
+      "train_stop": 1344,
+      "validation_start": 1349,
+      "validation_stop": 1529
+    },
+    {
+      "number": 2,
+      "train_stop": 1524,
+      "validation_start": 1529,
+      "validation_stop": 1704
+    }
+  ],
+  "github_writes": false,
+  "global_rank_invariance": "Global monotonic rank preserves daily Spearman against the same observed outcomes; an unchanged IC cannot prove incremental signal. Prefix checks audit ONLY the new transform, conditional on the previously verified parent feature panel.",
+  "historical_baseline_scores": [
+    0.40338108742296147,
+    0.16704165319061334,
+    0.39061886486364056
+  ],
+  "historical_pooled_score": 0.3097087232124053,
+  "innovation_min_history": 42,
+  "innovation_reference_delay": 1,
+  "innovation_window": 63,
+  "interpretation": "Reliance on time alignment of a fitted family, NOT causal importance or a retrained removal. Stable target identities are unchanged by within-target date permutations. Correlated alternatives and synthetic distribution shift limit interpretation.",
+  "maximum_diagnostic_predictions": 24,
+  "model_replays": 3,
+  "new_training_fits": 0,
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "permutation_contract": "Shuffle 20-row blocks WITHIN each validation fold; identical row order for all targets and all columns in a family. Two seeds, no fitting. Diagnostic counterfactual inputs may use later validation rows; NEVER used as predictive features or promoted forecasts.",
+  "permutation_seeds": [
+    42,
+    20260912
+  ],
+  "preceding_study_lineage": "e50f47658517d7ca35fa9e112c388b208c75cf240fb1508d49066a3dd179fcf0",
+  "prior_features_use_released_labels": true,
+  "promotion_allowed": false,
+  "rank_formula": "Average ties mapped linearly to [-1,1] among finite input values; global or within metadata horizon. NaNs remain NaN, no target label zero-fill.",
+  "ranking_minimum_observed": 3,
+  "shortlist_policy": "Only innovation_horizon_rank candidates are screened: coverage>=0.70, >=40 eligible dates per training half, consistent nonzero daily Spearman sign, no exact duplicate. Up to six, sorted by minimum absolute half-mean IC. Global/horizon ranks are representation controls, not new sources of information.",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "study": "saved_model_reliance_and_training_relative_state_lab",
+  "training_feature_stop_exclusive": 1164,
+  "training_screen_split": 708,
+  "training_screen_start": 252,
+  "validation_use": "The three development folds have been inspected before. They diagnose existing frozen models only; the new candidate screen receives training rows only. No selection on the permutation scores.",
+  "worker_limit_seconds": 180.0
+}

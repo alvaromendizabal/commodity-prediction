@@ -1,0 +1,51 @@
+{
+  "comparisons": [
+    {
+      "all_inputs_admitted": true,
+      "delta_vs_current_market": -0.025199431884861012,
+      "official_metric": 0.37818165553810046,
+      "passes_review_gate": false,
+      "positive_folds": 0,
+      "variant": "event_clock_only"
+    },
+    {
+      "all_inputs_admitted": true,
+      "delta_vs_current_market": -0.08108454932508963,
+      "official_metric": 0.32229653809787184,
+      "passes_review_gate": false,
+      "positive_folds": 0,
+      "variant": "event_location"
+    },
+    {
+      "all_inputs_admitted": true,
+      "delta_vs_current_market": -0.04372038328463862,
+      "official_metric": 0.35966070413832285,
+      "passes_review_gate": false,
+      "positive_folds": 0,
+      "variant": "event_shape"
+    },
+    {
+      "all_inputs_admitted": true,
+      "delta_vs_current_market": -0.09625000813428597,
+      "official_metric": 0.3071310792886755,
+      "passes_review_gate": false,
+      "positive_folds": 0,
+      "variant": "event_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "cumulative_supervised_seconds": 79.191,
+  "decision": "STOP_TESTED_EVENT_HISTORY_PANELS",
+  "evaluation_origins": 180,
+  "evidence_path": "reports/manual_research/study_17.json",
+  "lineage": "a1cce61d0aae1c6191882d260c9236f08400af207fb75263227472476c070534",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 4,
+  "notebook": 17,
+  "plotly_figures": 10,
+  "report_sha256": "32485001c39595e87ede0151cbb597b15d2e96dd2ec0b0d1db059411419b575b",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_COMPLETE",
+  "title": "Observed-event histories"
+}

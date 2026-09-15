@@ -1,0 +1,84 @@
+{
+  "acceptance": "Every declared delta >=0.002; at least one non-clock input admitted for numerical panels; exact replays and integrity checks. Review only.",
+  "account_operations": 0,
+  "automatic_promotion": false,
+  "baseline_score": 0.39061886486364056,
+  "candidate_templates": 24,
+  "comparators": {
+    "error_bias": [
+      "current_market",
+      "error_clock"
+    ],
+    "error_clock": [
+      "current_market"
+    ],
+    "error_dispersion": [
+      "current_market",
+      "error_clock"
+    ],
+    "error_joint": [
+      "current_market",
+      "error_clock",
+      "error_bias",
+      "error_dispersion"
+    ]
+  },
+  "distinction": "Error versus the historical as-of prior at origin s, NOT an in-sample residual of the fitted forecaster.",
+  "feature_gate": "open",
+  "final_test_evaluations": 0,
+  "fold": 2,
+  "forms": [
+    "error_coverage",
+    "mean_error_release_age",
+    "bias_mean",
+    "bias_median",
+    "sign_balance",
+    "absolute_error",
+    "root_squared_error",
+    "large_error_rate"
+  ],
+  "memory_rss_limit_bytes": 15032385536,
+  "minimum_gain": 0.002,
+  "model": "Original histogram configuration, preprocessing and target scaling; no tuning or online refitting.",
+  "network_calls": 0,
+  "new_control_refits": 0,
+  "new_fit_limit": 4,
+  "other_round_results_used_for_selection": false,
+  "package_installs": 0,
+  "panel_sizes": [
+    6,
+    15,
+    15,
+    24
+  ],
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "prerequisite_new_rounds": "The corrected preflight; no score from rounds16/17/18 enters this plan.",
+  "reference_error": "(outcome[s] - released_priors.location_126[s]) / released_priors.risk_126[s], clipped to [-12,12], released at s+h+1.",
+  "release_delay": "per-target h+1",
+  "round": 19,
+  "seed": 42,
+  "selected_new_features": "Fixed groups; only training missingness/constant/duplicate screening.",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "study": "prior_error_memory",
+  "threads": 4,
+  "threshold": "Fixed |standardized reference error| > 2; not an optimized alarm threshold.",
+  "train_stop": 1524,
+  "uncertainty": "Paired 10/20/40-origin blocks, conditional on fitted models. No full adaptive-search correction.",
+  "validation_origins": 175,
+  "validation_scope": "Previously inspected last development period, NOT an untouched final holdout.",
+  "validation_start": 1529,
+  "validation_stop": 1704,
+  "variants": [
+    "error_clock",
+    "error_bias",
+    "error_dispersion",
+    "error_joint"
+  ],
+  "warmup_dates": 252,
+  "windows": [
+    21,
+    63,
+    126
+  ],
+  "worker_limit_seconds": 240.0
+}

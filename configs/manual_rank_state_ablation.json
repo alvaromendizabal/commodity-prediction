@@ -1,0 +1,85 @@
+{
+  "aws_api_calls": 0,
+  "contrasts": [
+    [
+      "rank_global",
+      "current_market"
+    ],
+    [
+      "rank_horizon_relative",
+      "current_market"
+    ],
+    [
+      "rank_joint",
+      "current_market"
+    ],
+    [
+      "rank_joint",
+      "rank_global"
+    ],
+    [
+      "rank_joint",
+      "rank_horizon_relative"
+    ]
+  ],
+  "control_refits": 0,
+  "coverage_inputs_added": 0,
+  "feature_gate": "open",
+  "feature_update_policy": "Frozen forecasting models; feature state updates using same-origin outcomes released at least five rows earlier. Later validation predictions may use already-released earlier validation outcomes; never contemporaneous/future outcomes.",
+  "final_test_evaluations": 0,
+  "gate": "At least +0.002 same-fold official metric vs saved current_market, exact replay, fixed shortlist and all selected numerical inputs admitted. Review only; no automatic other folds.",
+  "gate_gain_over_saved_control": 0.002,
+  "github_writes": false,
+  "graph_reconstructions": 0,
+  "maximum_feature_label_origin": 1343,
+  "new_fit_limit": 3,
+  "numerical_candidate_counts": {
+    "rank_global": 3,
+    "rank_horizon_relative": 3,
+    "rank_joint": 6
+  },
+  "old_network_fits": 0,
+  "other_folds": false,
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "promotion_allowed": false,
+  "rank_candidate_parent_lineage": "2d7bf39364262dea9ba091a6f67899ab8c40fee9f7efd4a43c724a28ffa8807b",
+  "reference_formula": "Average tied ranks mapped to [-1,1] among observed labels, minimum three observations; no zero-filled target labels. EWM spans 21/63, min periods 14/42, adjust=False, ignore_na=False.",
+  "rule_timing": "Declared after the notebook-09 training screen and negative network ablations, before rank-feature validation scores. The development fold has already informed prior research.",
+  "selection_policy": "Fixed six-name notebook-09 training shortlist; no validation re-selection and no new coverage columns. Same parent preprocessing and fixed histogram learner.",
+  "shortlist_from_training_only": [
+    "released_rank_state__global_innovation_63",
+    "released_rank_state__horizon_innovation_63",
+    "released_rank_state__global_latest",
+    "released_rank_state__horizon_latest",
+    "released_rank_state__global_minus_horizon_latest",
+    "released_rank_state__global_mean_21"
+  ],
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "source_origin_delay": 5,
+  "study": "released_ordinal_rank_state_matched_first_fold",
+  "training_stop_exclusive": 1164,
+  "validation_start": 1169,
+  "validation_stop_exclusive": 1349,
+  "variants": {
+    "rank_global": [
+      "released_rank_state__global_innovation_63",
+      "released_rank_state__global_latest",
+      "released_rank_state__global_mean_21"
+    ],
+    "rank_horizon_relative": [
+      "released_rank_state__horizon_innovation_63",
+      "released_rank_state__horizon_latest",
+      "released_rank_state__global_minus_horizon_latest"
+    ],
+    "rank_joint": [
+      "released_rank_state__global_innovation_63",
+      "released_rank_state__global_latest",
+      "released_rank_state__global_mean_21",
+      "released_rank_state__horizon_innovation_63",
+      "released_rank_state__horizon_latest",
+      "released_rank_state__global_minus_horizon_latest"
+    ]
+  },
+  "warmup_dates": 252,
+  "worker_limit_seconds": 240.0
+}

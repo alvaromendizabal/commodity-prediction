@@ -1,0 +1,54 @@
+"""Prepared tests for the disclosure boundary; never accesses accounts or private data."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import sys
+import time
+import unittest
+ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+import commodity_publication as m
+
+class PublicBoundaryTests(unittest.TestCase):
+    def sample(self):
+        return {'status':'NOTEBOOK_COMPLETE','new_training_fits':4,'comparison_rows':[{'variant':'private_recipe','official_metric':.2,'delta_vs_current_market':.003}],
+          'secret':'TOKEN','prediction_array':[1,2,3],'traceback':'AWS_PATH','identity':{'recipe':'private'}}
+    def test_only_approved_study_fields(self):
+        v=m.summarize(self.sample(),'Study','Scope','abc')
+        self.assertEqual(set(v),{'study','evaluation_scope','status','comparisons','new_fits_in_this_report','report_sha256','provenance'})
+    def test_private_recipe_name_not_copied(self):
+        self.assertNotIn('private_recipe',json.dumps(m.summarize(self.sample(),'Study','Scope','abc')))
+    def test_predictions_not_copied(self):
+        self.assertNotIn('prediction_array',json.dumps(m.summarize(self.sample(),'Study','Scope','abc')))
+    def test_credentials_not_copied(self):
+        self.assertNotIn('TOKEN',json.dumps(m.summarize(self.sample(),'Study','Scope','abc')))
+    def test_pending_does_not_publish_scores(self):
+        r=self.sample();r['status']='STOPPED';v=m.summarize(r,'Study','Scope','abc');self.assertEqual(v['comparisons'],[]);self.assertIsNone(v['new_fits_in_this_report'])
+    def test_nonfinite_metric_not_published(self):
+        r=self.sample();r['comparison_rows'][0]['official_metric']=float('nan');self.assertEqual(m.summarize(r,'Study','Scope','abc')['comparisons'],[])
+    def test_copies_all_panels_not_only_best(self):
+        r=self.sample();r['comparison_rows'].append({'official_metric':-.2,'delta_vs_current_market':-.3});self.assertEqual(len(m.summarize(r,'Study','Scope','abc')['comparisons']),2)
+    def test_no_input_mutation(self):
+        r=self.sample();before=json.dumps(r,sort_keys=True);m.summarize(r,'Study','Scope','abc');self.assertEqual(json.dumps(r,sort_keys=True),before)
+    def test_public_file_allowlist(self):
+        s={'scope':'Development','studies':[]};self.assertEqual(set(m.public_files(s)),m.PUBLIC_FILES)
+    def test_public_notebook_is_unexecuted_template(self):
+        n=m.public_notebook()
+        self.assertTrue(all(c['execution_count'] is None and not c['outputs'] for c in n['cells'] if c['cell_type']=='code'))
+    def test_public_notebook_no_private_import(self):
+        n=json.dumps(m.public_notebook());self.assertNotIn('commodity_prior_research',n);self.assertNotIn('sagemaker-user',n);self.assertNotIn('joblib',n)
+    def test_public_notebook_contains_explicit_inline_displays(self):
+        n=json.dumps(m.public_notebook());self.assertIn("show(renderer='plotly_mimetype')",n)
+    def test_filename_allowlist_has_no_training_source(self):
+        for f in m.PUBLIC_FILES:self.assertFalse(f.startswith(('src/','scripts/','configs/','data/','artifacts/')))
+    def test_presentation_scope_not_overclaimed(self):
+        text=m.public_files({'studies':[]})['README.md'].decode();self.assertIn('not Kaggle leaderboard scores',text)
+    def test_boolean_is_not_numeric_evidence(self):self.assertFalse(m.finite(True))
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser();p.add_argument('--receipt',required=True,type=Path);a=p.parse_args();start=time.monotonic()
+    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]))
+    status='TESTS_PASSED' if result.wasSuccessful() and not result.skipped else 'TESTS_FAILED'
+    r={'status':status,'tests_run':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),'skipped':len(result.skipped),
+      'seconds':round(time.monotonic()-start,3),'code_sha256':hashlib.sha256(Path(m.__file__).read_bytes()).hexdigest(),'model_fits':0,'account_calls':0}
+    a.receipt.parent.mkdir(parents=True,exist_ok=True);a.receipt.write_text(json.dumps(r,indent=2)+'\n');print('RESULT:',status);raise SystemExit(0 if status=='TESTS_PASSED' else 1)

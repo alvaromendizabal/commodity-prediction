@@ -1,0 +1,16 @@
+{
+  "comparisons": [],
+  "completed": true,
+  "decision": "not recorded",
+  "elapsed_seconds": 10.88,
+  "evaluation_origins": 0,
+  "evidence_path": "reports/manual_research/study_06.json",
+  "lineage": "aefcc9201825211d64780701062212ae2b0ab1acf6ed17d84b0dad5821d01b98",
+  "new_training_fits": 0,
+  "notebook": 6,
+  "plotly_figures": 6,
+  "report_sha256": "b6185ed15a0db01efa15aa70ae1d04e40ad6a6cdd7efb3a26f5550f8b391f50d",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_SESSION_FEATURES_READY",
+  "title": "Session candidate laboratory"
+}

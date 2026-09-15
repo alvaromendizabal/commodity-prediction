@@ -1,0 +1,36 @@
+{
+  "comparisons": [
+    {
+      "matched_delta": -0.003975364171483198,
+      "official_metric": 0.3057333590409221,
+      "positive_folds": 1,
+      "variant": "normalized_price"
+    },
+    {
+      "matched_delta": -0.002798115888163366,
+      "official_metric": 0.3069106073242419,
+      "positive_folds": 2,
+      "variant": "volume_confirmation"
+    },
+    {
+      "matched_delta": -0.01273830567032641,
+      "official_metric": 0.29697041754207887,
+      "positive_folds": 0,
+      "variant": "normalized_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "decision": "NO_STABLE_GAIN_IN_THIS_FAMILY",
+  "evaluation_origins": 535,
+  "evidence_path": "reports/manual_research/study_05.json",
+  "lineage": "0bec922e64f09f4d051e2ded7b8d9e91b2e6a06e3f7e80af8ac1f4f044df8027",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 6,
+  "notebook": 5,
+  "plotly_figures": 8,
+  "report_sha256": "7c8a7984f87c7ba8a48472194128a6f0173d58903f25c03f6b10c8dfa72dd14a",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_VALIDATION_REVIEW_READY",
+  "title": "Normalization temporal validation"
+}

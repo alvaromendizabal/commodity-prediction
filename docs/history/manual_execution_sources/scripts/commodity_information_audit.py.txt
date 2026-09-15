@@ -1,0 +1,796 @@
+#!/usr/bin/env python3
+"""Notebook 13: bounded no-fit model-reliance audit and relative-state feature lab.
+
+Default command installs only. Reuse three frozen current_market models, never
+refit them. Construct 18 training-prefix representations; no candidate models,
+cloud/Git writes, dependency installation, final-test use or automatic shutdown.
+"""
+from __future__ import annotations
+
+import argparse
+from datetime import datetime, timezone
+import fcntl
+import gc
+import hashlib
+import importlib.util
+import json
+import math
+import os
+from pathlib import Path
+import shutil
+import signal
+import time
+import zipfile
+
+ROOT = Path('/home/sagemaker-user/projects/commodity-prediction-manual')
+SHA = 'd142a4cb57a5c4b2880f9341619e13a735b1cddc'
+PARENT = '04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605'
+FEATURE = '52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba'
+SESSION_HASH = '7efef4574d55bd9aad8da8ecf4e7f4ba7cc54907412dcfb4a754100d9e34f88f'
+PRIOR_HASH = '7e5fc8b133129149d2d2332e351889bd9c1d2a45b39c0a8670408fd72aea77af'
+PRIOR_LINEAGE = 'e50f47658517d7ca35fa9e112c388b208c75cf240fb1508d49066a3dd179fcf0'
+NOTEBOOK = '13_information_audit_and_relative_feature_lab.ipynb'
+LIMIT = 180.0
+FOLDS = [(0, 1164, 1169, 1349), (1, 1344, 1349, 1529), (2, 1524, 1529, 1704)]
+SCORES = [0.40338108742296147, 0.16704165319061334, 0.39061886486364056]
+FAMILIES = ['reference', 'released_priors', 'tail_risk', 'market_path']
+SEEDS = [42, 20260912]
+TRAIN_STOP = 1164
+SIGNALS = [
+    'reference__return_lag_0_difference',
+    'reference__return_lag_1_difference',
+    'reference__return_lag_5_difference',
+    'reference__risk_63_difference',
+    'released_priors__location_63',
+    'released_priors__location_126',
+]
+KINDS = ['global_rank', 'horizon_rank', 'innovation_horizon_rank']
+TERMINAL = {'INFORMATION_AUDIT_READY', 'NOTEBOOK_AND_INFORMATION_AUDIT_READY'}
+
+
+class Stop(RuntimeError):
+    """Preserve evidence and diagnose before another attempt."""
+
+
+def utc():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def emit(stage, **fields):
+    print(json.dumps(dict(utc=utc(), stage=stage, **fields), allow_nan=False), flush=True)
+
+
+def previous(root):
+    path = Path(root) / 'scripts/commodity_session_ablation.py'
+    if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != SESSION_HASH:
+        raise Stop('Verified notebook-07 utilities are absent or changed; do not overwrite them.')
+    spec = importlib.util.spec_from_file_location('information13_session_utils', path)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    older, u = m.previous(Path(root))
+    return m, older, u
+
+
+def outdir(root):
+    return Path(root) / 'logs/manual_information_audit'
+
+
+def report_path(root):
+    return outdir(root) / 'commodity_information_audit_report.json'
+
+
+def plan():
+    return dict(
+        study='saved_model_reliance_and_training_relative_state_lab', source_commit=SHA,
+        parent_lineage=PARENT, preceding_study_lineage=PRIOR_LINEAGE,
+        new_training_fits=0, control_refits=0, final_test_evaluations=0,
+        aws_api_calls=0, github_writes=False, worker_limit_seconds=LIMIT,
+        folds=[dict(number=i, train_stop=t, validation_start=a, validation_stop=b) for i,t,a,b in FOLDS],
+        historical_baseline_scores=SCORES, historical_pooled_score=0.3097087232124053,
+        model_replays=3, family_permutation_block_rows=20, permutation_seeds=SEEDS,
+        families=FAMILIES, maximum_diagnostic_predictions=24,
+        permutation_contract='Shuffle 20-row blocks WITHIN each validation fold; identical row order for all targets and all columns in a family. Two seeds, no fitting. Diagnostic counterfactual inputs may use later validation rows; NEVER used as predictive features or promoted forecasts.',
+        interpretation='Reliance on time alignment of a fitted family, NOT causal importance or a retrained removal. Stable target identities are unchanged by within-target date permutations. Correlated alternatives and synthetic distribution shift limit interpretation.',
+        candidate_sources=SIGNALS, candidate_kinds=KINDS, candidate_templates=18,
+        training_feature_stop_exclusive=TRAIN_STOP, training_screen_start=252,
+        training_screen_split=708, innovation_window=63, innovation_min_history=42,
+        innovation_reference_delay=1, ranking_minimum_observed=3,
+        rank_formula='Average ties mapped linearly to [-1,1] among finite input values; global or within metadata horizon. NaNs remain NaN, no target label zero-fill.',
+        shortlist_policy='Only innovation_horizon_rank candidates are screened: coverage>=0.70, >=40 eligible dates per training half, consistent nonzero daily Spearman sign, no exact duplicate. Up to six, sorted by minimum absolute half-mean IC. Global/horizon ranks are representation controls, not new sources of information.',
+        global_rank_invariance='Global monotonic rank preserves daily Spearman against the same observed outcomes; an unchanged IC cannot prove incremental signal. Prefix checks audit ONLY the new transform, conditional on the previously verified parent feature panel.',
+        prior_features_use_released_labels=True, candidate_outcome_access='Only training outcomes through 1163 for association screening. Historical priors are inherited as already-causal inputs; no new label-based feature estimation.',
+        validation_use='The three development folds have been inspected before. They diagnose existing frozen models only; the new candidate screen receives training rows only. No selection on the permutation scores.',
+        feature_gate='open', promotion_allowed=False, candidate_fits_allowed=False,
+    )
+
+
+def validate_prior(r):
+    if (r.get('status') != 'NOTEBOOK_AND_RESPONSE_READY' or r.get('source_commit') != SHA
+        or r.get('lineage') != PRIOR_LINEAGE or r.get('decision') != 'STOP_TESTED_RESPONSE_PANELS'
+        or r.get('new_training_fits') != 3 or r.get('control_refits') != 0
+        or r.get('parents_unchanged') is not True or r.get('maximum_prediction_replay_error') != 0
+        or r.get('final_test_evaluations') != 0 or r.get('candidates_for_review') != []):
+        raise Stop('Previous completed response-encoding evidence changed.')
+    expected = dict(response_drivers=0.1544260524171399,
+                    response_encoded=0.1652375346129812, response_joint=0.15886086817040856)
+    rows = r.get('comparison_rows', [])
+    if len(rows) != 3 or {q['variant'] for q in rows} != set(expected):
+        raise Stop('Previous model inventory changed.')
+    if any(not math.isclose(q['official_metric'],expected[q['variant']],rel_tol=0,abs_tol=1e-12) for q in rows):
+        raise Stop('Previous metric changed.')
+
+
+def read_prior(root, u, verify=False):
+    p = u.safe_path(root, 'logs/manual_response_encoding/commodity_response_encoding_report.json')
+    if u.digest(p) != PRIOR_HASH:
+        raise Stop('Notebook-12 report differs from the returned report; preserve it for review.')
+    r = u.read_json(p)
+    validate_prior(r)
+    if verify:
+        d = u.safe_path(root, 'artifacts/response_encoding/' + PRIOR_LINEAGE)
+        u.verify_stage(d / 'features', PRIOR_LINEAGE, r['feature_checkpoint_hashes'])
+        for name, pins in r['checkpoint_hashes'].items():
+            u.verify_stage(d / 'fold_1' / name, PRIOR_LINEAGE, pins)
+    return r
+
+
+def identity(root, u):
+    if u.read_json(root / 'configs/manual_information_audit.json') != plan():
+        raise Stop('Information-audit declaration changed.')
+    evidence = dict(plan=plan(), helper_sha256=u.digest(Path(__file__)),
+                    prior_report_sha256=PRIOR_HASH, session_helper_sha256=SESSION_HASH)
+    return hashlib.sha256(json.dumps(evidence, sort_keys=True).encode()).hexdigest(), evidence
+
+
+def ordinal(a):
+    """Row ranks among finite predictors, never fill missing observations."""
+    import numpy as np
+    import pandas as pd
+    x = np.array(a, dtype=float, copy=True)
+    if x.ndim != 2:
+        raise Stop('Rank input must have two axes.')
+    x[~np.isfinite(x)] = np.nan
+    finite = np.isfinite(x)
+    count = finite.sum(axis=1)
+    ranked = pd.DataFrame(x).rank(axis=1, method='average').to_numpy(dtype=float, copy=True)
+    result = 2 * (ranked - 1) / np.maximum(count[:, None] - 1, 1) - 1
+    result[count < 3] = np.nan
+    return result
+
+
+def check_inputs(values, names, pairs):
+    import numpy as np
+    import pandas as pd
+    a = np.asarray(values)
+    if (a.ndim != 3 or not 1 <= len(a) <= TRAIN_STOP or a.dtype.kind != 'f'
+        or a.shape[2] != len(names) or len(set(names)) != len(names)
+        or not set(SIGNALS).issubset(names) or np.isinf(a).any()):
+        raise Stop('Training-only finite-or-missing named panel required.')
+    if (not isinstance(pairs, pd.DataFrame) or pairs.empty or not pairs.columns.is_unique
+        or not {'target', 'lag'}.issubset(pairs.columns)
+        or pairs[['target','lag']].isna().any().any() or pairs.target.duplicated().any()
+        or not pairs.target.map(lambda z:isinstance(z,str) and bool(z)).all()
+        or pd.api.types.is_bool_dtype(pairs.lag) or not pairs.lag.isin([1,2,3,4]).all()
+        or a.shape[1] != len(pairs)):
+        raise Stop('Unique ordered target/horizon metadata required.')
+    return a
+
+
+def horizon_ranks(values, horizons):
+    import numpy as np
+    out = np.full_like(values, np.nan, dtype=float)
+    for h in (1,2,3,4):
+        idx = np.flatnonzero(horizons == h)
+        if len(idx):
+            out[:,idx] = ordinal(values[:,idx])
+    return out
+
+
+def build_relative(values, names, pairs):
+    """Transform supplied training panel only; no outcome argument or future fit."""
+    import numpy as np
+    import pandas as pd
+    a = check_inputs(values, names, pairs)
+    horizons = pairs.lag.to_numpy(dtype=int, copy=True)
+    arrays, output_names, metadata = [], [], []
+    for source in SIGNALS:
+        raw = np.array(a[:,:,names.index(source)], dtype=float, copy=True)
+        history = pd.DataFrame(raw).shift(1).rolling(63, min_periods=42)
+        mean = history.mean().to_numpy(dtype=float, copy=True)
+        sd = history.std(ddof=0).to_numpy(dtype=float, copy=True)
+        surprise = np.divide(raw-mean, sd, out=np.full_like(raw,np.nan), where=sd>1e-12)
+        channels = [ordinal(raw), horizon_ranks(raw,horizons), horizon_ranks(surprise,horizons)]
+        for kind, channel in zip(KINDS,channels,strict=True):
+            name = 'relative_state__' + source.replace('__','_') + '__' + kind
+            arrays.append(channel)
+            output_names.append(name)
+            metadata.append(dict(name=name, source=source, kind=kind,
+                source_uses_released_labels=source.startswith('released_priors__')))
+    cube = np.stack(arrays,axis=2).astype(np.float32)
+    if np.isinf(cube).any():
+        raise Stop('Relative features contain infinity.')
+    return cube, output_names, metadata
+
+
+def daily_ic(a, y):
+    """Pairwise-observed daily Spearman; not pooled or in-sample model importance."""
+    import numpy as np
+    import pandas as pd
+    x = np.asarray(a,dtype=float)
+    truth = np.asarray(y,dtype=float)
+    if x.ndim != 2 or x.shape != truth.shape:
+        raise Stop('Daily association axes differ.')
+    valid = np.isfinite(x) & np.isfinite(truth) & (truth != -999999)
+    xr = pd.DataFrame(np.where(valid,x,np.nan)).rank(axis=1).to_numpy(dtype=float,copy=True)
+    yr = pd.DataFrame(np.where(valid,truth,np.nan)).rank(axis=1).to_numpy(dtype=float,copy=True)
+    n = valid.sum(axis=1)
+    xm = np.where(valid,xr,0).sum(axis=1) / np.maximum(n,1)
+    ym = np.where(valid,yr,0).sum(axis=1) / np.maximum(n,1)
+    dx = np.where(valid,xr-xm[:,None],0)
+    dy = np.where(valid,yr-ym[:,None],0)
+    denom = np.sqrt((dx*dx).sum(axis=1)*(dy*dy).sum(axis=1))
+    return np.divide((dx*dy).sum(axis=1),denom,out=np.full(len(x),np.nan),where=(n>=3)&(denom>1e-12))
+
+
+def signature(a):
+    import numpy as np
+    x = np.array(a,dtype=np.float32,copy=True,order='C')
+    x[np.isnan(x)] = np.nan
+    x[x == 0] = 0  # canonicalize negative zero for the duplicate audit
+    return hashlib.sha256(x.tobytes()).hexdigest()
+
+
+def candidate_screen(base, base_names, cube, meta, y):
+    import numpy as np
+    if len(base)!=TRAIN_STOP or len(cube)!=TRAIN_STOP or np.asarray(y).shape!=cube.shape[:2]:
+        raise Stop('Screen must use exactly the first 1164 training rows.')
+    lo, mid, end = 252, 708, TRAIN_STOP
+    existing = {signature(base[lo:end,:,i]):n for i,n in enumerate(base_names)}
+    rows = []
+    for i,item in enumerate(meta):
+        data = cube[lo:end,:,i]
+        digest = signature(data)
+        duplicate = existing.get(digest)
+        if duplicate is None:
+            existing[digest] = item['name']
+        ic = daily_ic(cube[:,:,i],y)
+        first, second = ic[lo:mid], ic[mid:end]
+        left, right = first[np.isfinite(first)], second[np.isfinite(second)]
+        m1 = float(left.mean()) if len(left) else None
+        m2 = float(right.mean()) if len(right) else None
+        coverage = float(np.isfinite(data).mean())
+        consistent = m1 is not None and m2 is not None and m1*m2 > 0
+        eligible = (item['kind']=='innovation_horizon_rank' and duplicate is None and coverage>=.70
+                    and len(left)>=40 and len(right)>=40 and consistent)
+        raw_ic = daily_ic(base[:,:,base_names.index(item['source'])], y)
+        valid = np.isfinite(raw_ic[lo:end]) & np.isfinite(ic[lo:end])
+        error = float(np.max(np.abs(raw_ic[lo:end][valid]-ic[lo:end][valid]))) if valid.any() else None
+        if item['kind']=='global_rank':
+            if (not np.array_equal(np.isfinite(raw_ic[lo:end]),np.isfinite(ic[lo:end]))
+                or (error is not None and error>1e-12)):
+                raise Stop('Expected monotonic global-rank IC invariance failed.')
+        rows.append(dict(**item,training_coverage=coverage,half_1_mean_ic=m1,half_2_mean_ic=m2,
+            half_1_eligible_dates=len(left),half_2_eligible_dates=len(right),same_direction=bool(consistent),
+            exact_duplicate_of=duplicate,training_sha256=digest,eligible_innovation=bool(eligible),
+            training_relevance=min(abs(m1),abs(m2)) if eligible else 0.0,
+            max_daily_ic_change_vs_source=error,
+            selection_note='Screened innovation' if item['kind']=='innovation_horizon_rank' else 'Representation control; not selected as novel signal by marginal IC'))
+    selected = sorted([r for r in rows if r['eligible_innovation']], key=lambda r:(-r['training_relevance'],r['name']))[:6]
+    return dict(rows=rows,shortlist=[r['name'] for r in selected],training_rows=TRAIN_STOP,
+                screen_start=lo,screen_stop_exclusive=end,split_date=mid,
+                validation_rows_used_for_candidate_selection=0,
+                decision='REVIEW_INNOVATION_CANDIDATES_BEFORE_FITS' if selected else 'NO_INNOVATION_PASSED_THIS_SCREEN')
+
+
+def block_order(length, block, seed):
+    import numpy as np
+    if length < 2*block or block < 1:
+        raise Stop('Need at least two nonempty diagnostic blocks.')
+    chunks = [np.arange(s,min(s+block,length)) for s in range(0,length,block)]
+    order = np.random.default_rng(seed).permutation(len(chunks))
+    if np.array_equal(order,np.arange(len(chunks))):
+        order = np.roll(order,1)
+    return np.concatenate([chunks[i] for i in order])
+
+
+def permuted_values(values, names, family, order):
+    import numpy as np
+    a = np.asarray(values)
+    order = np.asarray(order)
+    if a.ndim!=3 or a.shape[2]!=len(names) or len(set(names))!=len(names):
+        raise Stop('Permutation panel axes differ.')
+    if order.dtype.kind not in 'iu' or not np.array_equal(np.sort(order),np.arange(len(a))):
+        raise Stop('Diagnostic order must permute each row exactly once.')
+    idx = [i for i,n in enumerate(names) if n.split('__',1)[0]==family]
+    if not idx:
+        raise Stop('Declared family not in the panel.')
+    out = np.array(a,copy=True)
+    out[:,:,idx] = a[order][:,:,idx]
+    return out
+
+
+def rank_summary(daily):
+    import numpy as np
+    v = np.asarray(daily,float)
+    if v.ndim!=1 or len(v)<2 or not np.isfinite(v).all() or (abs(v)>1+1e-12).any() or v.std(ddof=0)<=1e-12:
+        raise Stop('Undefined diagnostic correlation metric.')
+    return dict(official_metric=float(v.mean()/v.std(ddof=0)),mean_daily_rank_correlation=float(v.mean()),
+                std_daily_rank_correlation=float(v.std(ddof=0)),daily_rank_correlations=v.tolist())
+
+
+def summarize_reliance(folds):
+    import numpy as np
+    if len(folds)!=3 or [r['fold'] for r in folds]!=[0,1,2]:
+        raise Stop('Three chronological frozen-control audits required.')
+    full = np.concatenate([q['control']['daily_rank_correlations'] for q in folds])
+    mean = np.concatenate([q['mean_only']['daily_rank_correlations'] for q in folds])
+    if len(full)!=535:
+        raise Stop('Historical evaluation dates differ.')
+    control, intercept = rank_summary(full), rank_summary(mean)
+    rows = []
+    for family in FAMILIES:
+        drops=[]
+        for seed in SEEDS:
+            parts=[]
+            for fold in folds:
+                matches=[r for r in fold['permutations'] if r['family']==family and r['seed']==seed]
+                if len(matches)!=1:
+                    raise Stop('Incomplete family/repetition diagnostics.')
+                parts.append(matches[0]['daily_rank_correlations'])
+            score=rank_summary(np.concatenate(parts))['official_metric']
+            drops.append(control['official_metric']-score)
+        rows.append(dict(family=family,pooled_metric_drop_repetitions=drops,
+                         mean_drop=float(np.mean(drops)),min_drop=float(min(drops)),max_drop=float(max(drops))))
+    return dict(control=control,mean_only=intercept,metric_difference_vs_mean=control['official_metric']-intercept['official_metric'],
+                rows=rows,scope='Frozen-model diagnostic, not a new trained system; two perturbations are not uncertainty confidence bounds.')
+
+
+def smoke():
+    import numpy as np
+    import pandas as pd
+    rng=np.random.default_rng(13)
+    v=rng.normal(size=(160,16,len(SIGNALS)))
+    p=pd.DataFrame(dict(target=[f't{i}' for i in range(16)],lag=np.repeat([1,2,3,4],4)))
+    original=v.copy()
+    cube,names,_=build_relative(v,SIGNALS,p)
+    small,nn,_=build_relative(v[:129],SIGNALS,p)
+    np.testing.assert_array_equal(cube[:129],small)
+    altered=v.copy();altered[131:]*=100
+    c,_,_=build_relative(altered,SIGNALS,p);np.testing.assert_array_equal(cube[:131],c[:131])
+    np.testing.assert_array_equal(v,original)
+    yy=rng.normal(size=(160,16));yy[::7,0]=np.nan
+    np.testing.assert_allclose(daily_ic(v[:,:,0],yy),daily_ic(cube[:,:,0],yy),atol=1e-12,rtol=0,equal_nan=True)
+    return dict(status='RELATIVE_STATE_SMOKE_PASSED',input_unchanged=True,exact_prefix=True,
+                future_perturbation_exact=True,global_rank_ic_invariant=True,
+                numpy_version=np.__version__,pandas_version=pd.__version__)
+
+
+def audit_fold(base, y, pairs, fold, model, saved, u, metric_fn):
+    import numpy as np
+    import pandas as pd
+    from commodity_prediction.domain.catalog import Panel
+    number,train_stop,start,stop=fold
+    if saved.index.tolist()!=list(range(start,stop)) or saved.columns.tolist()!=base.targets:
+        raise Stop('Saved prediction dates or targets differ.')
+    replay=model.predict(base,start,stop)
+    error=u.exact_predictions(saved,replay)
+    control=metric_fn(y.loc[saved.index],saved,pairs)
+    if not math.isclose(control['official_metric'],SCORES[number],abs_tol=1e-12,rel_tol=0):
+        raise Stop('Frozen control did not reproduce the recorded score.')
+    # Read the fitted means; do not estimate another model or optimize residual weights.
+    target_mean=np.asarray(model.target_mean,dtype=float)
+    if target_mean.shape!=(len(base.targets),) or not np.isfinite(target_mean).all():
+        raise Stop('Invalid saved target-mean vector.')
+    predicted_mean=pd.DataFrame(np.broadcast_to(target_mean,saved.shape).copy(),index=saved.index,columns=saved.columns)
+    mean_only=metric_fn(y.loc[saved.index],predicted_mean,pairs)
+    permutations=[]
+    for seed in SEEDS:
+        order=block_order(stop-start,20,seed)
+        for family in FAMILIES:
+            changed=permuted_values(base.values[start:stop],base.names,family,order)
+            perturb=Panel(changed,base.dates[start:stop],base.targets,base.names,dict(base.source_series))
+            pred=model.predict(perturb,0,stop-start)
+            metrics=metric_fn(y.loc[pred.index],pred,pairs)
+            permutations.append(dict(family=family,seed=seed,
+                selected_family_templates=sum(n.split('__',1)[0]==family for n in model.feature_names),
+                official_metric=metrics['official_metric'],metric_drop=control['official_metric']-metrics['official_metric'],
+                daily_rank_correlations=metrics['daily_rank_correlations']))
+            emit('FAMILY_DIAGNOSTIC_COMPLETE',fold=number,family=family,seed=seed,new_fits=0)
+            del changed,perturb,pred
+    return dict(fold=number,train_stop=train_stop,validation_start=start,validation_stop=stop,
+                control=control,mean_only=mean_only,maximum_prediction_replay_error=error,permutations=permutations)
+
+
+def worker(root):
+    import numpy as np
+    import pandas as pd
+    import joblib
+    from threadpoolctl import threadpool_limits
+    from commodity_prediction.domain.catalog import Panel
+    from commodity_prediction.domain.run import load_panel
+    from commodity_prediction.domain.market_path.features import build_panel
+    from commodity_prediction.studies.evaluation import evaluate
+    from commodity_prediction.runtime import seal_checkpoint
+    root=Path(root);session,older,u=previous(root)
+    lineage,evidence=identity(root,u)
+    directory=u.safe_path(root,'artifacts/information_audit/'+lineage)
+    if directory.exists():
+        raise Stop('Existing audit directory retained. No blind rerun.')
+    directory.mkdir(parents=True)
+    began=time.monotonic()
+    r=dict(project='commodity-prediction',status='RUNNING',source_commit=SHA,lineage=lineage,identity=evidence,plan=plan(),
+        started_utc=utc(),new_training_fits=0,control_refits=0,candidate_models_fitted=0,
+        model_replays=0,diagnostic_prediction_calls=0,fold_audits=[],stage_hashes={},feature_gate='open',
+        promotion_allowed=False,aws_api_calls=0,github_writes=False,final_test_evaluations=0)
+    def save():
+        r['elapsed_seconds']=round(time.monotonic()-began,3);u.atomic_json(report_path(root),r)
+    def expire(*_):
+        raise Stop('180-second audit deadline reached. Completed stages preserved.')
+    old=signal.signal(signal.SIGALRM,expire);signal.setitimer(signal.ITIMER_REAL,LIMIT)
+    try:
+        save();ready=u.readiness(root);u.validate_runtime(root,ready);u.validate_source(root)
+        prior=read_prior(root,u,True)
+        r['prior_comparison_rows']=prior['comparison_rows'];r['prior_control_pooled']=prior['prior_control_pooled']
+        parents=u.checkpoint_snapshot(root,ready)
+        r['contract_smoke']=smoke();save()
+        for name,h in u.RAW.items():
+            if u.digest(u.safe_path(root,'data/raw/'+name))!=h:
+                raise Stop('Raw input checksum differs: '+name)
+        final=u.read_json(root/'configs/final_evaluation.json')
+        if final['evaluated'] or final['final_test_start_date_id']!=1714:
+            raise Stop('Final-test boundary changed.')
+        x=pd.read_csv(root/'data/raw/train.csv',nrows=1704).set_index('date_id')
+        y=pd.read_csv(root/'data/raw/train_labels.csv',nrows=1704).set_index('date_id').replace(-999999,np.nan)
+        pairs=pd.read_csv(root/'data/raw/target_pairs.csv')
+        if (len(x)!=1704 or x.index.tolist()!=list(range(1704)) or not x.index.equals(y.index)
+            or y.columns.tolist()!=[f'target_{i}' for i in range(424)] or pairs.target.tolist()!=y.columns.tolist()):
+            raise Stop('Historical 535-date audit axes changed.')
+        u.atomic_json(directory/'plan.json',evidence)
+        with threadpool_limits(limits=4):
+            original=load_panel(root/'artifacts'/FEATURE/'features')
+            prefix=Panel(original.values[:1704],original.dates[:1704],original.targets,original.names,dict(original.source_series))
+            base,_=build_panel(prefix,x,pairs,'current_market')
+            del original,prefix;gc.collect()
+            if sorted(set(n.split('__',1)[0] for n in base.names))!=sorted(FAMILIES):
+                raise Stop('Active control-family inventory changed.')
+            emit('ENGINEER_TRAINING_RELATIVE_STATES',rows=TRAIN_STOP,templates=18,new_fits=0)
+            cube,names,meta=build_relative(base.values[:TRAIN_STOP],base.names,pairs)
+            for end in (708,1000,TRAIN_STOP-1):
+                sub,sn,_=build_relative(base.values[:end],base.names,pairs)
+                np.testing.assert_array_equal(cube[:end],sub)
+                if sn!=names:raise Stop('Relative feature names changed with prefix.')
+            lab=candidate_screen(base.values[:TRAIN_STOP],base.names,cube,meta,y.iloc[:TRAIN_STOP].to_numpy(copy=True))
+            stage=directory/'feature_lab';stage.mkdir()
+            np.savez_compressed(stage/'candidates.npz',values=cube,dates=np.arange(TRAIN_STOP))
+            u.atomic_json(stage/'inventory.json',dict(names=names,metadata=meta,targets=base.targets,training_only=True))
+            u.atomic_json(stage/'screen.json',lab)
+            seal_checkpoint(stage,lineage,['candidates.npz','inventory.json','screen.json'])
+            r['stage_hashes']['feature_lab']=u.verify_stage(stage,lineage)
+            r['candidate_lab']=lab;r['candidate_metadata']=meta
+            r['causal_checks']=dict(new_transform_exact_prefixes=[708,1000,1163],candidate_outcome_stop_exclusive=1164,
+                inherited_parent_contract='Previously verified horizon+1 released priors; new tests do not independently reprove the whole cached parent pipeline.')
+            save();del cube;gc.collect()
+            for fold in FOLDS:
+                number=fold[0]
+                emit('AUDIT_FROZEN_CONTROL',fold=number,completed=r['model_replays'],total=3,new_fits=0)
+                cp=root/'artifacts'/PARENT/f'fold_{number}/current_market'
+                model=joblib.load(cp/'model.joblib')
+                saved=pd.read_parquet(cp/'predictions.parquet')
+                audit=audit_fold(base,y,pairs,fold,model,saved,u,evaluate)
+                stage=directory/f'fold_{number}';stage.mkdir()
+                u.atomic_json(stage/'audit.json',audit);seal_checkpoint(stage,lineage,['audit.json'])
+                r['stage_hashes'][f'fold_{number}']=u.verify_stage(stage,lineage)
+                r['fold_audits'].append(audit);r['model_replays']+=1;r['diagnostic_prediction_calls']+=len(audit['permutations'])
+                save();del model,saved;gc.collect()
+            r['reliance_summary']=summarize_reliance(r['fold_audits'])
+            if not math.isclose(r['reliance_summary']['control']['official_metric'],prior['prior_control_pooled'],abs_tol=1e-12,rel_tol=0):
+                raise Stop('Replayed pooled baseline differs from preserved result.')
+        r['parents_unchanged']=parents==u.checkpoint_snapshot(root,ready)
+        if not r['parents_unchanged']:raise Stop('Parent checkpoint changed during read-only audit.')
+        read_prior(root,u,True);u.validate_source(root)
+        r.update(status='INFORMATION_AUDIT_READY',source_unchanged=True,prior_study_unchanged=True,
+            maximum_prediction_replay_error=max(q['maximum_prediction_replay_error'] for q in r['fold_audits']),
+            validation_dates=535,decision='REVIEW_RELIANCE_AND_CANDIDATES_BEFORE_FITS',finished_utc=utc(),
+            limitations=[
+                'No new forecasting model or promoted feature result. Original 535-date scores are historical replays.',
+                'Within-target block shuffling measures time-alignment reliance, not static identity importance or causality.',
+                'Diagnostic shuffled inputs can contain later validation values; they are NEVER used to train or generate forecast features.',
+                'Two diagnostic permutations are not statistical confidence intervals; repeated development inspection is not corrected.',
+                'The new feature screen sees only the first 1164 rows; known prior-label dependencies are inherited, not removed.',
+                'Global ranks preserve per-date marginal Spearman; a rank column is not independent new information.',
+                'Screened associations do not establish conditional value beyond the saved model; a matched fitted ablation remains necessary.',
+                'No packages, cloud writes, Git writes, new fits, final-test values or automatic space shutdown.',
+            ])
+        save();u.atomic_json(directory/'review.json',r)
+        return r
+    except BaseException as exc:
+        r.update(status='STOPPED',error=type(exc).__name__+': '+str(exc),finished_utc=utc());save();raise
+    finally:
+        signal.setitimer(signal.ITIMER_REAL,0);signal.signal(signal.SIGALRM,old)
+
+
+def verify_complete(root,r,u):
+    lineage,evidence=identity(root,u);read_prior(root,u)
+    if (r.get('status') not in TERMINAL or r.get('lineage')!=lineage or r.get('identity')!=evidence
+        or r.get('new_training_fits')!=0 or r.get('candidate_models_fitted')!=0 or r.get('control_refits')!=0
+        or r.get('model_replays')!=3 or r.get('diagnostic_prediction_calls')!=24
+        or r.get('parents_unchanged') is not True or r.get('maximum_prediction_replay_error')!=0
+        or r.get('final_test_evaluations')!=0):
+        raise Stop('Complete audit receipt contract differs.')
+    expected={'feature_lab','fold_0','fold_1','fold_2'}
+    if set(r['stage_hashes'])!=expected:
+        raise Stop('Audit checkpoint inventory differs.')
+    d=root/'artifacts/information_audit'/lineage
+    for stage,pins in r['stage_hashes'].items():u.verify_stage(d/stage,lineage,pins)
+    for audit in r['fold_audits']:
+        if u.read_json(d/f"fold_{audit['fold']}"/'audit.json')!=audit:
+            raise Stop('Fold audit differs from sealed evidence.')
+    if u.read_json(d/'feature_lab/screen.json')!=r['candidate_lab']:
+        raise Stop('Candidate selection differs from sealed training screen.')
+    if summarize_reliance(r['fold_audits'])!=r['reliance_summary']:
+        raise Stop('Pooled audit reconstruction changed.')
+
+
+def run(root=ROOT):
+    root=Path(root);session,older,u=previous(root)
+    ready=u.readiness(root);u.validate_runtime(root,ready);u.validate_source(root);read_prior(root,u)
+    out=u.safe_path(root,'logs/manual_information_audit');out.mkdir(parents=True,exist_ok=True)
+    with u.safe_path(out,'supervisor.lock').open('a') as lock:
+        fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+        if report_path(root).exists():
+            r=u.read_json(report_path(root))
+            if r.get('status') not in TERMINAL:
+                raise Stop('Interrupted audit retained; do not reset its time budget or repeat unchanged.')
+            verify_complete(root,r,u);emit('COMPLETED_AUDIT_REUSED',new_fits=0)
+            return r
+        lineage,_=identity(root,u)
+        if (root/'artifacts/information_audit'/lineage).exists():raise Stop('Orphan audit checkpoint retained.')
+        if shutil.disk_usage(root).free<1024**3:raise Stop('Need 1 GiB free; keep old data/environment directories.')
+        u.atomic_json(report_path(root),dict(status='STARTING_WORKER',lineage=lineage,new_training_fits=0,started_utc=utc()))
+        cmd=[ready['runtime']['python'],'-u',str(Path(__file__).resolve()),'--worker','--root',str(root)]
+        began=time.monotonic()
+        try:
+            session._supervise_command(cmd,root,LIMIT,out/'information_audit_worker.log',u.environment(root))
+        except BaseException as exc:
+            r=u.read_json(report_path(root));r.update(status='STOPPED',supervisor_error=type(exc).__name__+': '+str(exc),
+                supervised_seconds=round(time.monotonic()-began,3));u.atomic_json(report_path(root),r);raise
+        r=u.read_json(report_path(root));verify_complete(root,r,u)
+        r['supervised_seconds']=round(time.monotonic()-began,3);u.atomic_json(report_path(root),r)
+        return r
+
+
+def charts(r):
+    import numpy as np
+    import plotly.graph_objects as go
+    figures=[]
+    def add(f,title,x='',y=''):
+        f.update_layout(title=title,height=490,margin=dict(l=85,r=40,t=95,b=130),xaxis_title=x,yaxis_title=y,
+                        legend=dict(orientation='h',y=-.35))
+        figures.append(f)
+    old=r['prior_comparison_rows']
+    add(go.Figure(go.Bar(x=[q['variant'] for q in old],y=[q['delta_vs_current_market'] for q in old])),
+        '1 · Completed response experiment — no new scores here','Notebook-12 panel','Middle-fold metric difference')
+    folds=r['fold_audits'];f=go.Figure()
+    for key,label in [('control','Frozen current_market'),('mean_only','Saved target means only')]:
+        f.add_bar(x=[f"Fold {q['fold']}" for q in folds],y=[q[key]['official_metric'] for q in folds],name=label)
+    f.update_layout(barmode='group');add(f,'2 · Does the fitted correction add value beyond saved target means?','Existing development fold','Official metric')
+    pooled=r['reliance_summary']
+    add(go.Figure(go.Bar(x=['current_market','saved means only'],y=[pooled['control']['official_metric'],pooled['mean_only']['official_metric']])),
+        '3 · Pooled from 535 daily correlations — NOT an average of fold scores','Existing frozen representation','Historical diagnostic metric')
+    f=go.Figure()
+    for family in FAMILIES:
+        means=[]
+        for fold in folds:
+            means.append(float(np.mean([v['metric_drop'] for v in fold['permutations'] if v['family']==family])))
+        f.add_bar(x=[f"Fold {q['fold']}" for q in folds],y=means,name=family)
+    f.update_layout(barmode='group');add(f,'4 · Reliance on family time alignment — not causal importance','Existing development fold','Mean metric drop after block shuffling')
+    f=go.Figure()
+    for row in pooled['rows']:
+        for j,drop in enumerate(row['pooled_metric_drop_repetitions']):
+            f.add_scatter(x=[drop],y=[row['family']],mode='markers',name=f"{row['family']} / seed {SEEDS[j]}")
+    f.add_vline(x=0,line_dash='dash');add(f,'5 · Two repetitions, not confidence bounds','Pooled frozen-model metric drop','Feature family')
+    f=go.Figure()
+    for fold in folds:
+        f.add_scatter(x=list(range(fold['validation_start'],fold['validation_stop'])),
+            y=np.cumsum(np.array(fold['control']['daily_rank_correlations'])-np.array(fold['mean_only']['daily_rank_correlations'])).tolist(),name=f"Fold {fold['fold']}")
+    add(f,'6 · Fitted correction versus target means — NOT trading returns','Prediction origin','Cumulative daily-correlation difference (resets per fold)')
+    rows=r['candidate_lab']['rows']
+    aliases=dict(zip(SIGNALS,['Return t','Return t−1','Return t−5','Risk difference','Released location 63','Released location 126'],strict=True))
+    kind_alias={'global_rank':'global','horizon_rank':'horizon','innovation_horizon_rank':'innovation'}
+    labels=[aliases[q['source']]+' / '+kind_alias[q['kind']] for q in rows]
+    add(go.Figure(go.Bar(y=labels,x=[q['training_coverage'] for q in rows],orientation='h')),
+        '7 · Actual new-feature coverage — training prefix only','Finite training fraction','Candidate')
+    figures[-1].update_layout(height=700,margin=dict(l=220,r=40,t=95,b=70),yaxis=dict(autorange='reversed'))
+    f=go.Figure()
+    for kind in KINDS:
+        group=[q for q in rows if q['kind']==kind]
+        f.add_scatter(x=[q['half_1_mean_ic'] for q in group],y=[q['half_2_mean_ic'] for q in group],
+            text=[q['source'] for q in group],mode='markers',name=kind,hovertemplate='%{text}<br>early=%{x}<br>later=%{y}<extra></extra>')
+    f.add_hline(y=0,line_dash='dot');f.add_vline(x=0,line_dash='dot')
+    add(f,'8 · Training-half consistency is screening, not validation evidence','Early-half mean daily Spearman','Later-half mean daily Spearman')
+    rank_rows=[q for q in rows if q['kind']=='global_rank']
+    add(go.Figure(go.Bar(x=[aliases[q['source']] for q in rank_rows],y=[q['max_daily_ic_change_vs_source'] for q in rank_rows])),
+        '9 · Global rank does not create a new marginal rank signal','Source','Maximum absolute daily IC change (expected zero)')
+    candidates=[q for q in rows if q['kind']=='innovation_horizon_rank']
+    f=go.Figure(go.Bar(x=[aliases[q['source']] for q in candidates],y=[q['training_relevance'] for q in candidates],
+        text=['shortlisted' if q['name'] in r['candidate_lab']['shortlist'] else 'not shortlisted' for q in candidates]))
+    add(f,'10 · Innovation shortlist — no candidate models fitted','Underlying input','Minimum absolute training-half mean IC, when eligible')
+    return figures
+
+
+def private_backup(root,r,u):
+    d=root/'artifacts/information_audit'/r['lineage']
+    paths=[d/'plan.json',d/'review.json']
+    for s,pins in r['stage_hashes'].items():paths.extend(d/s/n for n in pins)
+    pins={str(p.relative_to(root)):u.digest(u.safe_path(root,str(p.relative_to(root)))) for p in paths}
+    if sum(p.stat().st_size for p in paths)>128*1024**2:raise Stop('Feature backup exceeds 128 MiB; saved stages retained.')
+    dest=u.safe_path(outdir(root),'information_audit_artifacts.zip');tmp=u.safe_path(dest.parent,dest.name+'.tmp')
+    with zipfile.ZipFile(tmp,'w',zipfile.ZIP_DEFLATED,compresslevel=1) as z:
+        for p in paths:z.write(p,str(p.relative_to(root)))
+        z.writestr('SHA256SUMS.json',json.dumps(pins,sort_keys=True,indent=2))
+    with zipfile.ZipFile(tmp) as z:
+        if z.testzip():raise Stop('Artifact ZIP CRC failed.')
+        for name,h in pins.items():
+            if hashlib.sha256(z.read(name)).hexdigest()!=h:raise Stop('Artifact ZIP checksum differs.')
+    os.replace(tmp,dest)
+    return dict(path=str(dest),sha256=u.digest(dest),bytes=dest.stat().st_size,files=len(paths),private=True,
+        label_derived_features_included=True,new_models_included=False,raw_csvs_included=False,off_disk_backup_confirmed=False)
+
+
+def finish(root,r,figures):
+    root=Path(root);session,older,u=previous(root);verify_complete(root,r,u)
+    if len(figures)!=10:raise Stop('Expected ten Plotly figures.')
+    result=dict(r);path=outdir(root)/'information_audit_dashboard.html'
+    result.update(dashboard=str(path),plotly_figures=10,dashboard_sha256=older.export_dashboard(path,
+        'Commodity research: information audit and relative-state laboratory',[(str(f.layout.title.text),f) for f in figures]))
+    try:result['private_checkpoint_bundle']=private_backup(root,result,u)
+    except Exception as exc:result['backup_warning']=type(exc).__name__+': '+str(exc)
+    result.update(status='NOTEBOOK_AND_INFORMATION_AUDIT_READY',notebook=str(root/'notebooks'/NOTEBOOK),updated_utc=utc())
+    u.atomic_json(report_path(root),result);return result
+
+
+def protocol_markdown():
+    return '''# Information audit and relative-state laboratory — notebook 13
+
+## Why this milestone
+Notebook 12 produced 0.154426, 0.165238 and 0.158861 on the middle development fold,
+all below the saved 0.167042 control. All intended inputs were admitted. Close the
+unchanged recipe. More automatic addition fits are not the next default.
+
+## Frozen-model diagnosis: no fitting
+Replay the three saved current_market models on exactly 180/180/175 dates. Score
+both their saved predictions and the target-mean vectors already stored inside
+those models. This comparison isolates the fitted correction above historical
+means; it is not a newly optimized mean model or a deployable improvement claim.
+
+For reference, released_priors, tail_risk and market_path, reorder 20-row blocks
+within each fold twice (seeds 42 and 20260912). Use one shared order across all
+424 targets and every column in the family. Other families remain untouched.
+The fitted trees and preprocessing remain frozen. Inspect time-alignment reliance,
+not causal effects and not the performance of a model retrained without a family.
+Target identity that is constant through time is not disturbed. Correlated
+alternatives can hide reliance. Shuffled inputs may combine later validation
+values with earlier rows: they are synthetic diagnostic perturbations, NEVER
+predictive inputs or candidates for promotion. Two permutations are NOT confidence
+bounds. Do not select features using these diagnostic scores in this milestone.
+
+Pooled scores are recomputed from 535 daily correlations, never from the average
+of three ratios. All dates are previously used development dates. Final origins
+1714–1960 remain untouched; rows1704 onward are not numerically read by the worker.
+Full raw-file hash checks read bytes, not final-label values for feature selection.
+
+## Concrete new feature engineering: 18 representations
+Six fixed existing target-level inputs are used: return differences at lags0,1,5;
+63-row risk difference; and released-target location estimates over63 and126.
+For each build global rank, within-horizon rank, and within-horizon rank of its
+own historical innovation. The innovation uses mean and population SD from the
+preceding63 rows (minimum42), excluding the current row. SD<=1e-12 yields missing.
+Average tied ranks are mapped to[-1,1] among finite values, minimum3 per cohort.
+No missing values are forward-filled or converted into economic zeros.
+
+These are new REPRESENTATIONS of existing information, not18 independent sources.
+The prior columns already depend on legally released labels; this lab inherits
+that causal contract. Its transforms do not consume outcome labels. Training
+outcomes0–1163 are used only for association screening. New-transform prefix
+checks do not independently recertify every historical parent feature formula.
+
+Important mathematical control: global ranking is monotonic within a date, so
+its daily Spearman against the same observed targets is unchanged. That equality
+is tested, not presented as a predictive discovery. Such reparameterization may
+still change what a pooled learner learns across dates, but requires a fitted
+comparison. Within-horizon normalization changes comparisons across horizons;
+innovation ranks change temporal/contextual representation.
+
+Screen only the six innovation candidates on training rows252–1163, split at708:
+>=70% coverage, >=40 eligible dates per half, nonzero same sign, no exact duplicate
+of the active87-template baseline or another candidate. Rank eligible candidates
+by the weaker absolute half-mean association; cap at6. Raw/horizon rank controls
+are retained as controls, not selected as new marginal signals. Exact historical
+380-template numerical overlap is not exhaustively checked. No candidate fits
+or new validation scores are produced. A shortlist is NOT evidence of conditional
+improvement beyond the saved forecasting model.
+
+## Stop conditions and artifacts
+180-second supervised worker,15-second heartbeats, zero .fit calls. Persist the
+training cube/screen and each of three fold audits independently with hashes.
+Failure retains completed stages and requires diagnosis, not budget resets.
+Complete result reuse reads sealed evidence rather than predicting again. The
+HTML dashboard uses Plotly without Chrome/Kaleido. Artifact ZIP is private and
+is an off-disk copy only after download. No Git/cloud changes or automatic stop.
+
+## Research context and limitations
+Scikit-learn's primary documentation explains model dependence and correlated
+feature limitations of permutation importance:
+https://scikit-learn.org/stable/modules/permutation_importance.html
+The competition participant's historical-rank features are contextual motivation,
+not proof for our different predictor-normalization construction:
+https://www.kaggle.com/competitions/mitsui-commodity-prediction-challenge/writeups/26th-place-mitsui-and-co-commodity-prediction
+No leaderboard-equivalence or performance guarantee. The next fitted experiment
+must specify whether it tests added temporal information or reparameterization,
+use isolated chronological folds, and compare against a frozen matched baseline.
+Feature engineering remains open, including conditional effects and learned raw
+representations. Negative evidence does not prove the learner is never limiting.
+'''
+
+
+def notebook_document():
+    cells=[]
+    def md(text):cells.append(dict(cell_type='markdown',metadata={},source=text,id=f'audit13-{len(cells):02d}'))
+    def code(text):cells.append(dict(cell_type='code',metadata={},source=text,execution_count=None,outputs=[],id=f'audit13-{len(cells):02d}'))
+    md('# Commodity prediction · Information audit and relative-state lab\n\n**No new model fits.** Reuse three frozen controls; diagnose four feature families and build18 training-only representations. No final test, ensemble or model promotion.\n\nUse **Commodity - manual (verified)**. Stop the space after saving the results.')
+    code("from pathlib import Path\nimport importlib.util, sys\nimport pandas as pd\nimport plotly.io as pio\nfrom IPython.display import display\nROOT=Path('/home/sagemaker-user/projects/commodity-prediction-manual')\nspec=importlib.util.spec_from_file_location('information_audit_support',ROOT/'scripts/commodity_information_audit.py')\nsupport=importlib.util.module_from_spec(spec);spec.loader.exec_module(support)\npio.renderers.default='plotly_mimetype'\nprint('Worker budget:',support.LIMIT,'seconds; new model fits: 0')")
+    md('## Fixed questions\n1. What does the existing fitted correction add beyond stored target means?\n2. Which feature families does the frozen model rely on across the three periods?\n3. Do horizon-relative innovations have stable training associations?\n\nPerturbations are diagnostics, not deployable predictions. Candidate selection does not use the diagnostic validation results.')
+    code("display(pd.DataFrame(support.plan()['folds']))\ndisplay(pd.DataFrame({'existing_input':support.SIGNALS}))")
+    md('## Execute the bounded audit once\nThis worker has no forecasting fit path. Saved model/data/source hashes are verified first. It saves each completed stage. A failure is not permission to reset the budget. Global-rank IC invariance and current-row exclusion are tested.')
+    code("report=support.run(ROOT)\nprint('RESULT:',report['status'])\nprint('New fits:',report['new_training_fits'])\nprint('Saved model replays:',report['model_replays'])\nprint('Candidate decision:',report['candidate_lab']['decision'])\nfigures=support.charts(report)")
+    titles=['Previous result','Stored means versus fitted correction','Pooled evidence','Family time-alignment reliance','Replication spread','Temporal pattern','Training coverage','Training-half associations','Mathematical rank control','Innovation shortlist']
+    for i,title in enumerate(titles):
+        md('## '+title)
+        code(f'figures[{i}].show()')
+    md('## Inspect, do not promote\nA permutation drop is model reliance under changed inputs, not causality or a fitted feature removal. Global ranking preserves same-date Spearman and creates no new marginal signal. Shortlisted innovations still need a fixed-model, matched temporal ablation. No fit is automatically launched.')
+    code("display(pd.DataFrame(report['candidate_lab']['rows'])[['source','kind','training_coverage','half_1_mean_ic','half_2_mean_ic','eligible_innovation']])\nprint('Shortlist:',report['candidate_lab']['shortlist'])")
+    md('## Save evidence\nThe ZIP contains private derived features, not a public release. Download it separately as a backup. Save this notebook with Ctrl+S; stop the AWS space afterward. No automatic shutdown.')
+    code("report=support.finish(ROOT,report,figures)\nprint('RESULT:',report['status'])\nprint('REPORT:',support.report_path(ROOT))\nprint('DASHBOARD:',report['dashboard'])\nprint('PRIVATE ZIP:',report.get('private_checkpoint_bundle',{}).get('path',report.get('backup_warning')))\nprint('No candidate models fitted. Save this notebook and stop space.')")
+    return dict(cells=cells,metadata=dict(kernelspec=dict(display_name='Commodity - manual (verified)',language='python',name='commodity-manual'),
+        language_info=dict(name='python',version='3.12'),commodity_milestone='information-audit-relative-lab'),nbformat=4,nbformat_minor=5)
+
+
+def install(root=ROOT):
+    root=Path(root);session,older,u=previous(root);u.validate_source(root);read_prior(root,u)
+    nb=notebook_document()
+    files={u.safe_path(root,'scripts/commodity_information_audit.py'):Path(__file__).read_bytes(),
+        u.safe_path(root,'configs/manual_information_audit.json'):(json.dumps(plan(),sort_keys=True,indent=2)+'\n').encode(),
+        u.safe_path(root,'docs/manual_information_audit.md'):protocol_markdown().encode(),
+        u.safe_path(root,'notebooks/'+NOTEBOOK):(json.dumps(nb,indent=1)+'\n').encode()}
+    def sources(obj):return [(c['cell_type'],''.join(c['source']) if isinstance(c['source'],list) else c['source']) for c in obj['cells']]
+    for path,body in files.items():
+        if path.exists():
+            if path.suffix=='.ipynb':
+                if sources(u.read_json(path))!=sources(nb):raise Stop('Edited notebook preserved: '+str(path))
+            elif path.read_bytes()!=body:raise Stop('Existing different file preserved: '+str(path))
+    for path,body in files.items():
+        if not path.exists():u.write_new(path,body)
+    print('RESULT: INFORMATION_AUDIT_NOTEBOOK_READY\nNOTEBOOK: '+str(root/'notebooks'/NOTEBOOK)+'\nKERNEL: Commodity - manual (verified)',flush=True)
+    return dict(new_training_fits=0,files=[str(p) for p in files])
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--root',type=Path,default=ROOT)
+    parser.add_argument('--worker',action='store_true',help=argparse.SUPPRESS)
+    args=parser.parse_args();old=None
+    def expire(*_):raise Stop('90-second setup deadline; existing files preserved.')
+    try:
+        if args.worker:worker(args.root)
+        else:
+            old=signal.signal(signal.SIGALRM,expire);signal.alarm(90);install(args.root)
+    except BaseException as exc:
+        print('RESULT: STOPPED\nERROR: '+type(exc).__name__+': '+str(exc),flush=True)
+        print('Retain report/error. No unchanged retry, budget reset, or automatic space shutdown.',flush=True)
+        return 2
+    finally:
+        if old is not None:signal.alarm(0);signal.signal(signal.SIGALRM,old)
+    return 0
+
+
+if __name__=='__main__':raise SystemExit(main())
