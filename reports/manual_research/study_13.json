@@ -1,0 +1,19 @@
+{
+  "comparisons": [],
+  "completed": true,
+  "control_refits": 0,
+  "decision": "REVIEW_RELIANCE_AND_CANDIDATES_BEFORE_FITS",
+  "elapsed_seconds": 37.623,
+  "evaluation_origins": 535,
+  "evidence_path": "reports/manual_research/study_13.json",
+  "lineage": "38e222706a234b1f8b1cf05e430581ae4660b588a184e012d9dca9cdfcc11a6d",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 0,
+  "notebook": 13,
+  "plotly_figures": 10,
+  "report_sha256": "01f5cef137cc0527b4fd59b9e56b1c31e0258913d85534f3d318f4bfc3778bee",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_INFORMATION_AUDIT_READY",
+  "supervised_seconds": 42.32,
+  "title": "Saved-model information audit"
+}

@@ -188,8 +188,15 @@ def main(*, require_aws_evidence: bool = True) -> None:
                 counts["candidate_output_assignments"]
                 == counts["retained_output_assignments"] + counts["rejected_output_assignments"]
             )
-    paths = sorted((root / "notebooks").glob("*.ipynb"))
-    assert len(paths) == 3
+    # manual-publication: canonical-notebook-scope
+    # Legacy lineage evidence belongs to the three canonical notebooks; later manual
+    # research notebooks have their own tests and result ledger.
+    paths = [
+        root / "notebooks/00_data_audit.ipynb",
+        root / "notebooks/01_eda.ipynb",
+        root / "notebooks/02_feature_research.ipynb",
+    ]
+    assert all(path.is_file() for path in paths)
     figures = 0
     for path in paths:
         notebook = nbformat.read(path, as_version=4)

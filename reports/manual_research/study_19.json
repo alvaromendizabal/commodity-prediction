@@ -1,0 +1,43 @@
+{
+  "comparisons": [
+    {
+      "delta_vs_current_market": -0.003318200952792283,
+      "official_metric": 0.3873006639108483,
+      "passes_review_gate": false,
+      "variant": "error_clock"
+    },
+    {
+      "delta_vs_current_market": 0.005703243912249911,
+      "official_metric": 0.39632210877589047,
+      "passes_review_gate": true,
+      "variant": "error_bias"
+    },
+    {
+      "delta_vs_current_market": 0.005843899389005647,
+      "official_metric": 0.3964627642526462,
+      "passes_review_gate": true,
+      "variant": "error_dispersion"
+    },
+    {
+      "delta_vs_current_market": -0.013542842333203908,
+      "official_metric": 0.37707602253043665,
+      "passes_review_gate": false,
+      "variant": "error_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "cumulative_supervised_seconds": 89.233,
+  "decision": "REVIEW_ON_OTHER_PERIODS",
+  "evaluation_origins": 175,
+  "evidence_path": "reports/manual_research/study_19.json",
+  "lineage": "195a9c0254f4cc79a9a2087fccf2a656a60b22c7dccdeaada7c704ce9eee9496",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 4,
+  "notebook": 19,
+  "plotly_figures": 10,
+  "report_sha256": "8de2d6013733f51042556a8c3843c375643478d05c5982819c06e027b131cc17",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_COMPLETE",
+  "title": "As-of prior-error memory"
+}

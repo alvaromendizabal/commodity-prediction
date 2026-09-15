@@ -1,0 +1,47 @@
+{
+  "aws_api_calls": 0,
+  "decision_rule": "Review only if a numeric-only panel gains >=0.002 over BOTH saved current_market and its saved same-numeric-with-masks model; exact replay and all six numeric features admitted. Rank lab is unfit.",
+  "feature_gate": "open",
+  "final_test_evaluations": 0,
+  "fitted_rank_feature_models": 0,
+  "further_folds": false,
+  "github_writes": false,
+  "learner_policy": "Frozen histogram settings and original training preprocessing/screening. Existing models/predictions and network cube are reused, never regenerated.",
+  "mask_removal_variants": {
+    "numeric_directed": "network_directed",
+    "numeric_synchronous": "network_synchronous"
+  },
+  "max_new_fits": 2,
+  "minimum_cohort_labels": 3,
+  "network_lineage": "d13660eed28efef3b938b898f502a2b88359c2d6a774f22c4f16d66f28314ccc",
+  "new_availability_inputs_in_fits": 0,
+  "numerical_network_templates_per_variant": 6,
+  "old_control_refits": 0,
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "promotion_allowed": false,
+  "rank_coverage_candidates": 2,
+  "rank_ema_spans": [
+    21,
+    63
+  ],
+  "rank_minimum_history": [
+    14,
+    42
+  ],
+  "rank_numerical_candidates": 12,
+  "rank_origin_delay": 5,
+  "rank_reference": "Same origin across targets; h+1 release contract, max h=4.",
+  "rank_screen": "Training-only daily Spearman associations, two chronological halves; coverage>=0.70, >=40 eligible dates in each half, matching nonzero sign, exact duplicates removed. No validation outcomes used for shortlist.",
+  "rank_screen_stop_exclusive": 1164,
+  "rank_screen_warmup": 252,
+  "rank_shortlist_limit": 6,
+  "review_gain_vs_each_reference": 0.002,
+  "rule_timing": "Declared after notebook-08 results. This is a diagnostic removal experiment on a repeatedly inspected development fold, not an independent confirmatory test.",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "study": "network_mask_removal_and_causal_rank_state_lab",
+  "training_stop_exclusive": 1164,
+  "validation_start": 1169,
+  "validation_stop_exclusive": 1349,
+  "warmup_dates": 252,
+  "worker_limit_seconds": 240.0
+}

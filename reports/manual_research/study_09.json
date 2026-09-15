@@ -1,0 +1,33 @@
+{
+  "comparisons": [
+    {
+      "delta_vs_current_market": -0.025835692920397002,
+      "official_metric": 0.37754539450256447,
+      "passes_review_gate": false,
+      "variant": "numeric_synchronous"
+    },
+    {
+      "delta_vs_current_market": -0.0037270150670694613,
+      "official_metric": 0.399654072355892,
+      "passes_review_gate": false,
+      "variant": "numeric_directed"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "cumulative_supervised_seconds": 53.762,
+  "decision": "STOP_TESTED_NETWORK_VARIANTS",
+  "elapsed_seconds": 34.256,
+  "evaluation_origins": 180,
+  "evidence_path": "reports/manual_research/study_09.json",
+  "lineage": "2d7bf39364262dea9ba091a6f67899ab8c40fee9f7efd4a43c724a28ffa8807b",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 2,
+  "notebook": 9,
+  "plotly_figures": 10,
+  "report_sha256": "7003517459b1fbb71c1dfe6e131de47ce1d7c36243d324a0c33166f6cb727c48",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_DIAGNOSIS_READY",
+  "supervised_seconds": 38.815,
+  "title": "Network removal and rank laboratory"
+}

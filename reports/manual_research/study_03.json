@@ -1,0 +1,15 @@
+{
+  "comparisons": [],
+  "completed": true,
+  "decision": "not recorded",
+  "elapsed_seconds": 35.457,
+  "evaluation_origins": 0,
+  "evidence_path": "reports/manual_research/study_03.json",
+  "new_training_fits": 0,
+  "notebook": 3,
+  "plotly_figures": 5,
+  "report_sha256": "2c16ec7dca306e01b7af33c0c90169d290bb19e8456f8f1551fb93d170d8a54c",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_FEATURE_AUDIT_READY",
+  "title": "Runtime and feature readiness"
+}

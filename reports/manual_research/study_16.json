@@ -1,0 +1,51 @@
+{
+  "comparisons": [
+    {
+      "all_inputs_admitted": true,
+      "delta_vs_current_market": -0.009375072648446336,
+      "official_metric": 0.30033365056395894,
+      "passes_review_gate": false,
+      "positive_folds": 0,
+      "variant": "risk_dynamics_only"
+    },
+    {
+      "all_inputs_admitted": true,
+      "delta_vs_current_market": -0.015067008679544136,
+      "official_metric": 0.29464171453286114,
+      "passes_review_gate": false,
+      "positive_folds": 0,
+      "variant": "own_history_dynamics"
+    },
+    {
+      "all_inputs_admitted": true,
+      "delta_vs_current_market": -0.013702060778124414,
+      "official_metric": 0.29600666243428086,
+      "passes_review_gate": false,
+      "positive_folds": 0,
+      "variant": "pool_and_risk_dynamics"
+    },
+    {
+      "all_inputs_admitted": true,
+      "delta_vs_current_market": -0.006094816474201847,
+      "official_metric": 0.30361390673820343,
+      "passes_review_gate": false,
+      "positive_folds": 1,
+      "variant": "prior_dynamics_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "cumulative_supervised_seconds": 159.95928964001314,
+  "decision": "NO_STABLE_PRIOR_DYNAMICS_GAIN",
+  "evaluation_origins": 535,
+  "evidence_path": "reports/manual_research/study_16.json",
+  "lineage": "137bd06c719e531294c047eca3e2c24686757ad9c9c317ce872ab303ba2067bc",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 8,
+  "notebook": 16,
+  "plotly_figures": 10,
+  "report_sha256": "48faf0c54e4f95a6e4f6f2c7c0416edc72795a80a4b9dccb0a12c52126768364",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_COMPLETE",
+  "title": "Prior dynamics temporal replication"
+}

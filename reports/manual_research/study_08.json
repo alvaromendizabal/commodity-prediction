@@ -1,0 +1,44 @@
+{
+  "comparisons": [
+    {
+      "delta_vs_current_market": -0.030684542316791796,
+      "official_metric": 0.3726965451061697,
+      "passes_review_gate": false,
+      "variant": "network_availability"
+    },
+    {
+      "delta_vs_current_market": -0.028656122514533477,
+      "official_metric": 0.374724964908428,
+      "passes_review_gate": false,
+      "variant": "network_synchronous"
+    },
+    {
+      "delta_vs_current_market": -0.04017320655482631,
+      "official_metric": 0.36320788086813516,
+      "passes_review_gate": false,
+      "variant": "network_directed"
+    },
+    {
+      "delta_vs_current_market": -0.039489462661964514,
+      "official_metric": 0.36389162476099696,
+      "passes_review_gate": false,
+      "variant": "network_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "decision": "STOP_THIS_NETWORK_FORMULATION",
+  "elapsed_seconds": 76.833,
+  "evaluation_origins": 180,
+  "evidence_path": "reports/manual_research/study_08.json",
+  "lineage": "d13660eed28efef3b938b898f502a2b88359c2d6a774f22c4f16d66f28314ccc",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 4,
+  "notebook": 8,
+  "plotly_figures": 10,
+  "report_sha256": "3131f1a96e6a7a9f3ca90ad0de0aa7b6b3f6ee685588af327f8ead9346fa0bb1",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_CLOSE_NETWORK_READY",
+  "supervised_seconds": 81.429,
+  "title": "Cross-asset peer features"
+}

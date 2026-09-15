@@ -1,0 +1,84 @@
+{
+  "aws_api_calls": 0,
+  "coefficient_learning": "Supervised rolling feature coefficients, not zero learning. No optimizer or extra forecast-model training during feature generation.",
+  "contrasts": [
+    [
+      "response_drivers",
+      "current_market"
+    ],
+    [
+      "response_encoded",
+      "current_market"
+    ],
+    [
+      "response_joint",
+      "current_market"
+    ],
+    [
+      "response_encoded",
+      "response_drivers"
+    ],
+    [
+      "response_joint",
+      "response_drivers"
+    ]
+  ],
+  "control_refits": 0,
+  "coverage_columns_added": 0,
+  "driver_definition": "Directed log-price difference over 1 or 5 rows / (sqrt(lag) * prior 63-row spread-return population SD, min42, floor1e-6), clipped +-12. No forward fill; all intermediate prices must be valid.",
+  "driver_lags": [
+    1,
+    5
+  ],
+  "feature_gate": "open",
+  "feature_update_policy": "Each target j uses signal/outcome ORIGIN-aligned pairs (s[u,j],y[u,j]) only when u+h_j+1 <= t. Rolling coefficients update sequentially during validation; downstream forecasting model stays frozen.",
+  "final_test_evaluations": 0,
+  "fold": 1,
+  "forecast_learner": "Existing histogram model, configuration and training preprocessing unchanged; usable nonduplicate inputs admitted.",
+  "gate": "Drivers >=0.002 over saved current_market; encoded and joint >=0.002 over BOTH saved current_market and fitted drivers. Required intended inputs admitted and exact replay. Review only.",
+  "github_writes": false,
+  "hyperparameter_search": false,
+  "maximum_feature_label_origins": {
+    "1": 1526,
+    "2": 1525,
+    "3": 1524,
+    "4": 1523
+  },
+  "minimum_outcome_variance": 1e-16,
+  "minimum_pairs": [
+    42,
+    84
+  ],
+  "minimum_signal_variance": 1e-10,
+  "new_feature_labels_used": true,
+  "new_fit_limit": 3,
+  "numerical_counts": [
+    2,
+    4,
+    6
+  ],
+  "other_folds": false,
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "period_choice": "Same previously inspected middle development fold; exploratory after negative context panels, not fresh holdout or adaptive-search correction.",
+  "prior_context_lineage": "c2d8078948d72467b75dc30f692ad9cbf4f38b4ff1f74600b00e2aea63413d2c",
+  "promotion_allowed": false,
+  "response_definition": "n/(n+63*h) * Corr(s,y) * (current_s-mean_s)/sd_s, clipped +-6; all moments use the SAME finite paired observations. No outcome-mean/intercept added; no missing target zero-fill.",
+  "response_windows": [
+    63,
+    126
+  ],
+  "review_gain": 0.002,
+  "shrinkage_note": "63*h is a fixed conservative pseudo-count for noisy, overlapping-horizon estimates, not an exact effective sample-size calculation.",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "study": "horizon_delayed_conditional_response_encoding",
+  "training_stop_exclusive": 1344,
+  "validation_start": 1349,
+  "validation_stop_exclusive": 1529,
+  "variants": [
+    "response_drivers",
+    "response_encoded",
+    "response_joint"
+  ],
+  "warmup_dates": 252,
+  "worker_limit_seconds": 240.0
+}

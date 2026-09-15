@@ -55,7 +55,14 @@ def main() -> None:
         )
         return
     figures = 0
-    for path in sorted((root / "notebooks").glob("*.ipynb")):
+    # manual-publication: canonical-risk-notebook-scope
+    canonical_notebooks = [
+        root / "notebooks/00_data_audit.ipynb",
+        root / "notebooks/01_eda.ipynb",
+        root / "notebooks/02_feature_research.ipynb",
+    ]
+    assert all(path.is_file() for path in canonical_notebooks)
+    for path in canonical_notebooks:
         notebook = nbformat.read(path, as_version=4)
         assert notebook.metadata["risk_state_lineage"] == report["lineage"], path.name
         for cell in notebook.cells:

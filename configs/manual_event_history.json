@@ -1,0 +1,88 @@
+{
+  "acceptance": "Each required matched delta >=0.002; all intended inputs admitted; exact replay and timing checks. Screening gate only.",
+  "aws_api_calls": 0,
+  "candidate_templates": 24,
+  "comparators": {
+    "event_clock_only": [
+      "current_market"
+    ],
+    "event_joint": [
+      "current_market",
+      "event_clock_only",
+      "event_location",
+      "event_shape"
+    ],
+    "event_location": [
+      "current_market",
+      "event_clock_only"
+    ],
+    "event_shape": [
+      "current_market",
+      "event_clock_only"
+    ]
+  },
+  "control_refits": 0,
+  "decision_timing": "Specified after supplied round14/15 reports, before the new results.",
+  "dependency_on_round16": false,
+  "feature_gate": "open",
+  "final_test_evaluations": 0,
+  "folds": {
+    "0": [
+      1164,
+      1169,
+      1349
+    ]
+  },
+  "forms": [
+    "mean_over_risk",
+    "median_over_risk",
+    "latest_innovation_over_risk",
+    "positive_balance",
+    "tail_asymmetry",
+    "semivariance_balance",
+    "mean_release_age",
+    "longest_release_gap"
+  ],
+  "gate_delta": 0.002,
+  "github_writes": false,
+  "learner": "Same histogram, target normalization, and preprocessing settings as saved current_market; no parameter tuning.",
+  "memory_rss_limit_bytes": 15032385536,
+  "new_feature_templates": 24,
+  "new_fit_limit": 4,
+  "new_packages": 0,
+  "no_winner_combination": true,
+  "nonmissing_zero_outcomes": "Valid observations, included. Sentinel -999999 and nonfinite entries excluded.",
+  "observation_clock": "Mean release-row age/K and largest observed release gap/K (including current staleness); log1p and clip [0,12]. Row units, not real calendar time.",
+  "panel_selection": "Fixed groups. Fit-time missingness/constants/exact-duplicate screens use training only; no validation replacement of features.",
+  "panel_sizes": [
+    6,
+    15,
+    15,
+    24
+  ],
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "promotion_allowed": false,
+  "response_release_delay": "per-target horizon+1",
+  "risk_scale": "Existing causal released_priors__risk_126 at prediction origin; >1e-12 required.",
+  "round": 17,
+  "same_original_control": true,
+  "seed": 42,
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "statistics_clock": "Last K actually observed, released outcomes, not last K calendar rows.",
+  "study": "event_history",
+  "threads": 4,
+  "uncertainty": "Paired 10/20/40-origin blocks; model-conditional, not full adaptive-search correction.",
+  "variants": [
+    "event_clock_only",
+    "event_location",
+    "event_shape",
+    "event_joint"
+  ],
+  "warmup_dates": 252,
+  "windows": [
+    8,
+    21,
+    63
+  ],
+  "worker_limit_seconds": 240.0
+}

@@ -1,0 +1,114 @@
+{
+  "audited_parent": "38e222706a234b1f8b1cf05e430581ae4660b588a184e012d9dca9cdfcc11a6d",
+  "automatic_promotion": false,
+  "aws_api_calls": 0,
+  "candidate_templates": 24,
+  "change_rows": 5,
+  "contrasts": [
+    [
+      "risk_dynamics_only",
+      "current_market"
+    ],
+    [
+      "own_history_dynamics",
+      "current_market"
+    ],
+    [
+      "pool_and_risk_dynamics",
+      "current_market"
+    ],
+    [
+      "prior_dynamics_joint",
+      "current_market"
+    ],
+    [
+      "pool_and_risk_dynamics",
+      "risk_dynamics_only"
+    ],
+    [
+      "prior_dynamics_joint",
+      "own_history_dynamics"
+    ],
+    [
+      "prior_dynamics_joint",
+      "pool_and_risk_dynamics"
+    ],
+    [
+      "own_history_dynamics",
+      "risk_dynamics_only"
+    ]
+  ],
+  "control_refits": 0,
+  "declaration_timing": "Both rounds frozen together after notebook13, before either new result. Previously inspected middle development period; no test-set claim.",
+  "feature_gate": "open",
+  "final_test_evaluations": 0,
+  "fold": 1,
+  "forms": [
+    "level",
+    "change_5",
+    "surprise_63",
+    "horizon_rank"
+  ],
+  "github_writes": false,
+  "inherited_released_label_inputs": true,
+  "innovation_window": 63,
+  "learner": "Unchanged parent histogram settings and preprocessing. Family inputs appended to original current_market, never to the other round.",
+  "magnitude_clip": 12.0,
+  "mechanisms": [
+    "fast_minus_medium",
+    "medium_minus_slow",
+    "median_minus_mean",
+    "own_minus_market_pool",
+    "own_minus_cross_horizon_pool",
+    "short_long_risk_ratio"
+  ],
+  "min_history": 42,
+  "new_direct_label_access_in_feature_builder": false,
+  "new_fit_limit": 4,
+  "new_representation_templates": 24,
+  "novelty": "Counts denote representations, not independent new information. Exact duplicate audit covers active baseline, notebook-13 candidates, and this round; not every abandoned historical array.",
+  "other_folds": false,
+  "other_round_dependency": false,
+  "panel_sizes": [
+    4,
+    12,
+    12,
+    24
+  ],
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "ratios": "Finite positive risk denominator >1e-12. risk contrast is log(risk63/risk252). No filled labels or fabricated effective sample size.",
+  "reference_delay": 1,
+  "release_contract": "Existing horizon+1 parent priors; do not weaken.",
+  "review_gain": 0.002,
+  "round": 15,
+  "rule": "Risk-only and own-history: +0.002 over saved control. Pool/risk: +0.002 over saved AND risk-only. Joint: +0.002 over saved AND both 12-column groups. All intended inputs admitted; exact replay. Review only.",
+  "saved_same_fold_control": 0.16704165319061334,
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "sources": [
+    "released_priors__location_63",
+    "released_priors__location_126",
+    "released_priors__location_252",
+    "released_priors__median_63",
+    "released_priors__risk_63",
+    "released_priors__risk_126",
+    "released_priors__risk_252",
+    "released_priors__market_pair_pool",
+    "released_priors__canonical_cross_horizon_pool"
+  ],
+  "study": "prior_dynamics",
+  "training_diagnostic_split": 798,
+  "training_diagnostic_start": 252,
+  "training_screen": "Check finite coverage, constants and exact duplicates with parent fit-time preprocessing; audit two-half IC and redundancy on training only. Panels are fixed: IC signs do not select validation-driven replacements.",
+  "training_stop_exclusive": 1344,
+  "transforms_update": "Trailing input statistics may update sequentially; existing priors may use only already-released earlier outcomes. Forecaster stays frozen during validation.",
+  "uncertainty": "Within-round conditional 10/20/40-date block intervals; not independent confirmation or full adaptive-search correction.",
+  "validation_start": 1349,
+  "validation_stop_exclusive": 1529,
+  "variants": [
+    "risk_dynamics_only",
+    "own_history_dynamics",
+    "pool_and_risk_dynamics",
+    "prior_dynamics_joint"
+  ],
+  "worker_limit_seconds": 240.0
+}

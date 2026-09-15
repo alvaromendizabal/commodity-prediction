@@ -1,0 +1,38 @@
+{
+  "comparisons": [
+    {
+      "delta_vs_current_market": -0.012803698675995512,
+      "official_metric": 0.39057738874696596,
+      "passes_review_gate": false,
+      "variant": "rank_global"
+    },
+    {
+      "delta_vs_current_market": -0.004307620043498495,
+      "official_metric": 0.399073467379463,
+      "passes_review_gate": false,
+      "variant": "rank_horizon_relative"
+    },
+    {
+      "delta_vs_current_market": -0.014814395676247483,
+      "official_metric": 0.388566691746714,
+      "passes_review_gate": false,
+      "variant": "rank_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "decision": "STOP_TESTED_RANK_STATE_PANELS",
+  "elapsed_seconds": 47.187,
+  "evaluation_origins": 180,
+  "evidence_path": "reports/manual_research/study_10.json",
+  "lineage": "736913e32506fcd3f9379d5b1d166e611a819848f0699ada7c50f71d8c0ecbbd",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 3,
+  "notebook": 10,
+  "plotly_figures": 10,
+  "report_sha256": "9eae64662af41f6fb9409cd96faf2414ca6ae219f75e2d46556263e5dc356fec",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_RANK_STATE_READY",
+  "supervised_seconds": 52.741,
+  "title": "Released historical-rank states"
+}

@@ -1,0 +1,63 @@
+{
+  "candidate_lineage": "aefcc9201825211d64780701062212ae2b0ab1acf6ed17d84b0dad5821d01b98",
+  "continue_threshold_vs_each_control": 0.002,
+  "decision_rule": "For a numeric group to earn review, gain >=0.002 over BOTH saved current_market and fitted support-only controls, exact replays and nonzero admitted numeric candidates.",
+  "feature_gate": "open",
+  "final_test_evaluations": 0,
+  "further_folds_in_this_helper": false,
+  "max_new_fits": 4,
+  "model_policy": "Frozen histogram settings and preprocessing; replay current_market, never refit it.",
+  "new_support_indicators": 2,
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "promotion_allowed": false,
+  "rule_timing": "Declared after reviewing training-only session screen and negative normalization validation; no session fitted validation result observed.",
+  "screening": "Fixed 11-name training shortlist, same model screening; exact duplicate audit against 87 current-market templates and within candidates. Not an exhaustive historical catalog overlap audit.",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "study": "session_pair_training_shortlist_first_fold",
+  "training_selected_numeric_candidates": 11,
+  "training_stop_exclusive": 1164,
+  "validation_start": 1169,
+  "validation_stop_exclusive": 1349,
+  "variants": {
+    "session_intraday": [
+      "session_pair__all_legs_applicable",
+      "session_pair__paired_applicable",
+      "session_pair__intraday_shock_z_63",
+      "session_pair__intraday_shock_z_21",
+      "session_pair__intraday_shock_z_126",
+      "session_pair__intraday_drift_z_63",
+      "session_pair__intraday_log_risk_ratio_63",
+      "session_pair__intraday_drift_z_21"
+    ],
+    "session_joint": [
+      "session_pair__all_legs_applicable",
+      "session_pair__paired_applicable",
+      "session_pair__intraday_shock_z_63",
+      "session_pair__intraday_shock_z_21",
+      "session_pair__intraday_shock_z_126",
+      "session_pair__overnight_drift_z_63",
+      "session_pair__overnight_drift_z_126",
+      "session_pair__intraday_drift_z_63",
+      "session_pair__intraday_log_risk_ratio_63",
+      "session_pair__overnight_risk_share_21",
+      "session_pair__overnight_log_risk_ratio_21",
+      "session_pair__intraday_drift_z_21",
+      "session_pair__overnight_covariance_adjustment_21"
+    ],
+    "session_overnight_risk": [
+      "session_pair__all_legs_applicable",
+      "session_pair__paired_applicable",
+      "session_pair__overnight_drift_z_63",
+      "session_pair__overnight_drift_z_126",
+      "session_pair__overnight_risk_share_21",
+      "session_pair__overnight_log_risk_ratio_21",
+      "session_pair__overnight_covariance_adjustment_21"
+    ],
+    "session_support_only": [
+      "session_pair__all_legs_applicable",
+      "session_pair__paired_applicable"
+    ]
+  },
+  "warmup_dates": 252,
+  "worker_cumulative_limit_seconds": 240.0
+}

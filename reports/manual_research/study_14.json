@@ -1,0 +1,48 @@
+{
+  "comparisons": [
+    {
+      "all_intended_inputs_admitted": true,
+      "delta_vs_current_market": -0.00575028361528096,
+      "official_metric": 0.16129136957533238,
+      "passes_review_gate": false,
+      "variant": "audit_shortlist"
+    },
+    {
+      "all_intended_inputs_admitted": true,
+      "delta_vs_current_market": -0.01985839080154822,
+      "official_metric": 0.14718326238906512,
+      "passes_review_gate": false,
+      "variant": "ordinary_innovations"
+    },
+    {
+      "all_intended_inputs_admitted": true,
+      "delta_vs_current_market": -0.020930098347728354,
+      "official_metric": 0.146111554842885,
+      "passes_review_gate": false,
+      "variant": "robust_innovations"
+    },
+    {
+      "all_intended_inputs_admitted": true,
+      "delta_vs_current_market": -0.041639788878576084,
+      "official_metric": 0.12540186431203726,
+      "passes_review_gate": false,
+      "variant": "innovation_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "decision": "STOP_TESTED_PANELS",
+  "elapsed_seconds": 93.427,
+  "evaluation_origins": 180,
+  "evidence_path": "reports/manual_research/study_14.json",
+  "lineage": "77823f968c492ad31e3d0b8973360be8a1ccf2dff951debe7a208c8e03128c60",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 4,
+  "notebook": 14,
+  "plotly_figures": 10,
+  "report_sha256": "8c3ef8a7a0989dab4cab6253c4ad9e8f141201fe3710e03b70abc3e6accc1fd6",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_FEATURE_ROUND_READY",
+  "supervised_seconds": 98.152,
+  "title": "Ordinary and robust innovations"
+}

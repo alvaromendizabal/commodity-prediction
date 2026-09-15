@@ -1,0 +1,184 @@
+{
+  "files": [
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_close_network.py.txt",
+      "original_sha256": "3b0c9b77b5e44962bd9c0068c7f958a7418f826943f5c025aeff2261d4cdf8d4",
+      "path": "scripts/commodity_close_network.py",
+      "published_sha256": "7a672f058aab1a876fa7885a25e7275990fa99d1001b5519bf71f96d6bd5fac8",
+      "targeted_changes": [
+        "Name intentionally unused iteration value (B007)."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_feature_diagnosis.py.txt",
+      "original_sha256": "a8991b0e9b5517cf5c6c19659084c999aec3cfb7addb28252470b738df5ef80b",
+      "path": "scripts/commodity_feature_diagnosis.py",
+      "published_sha256": "982a778951b11ce8ac3e488851dca67fd50eb14791237e6db2fc5e8253f7d4e3",
+      "targeted_changes": [
+        "Name intentionally unused iteration value (B007)."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_feature_round.py.txt",
+      "original_sha256": "fc27479ee4821dec7e4f965e1d32c885f7cad0b157b6e1bb3b1cd7ac9822ea73",
+      "path": "scripts/commodity_feature_round.py",
+      "published_sha256": "d0a4a4b4e05dedf8b152befdf0924196ffd5438e63a486bcd4a8a41bffca6813",
+      "targeted_changes": [
+        "Retain original cause in failure traceback (B904).",
+        "Explicit original zip truncation semantics (B905).",
+        "Unambiguous OHLC variable, unchanged values (E741).",
+        "Unambiguous OHLC variable, unchanged values (E741).",
+        "Unambiguous OHLC variable, unchanged values (E741).",
+        "Unambiguous OHLC variable, unchanged values (E741).",
+        "Explicit original zip truncation semantics (B905).",
+        "Explicit original zip truncation semantics (B905)."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_first_fold.py.txt",
+      "original_sha256": "517c76064e2c70469843b007c446caf7cc8678440d61c095f42feb6faf62b53d",
+      "path": "scripts/commodity_first_fold.py",
+      "published_sha256": "0114db8c6a5af016ad1a585473033314be7c0d885c849f23c6c67b52a8ee07d8",
+      "targeted_changes": [
+        "Retain original cause in failure traceback (B904).",
+        "Explicit original zip truncation semantics (B905)."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_information_audit.py.txt",
+      "original_sha256": "e86f608be525d41c667d261cc0c9fa04a51f08e17b2a58d0a81224a9771d27df",
+      "path": "scripts/commodity_information_audit.py",
+      "published_sha256": "9e70fedc9812e4fcfb57b04a3493960e5909c938b4864f25aaaa03fea93c2c45",
+      "targeted_changes": []
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_next_research.py.txt",
+      "original_sha256": "d923cfdbe726d0c068612f5c5066beec4fe631b9919e1425e08de114bcf4dc9d",
+      "path": "scripts/commodity_next_research.py",
+      "published_sha256": "f05707826203dc35154c874d45438587fe3e0382af07726045e5d9c2f8b19bd4",
+      "targeted_changes": [
+        "Retain original cause in failure traceback (B904).",
+        "Name caught exception for explicit chaining.",
+        "Bind per-window local rolling helpers explicitly (B023).",
+        "Bind per-window local rolling helpers explicitly (B023)."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_prior_research.py.txt",
+      "original_sha256": "eb3e968efebf49c036bd42f1610efc33444a7706059030cb18de5773285d0cc8",
+      "path": "scripts/commodity_prior_research.py",
+      "published_sha256": "4ce2b2abe99a7a8697c3ee67bf4ffe4f1946bbb2fca3795cb2aefc68faef62f6",
+      "targeted_changes": [
+        "Retain original cause in failure traceback (B904).",
+        "Retain original cause in failure traceback (B904).",
+        "Name caught exception for explicit chaining.",
+        "Retain call/indexing while naming unused binding (F841)."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_public_update.py.txt",
+      "original_sha256": "3ee316a503f19a8b9e04608f4c8042f6b32840e264beed8bb9681e02948bca7a",
+      "path": "scripts/commodity_public_update.py",
+      "published_sha256": "ac91831943dfc8b2598b4550e2e24adfa4564782e0494af1104ffabb9823432c",
+      "targeted_changes": [
+        "Retain original cause in failure traceback (B904).",
+        "Explicit original zip truncation semantics (B905).",
+        "Replace the reviewed stdout/stderr PIPE pair with capture_output=True (UP022)."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_publication.py.txt",
+      "original_sha256": "41f41e98fc81de6e0897970537b3751fc40a5dfe32408ccf8661845cdaafe21f",
+      "path": "scripts/commodity_publication.py",
+      "published_sha256": "a4c2f9a3047635181d5ef86e21dede5dc7c4277aa468c8a0ad5156be2a13803e",
+      "targeted_changes": []
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_rank_state_ablation.py.txt",
+      "original_sha256": "bce98b5326fad9fd1e1f04d2536629b1641d8428443e09de4ac641ea87a40762",
+      "path": "scripts/commodity_rank_state_ablation.py",
+      "published_sha256": "5e062769c31d0f5a75948272cf5617feacc84a6c580533347487a20d4e2626c7",
+      "targeted_changes": []
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_research_release.py.txt",
+      "original_sha256": "cc8d68e69aa42fedd95a2002f238d1ff9437ce80dbbed2f4b8ca71e1d08f7827",
+      "path": "scripts/commodity_research_release.py",
+      "published_sha256": "bf5aa4386ded43d6e64490a002d81eb70d206b90f9c4760107df2c1f7cdcab38",
+      "targeted_changes": [
+        "Retain original cause in failure traceback (B904).",
+        "Retain original cause in failure traceback (B904).",
+        "Name caught exception for explicit chaining."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_response_encoding.py.txt",
+      "original_sha256": "51db0fcdc93dc75e671c269ade763797f5c555a10ea7d5b0c22d9fd270f7b496",
+      "path": "scripts/commodity_response_encoding.py",
+      "published_sha256": "ab8f59fde16d509db485af2155f3fb0a693ad6e9a1b953704c16b3366620fca7",
+      "targeted_changes": [
+        "Name intentionally unused iteration value (B007)."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_session_ablation.py.txt",
+      "original_sha256": "7efef4574d55bd9aad8da8ecf4e7f4ba7cc54907412dcfb4a754100d9e34f88f",
+      "path": "scripts/commodity_session_ablation.py",
+      "published_sha256": "061790976e1ca027fc35592a3d524cbc35ef91821edfc507f3d163c4e72e4ed9",
+      "targeted_changes": []
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_target_context.py.txt",
+      "original_sha256": "4c9f2c11f76fe6f9f31516ae078610879fb50bad4b4a55ae0ce3a9ca5bfbd2c3",
+      "path": "scripts/commodity_target_context.py",
+      "published_sha256": "377bebdc4364e6f57c5651841cfe9dae5b1f956b5cd5fbe8257e6e18e5e061ce",
+      "targeted_changes": []
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/scripts/commodity_two_feature_rounds.py.txt",
+      "original_sha256": "a4284a2a80e42568899704e694b98ef351181be7aa33b3af86135a857a0852aa",
+      "path": "scripts/commodity_two_feature_rounds.py",
+      "published_sha256": "e7c1644f6cb7d5ecf1971597c82a0a9f1aabcb5c6088e480e3096041ce6bcd7d",
+      "targeted_changes": [
+        "Retain call/indexing while naming unused binding (F841)."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/tests/test_manual_next_research.py.txt",
+      "original_sha256": "a84438ce5508c56de2106291de70184835e6f83032ed26b5a1124cbd098e8430",
+      "path": "tests/test_manual_next_research.py",
+      "published_sha256": "e98751182a15c2f7e5fcf414c44f6e8a565045dafdf1e542f969b70649ecafdd",
+      "targeted_changes": [
+        "Explicit dynamic import after local path bootstrap (E402).",
+        "Standard-library dynamic import support."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/tests/test_manual_prior_research.py.txt",
+      "original_sha256": "d5d0475ebac01f3104ac2bbf34dd75fadc47ebced0c086aab545ea9fccabccad",
+      "path": "tests/test_manual_prior_research.py",
+      "published_sha256": "6ac452a7b5da1c75a47639e6581eac56fe2aa283f6363cfd23683685f0067c37",
+      "targeted_changes": [
+        "Named local function instead of lambda binding (E731).",
+        "Explicit dynamic import after local path bootstrap (E402).",
+        "Standard-library dynamic import support."
+      ]
+    },
+    {
+      "archive_path": "docs/history/manual_execution_sources/tests/test_manual_publication.py.txt",
+      "original_sha256": "83f3fbceef4214e8788107655cb826e55bb77199c2605645d1f4ab9c85f1e53b",
+      "path": "tests/test_manual_publication.py",
+      "published_sha256": "221c2e25139c3943d348aa4dbcd835d4b0a55d6c6667163f77a665e3cce42757",
+      "targeted_changes": [
+        "Explicit dynamic import after local path bootstrap (E402).",
+        "Standard-library dynamic import support."
+      ]
+    }
+  ],
+  "historical_experiment_reexecuted": false,
+  "model_parameters_changed": false,
+  "original_source_pin": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "publication": "manual-research-20260914",
+  "scope": "Publication corrections only; original execution-source archives are unchanged.",
+  "source_manifest_sha256": "25944bd1af23693f771c7eeeb2cb81723f92764ffabf0246eb125b5bd5a839ea"
+}

@@ -1,0 +1,59 @@
+{
+  "acceptance": "Review only if joint beats baseline pooled and on the 355 non-selection origins, improves at least 2 of 3 folds, and beats both half-panels pooled. All intended inputs admitted. No model promotion.",
+  "aws_api_calls": 0,
+  "candidate_templates": 24,
+  "control_refits": 0,
+  "decision_timing": "Specified after supplied round14/15 reports, before the new results.",
+  "feature_contract": "Exactly round15 formulas and names; inherited h+1 prior availability. Full prefix through1528 must equal the saved round15 cube.",
+  "feature_gate": "open",
+  "final_test_evaluations": 0,
+  "folds": {
+    "0": [
+      1164,
+      1169,
+      1349
+    ],
+    "2": [
+      1524,
+      1529,
+      1704
+    ]
+  },
+  "github_writes": false,
+  "independently_untouched_holdout": false,
+  "learner": "Same histogram, target normalization, and preprocessing settings as saved current_market; no parameter tuning.",
+  "memory_rss_limit_bytes": 15032385536,
+  "new_feature_templates": 0,
+  "new_fit_limit": 8,
+  "new_packages": 0,
+  "objective": "Replicate the identical four prior-dynamics panels on first/last development folds; replay the middle fold.",
+  "old_middle_fold_refits": 0,
+  "panel_selection": "Fixed groups. Fit-time missingness/constants/exact-duplicate screens use training only; no validation replacement of features.",
+  "panel_sizes": [
+    4,
+    12,
+    12,
+    24
+  ],
+  "parent_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "primary_candidate": "prior_dynamics_joint",
+  "promotion_allowed": false,
+  "reused_feature_templates": 24,
+  "reused_middle_fold_models": 4,
+  "round": 16,
+  "same_original_control": true,
+  "second_round_results_used": false,
+  "seed": 42,
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "study": "prior_replication",
+  "threads": 4,
+  "uncertainty": "Paired 10/20/40-origin blocks; model-conditional, not full adaptive-search correction.",
+  "variants": [
+    "risk_dynamics_only",
+    "own_history_dynamics",
+    "pool_and_risk_dynamics",
+    "prior_dynamics_joint"
+  ],
+  "warmup_dates": 252,
+  "worker_limit_seconds": 360.0
+}

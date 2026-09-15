@@ -1,0 +1,1659 @@
+#!/usr/bin/env python3
+"""Install notebooks 05/06; run only explicit bounded manual research actions.
+
+No network, dependency install, AWS API, Git write, final-test score or automatic
+shutdown. Notebook 05 invokes the unchanged normalization runner with saved fold-0
+fits; notebook 06 creates new session-specific candidates on training data only.
+"""
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import fcntl
+import gc
+import hashlib
+import html
+import importlib.util
+import json
+import math
+import os
+import queue
+import signal
+import subprocess
+import sys
+import threading
+import time
+import zipfile
+from datetime import UTC, datetime
+from pathlib import Path
+
+ROOT = Path("/home/sagemaker-user/projects/commodity-prediction-manual")
+SHA = "d142a4cb57a5c4b2880f9341619e13a735b1cddc"
+CHILD = "0bec922e64f09f4d051e2ded7b8d9e91b2e6a06e3f7e80af8ac1f4f044df8027"
+PARENT = "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605"
+FEATURE = "52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba"
+OLD_HELPER_HASH = "517c76064e2c70469843b007c446caf7cc8678440d61c095f42feb6faf62b53d"
+VARIANTS = ("normalized_price", "volume_confirmation", "normalized_joint")
+FOLDS = ((0, 1164, 1169, 1349), (1, 1344, 1349, 1529), (2, 1524, 1529, 1704))
+CONTROL_SCORES = (0.40338108742296147, 0.16704165319061334, 0.39061886486364056)
+CONTROL_POOLED = 0.3097087232124053
+OBSERVED_USED = 71.49183491099939
+LIMIT = 300.0
+TRAIN_ROWS = 1164
+WINDOWS = (21, 63, 126)
+LAB_LIMIT = 90.0
+LAB_COLUMNS = 41
+TERMINAL = {"VALIDATION_REVIEW_READY", "NOTEBOOK_AND_VALIDATION_REVIEW_READY"}
+# Anchored to the returned first-fold report. Never silently replace these seals.
+FIRST_PINS = {
+    "normalized_joint": {
+        "manifest.json": "9e4f5dc1eba0a2d5c44b47d4d86aec001fa18be30ba03888b7607ec21cfb92e7",
+        "model.joblib": "b28f46f88512b74aaa620bfefc8ac612f93942769fca45926fe394c75abeda85",
+        "predictions.parquet": "5fd2540b607b190ad6ae0e4f5e1e567f978c72c0e6b8fcb8a5fce702023cfbe4",
+        "result.json": "7fe455666dd48ba93aac6b19813e54dab4e9be5aa588b2d8a8bf1139a4e1605c",
+    },
+    "normalized_price": {
+        "manifest.json": "ebe542667063330282301a895267f9498fbbbcc4572951907f33bf2d57681999",
+        "model.joblib": "99b896e0d89b8b9961fbd42eb815ffd45e458ca1e87a56077de89e0aee711488",
+        "predictions.parquet": "e136a114785c8a3270d5c24e625cd13265ffb512956a71f8ae13fef082791bb5",
+        "result.json": "f1b458f8e36c57de7743601217652946e904c4a833a63cc5b66ef6d3f711d09f",
+    },
+    "volume_confirmation": {
+        "manifest.json": "c8aeaf74cb1995fd16f0bdce8f787a0873b38c012b9e7ef0e30af5516f20accb",
+        "model.joblib": "cf188da4cd524cede2484d322e48c307318f58b958ea556f6e39e8f2a2336517",
+        "predictions.parquet": "59b315ef93b0fa1e18d1c09cc726da1e4699f877add7ed35ff1e91b53dc415c4",
+        "result.json": "c5ea0e9047ef598808ea3491e126bf92a86c5aff51be3b54f102ad9b991c3b25",
+    },
+}
+
+
+class Stop(RuntimeError):
+    """Stop safely with evidence; never retry a diagnosed failure unchanged."""
+
+
+def utc() -> str:
+    return datetime.now(UTC).isoformat()
+
+
+def event(stage: str, **values) -> None:
+    print(json.dumps({"utc": utc(), "stage": stage, **values}, allow_nan=False), flush=True)
+
+
+def support(root: Path):
+    path = root / "scripts/commodity_first_fold.py"
+    if path.is_symlink() or not path.is_file():
+        raise Stop("The completed notebook-04 support file is missing; do not rerun old studies.")
+    if hashlib.sha256(path.read_bytes()).hexdigest() != OLD_HELPER_HASH:
+        raise Stop(
+            "Notebook-04 helper changed; keep it and return the error rather than overwriting."
+        )
+    spec = importlib.util.spec_from_file_location("commodity_previous_manual_support", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def outdir(root: Path, lab: bool = False) -> Path:
+    u = support(root)
+    return u.safe_path(root, "logs/manual_session_features" if lab else "logs/manual_validation")
+
+
+def result_path(root: Path, lab: bool = False) -> Path:
+    return outdir(root, lab) / (
+        "commodity_session_features_report.json" if lab else "commodity_validation_report.json"
+    )
+
+
+def metric(values, expected: int | None = None) -> float:
+    import numpy as np
+
+    x = np.asarray(values, dtype=float)
+    if x.ndim != 1 or len(x) < 2 or (expected is not None and len(x) != expected):
+        raise Stop("Daily correlations have the wrong shape/dates.")
+    if not np.isfinite(x).all() or np.any(np.abs(x) > 1 + 1e-12) or x.std(ddof=0) <= 1e-12:
+        raise Stop("Invalid or undefined daily-correlation metric.")
+    return float(x.mean() / x.std(ddof=0))
+
+
+def close(a, b) -> bool:
+    return math.isclose(float(a), float(b), rel_tol=0, abs_tol=1e-12)
+
+
+def verify_review(root: Path, u) -> dict:
+    r = u.read_json(root / "logs/manual_first_fold/commodity_first_fold_report.json")
+    if (
+        r.get("status") not in u.TERMINAL
+        or r.get("source_commit") != SHA
+        or r.get("lineage") != CHILD
+    ):
+        raise Stop("Completed first-fold report or source lineage is missing.")
+    u.validate_probe(r["probe"], r["control"])
+    if not r.get("gate_passed") or r.get("checkpoint_hashes") != FIRST_PINS:
+        raise Stop("The reviewed first-fold continuation gate/seals do not match.")
+    if r.get("control_refits") != 0 or r.get("final_test_evaluations") != 0:
+        raise Stop("Control/final-evaluation contract changed.")
+    for name in VARIANTS:
+        u.verify_stage(root / "artifacts" / CHILD / "fold_0" / name, CHILD, FIRST_PINS[name])
+    if not close(r["control"]["official_metric"], CONTROL_SCORES[0]):
+        raise Stop("First-fold reference changed.")
+    return r
+
+
+def stage_inventory(root: Path, u) -> dict:
+    """No unsealed or damaged stage can quietly become a refit."""
+    found = {}
+    base = root / "artifacts" / CHILD
+    for fold, _, _, _ in FOLDS:
+        for name in VARIANTS:
+            key = f"fold_{fold}/{name}"
+            p = u.safe_path(base, key)
+            if p.exists():
+                if not p.is_dir():
+                    raise Stop("A checkpoint path is not a directory: " + key)
+                if not (p / "manifest.json").is_file():
+                    raise Stop("Unsealed stage retained for diagnosis: " + key)
+                found[key] = u.verify_stage(p, CHILD, FIRST_PINS[name] if fold == 0 else None)
+                if set(found[key]) != {
+                    "manifest.json",
+                    "model.joblib",
+                    "predictions.parquet",
+                    "result.json",
+                }:
+                    raise Stop("Unexpected fitted-stage files: " + key)
+    if not all("fold_0/" + name in found for name in VARIANTS):
+        raise Stop("All three completed first-fold fits are required; they will not be retrained.")
+    return found
+
+
+def guarded_budget(root: Path, u) -> float:
+    value = u.budget_used(root)
+    if value + 1e-6 < OBSERVED_USED:
+        raise Stop("Recorded runtime budget decreased below the reviewed value. Do not reset it.")
+    return value
+
+
+def replay_controls(root: Path, u, parent: dict) -> dict:
+    import joblib
+    import pandas as pd
+    from threadpoolctl import threadpool_limits
+
+    from commodity_prediction.domain.market_path.features import build_panel
+    from commodity_prediction.domain.market_path.run import load_inputs
+    from commodity_prediction.studies.evaluation import evaluate
+
+    records, daily = [], []
+    with threadpool_limits(limits=4):
+        x, y, pairs, original, folds = load_inputs(root, FEATURE)
+        if (
+            tuple((f.number, f.train_stop, f.validation_start, f.validation_stop) for f in folds)
+            != FOLDS
+        ):
+            raise Stop("The three chronological fold boundaries changed.")
+        base, _ = build_panel(original, x, pairs, "current_market")
+        for fold in folds:
+            event("replay_owned_control", fold=fold.number, new_fits=0)
+            p = root / "artifacts" / PARENT / f"fold_{fold.number}/current_market"
+            saved = pd.read_parquet(p / "predictions.parquet")
+            model = joblib.load(p / "model.joblib")
+            pred = model.predict(base, fold.validation_start, fold.validation_stop)
+            err = u.exact_predictions(saved, pred)
+            if saved.index.tolist() != list(range(fold.validation_start, fold.validation_stop)):
+                raise Stop("Control prediction index changed.")
+            score = evaluate(y.loc[saved.index], saved, pairs)
+            if not close(score["official_metric"], CONTROL_SCORES[fold.number]):
+                raise Stop("Control score cannot be reproduced on its original dates.")
+            records.append(
+                {
+                    "fold": fold.number,
+                    "official_metric": score["official_metric"],
+                    "maximum_prediction_replay_error": err,
+                    "daily_rank_correlations": score["daily_rank_correlations"],
+                }
+            )
+            daily.extend(score["daily_rank_correlations"])
+            del model, pred, saved
+        if not close(metric(daily, 535), CONTROL_POOLED) or not close(
+            parent["summaries"]["current_market"]["official_metric"], CONTROL_POOLED
+        ):
+            raise Stop("Pooled control score disagrees with preserved evidence.")
+        del x, y, pairs, original, base
+    gc.collect()
+    return {
+        "folds": records,
+        "official_metric": metric(daily, 535),
+        "daily_rank_correlations": daily,
+        "maximum_prediction_replay_error": 0.0,
+        "control_refits": 0,
+    }
+
+
+def validate_full(study: dict, control: dict, first: dict) -> tuple[list, list]:
+    import numpy as np
+
+    if (
+        study.get("status") != "completed"
+        or study.get("lineage") != CHILD
+        or study.get("parent_lineage") != PARENT
+        or study.get("validation_dates") != 535
+        or study.get("model_checkpoints") != 9
+        or study.get("holdout_evaluated") is not False
+        or study.get("feature_gate") != "open"
+        or study.get("promotion_allowed") is not False
+        or study.get("maximum_prediction_replay_error") != 0.0
+    ):
+        raise Stop(
+            "Full study does not satisfy the declared identity, fit-count, replay or holdout contract."
+        )
+    if set(study.get("summaries", {})) != {*VARIANTS, "current_market", "historical_mean"}:
+        raise Stop("Unexpected or missing study summaries.")
+    if len(study.get("results", [])) != 9:
+        raise Stop("Exactly nine result rows must exist, including the three reused rows.")
+    if not close(metric(control["daily_rank_correlations"], 535), control["official_metric"]):
+        raise Stop("Control daily metric does not match its stated score.")
+    np.testing.assert_array_equal(
+        study["summaries"]["current_market"]["daily_rank_correlations"],
+        control["daily_rank_correlations"],
+    )
+    seen, screening = set(), []
+    for row in study["results"]:
+        f, n = row["fold"], row["variant"]
+        if n not in VARIANTS or f not in (0, 1, 2) or (f, n) in seen:
+            raise Stop("Duplicate or invalid experiment row.")
+        seen.add((f, n))
+        expected = FOLDS[f]
+        if (row["train_stop"], row["validation_start"], row["validation_stop"]) != expected[1:]:
+            raise Stop("Unreviewed result-date boundary.")
+        if row["metrics"].get("date_ids") != list(range(expected[2], expected[3])):
+            raise Stop("Result does not cover the exact fold dates.")
+        value = metric(row["metrics"]["daily_rank_correlations"], expected[3] - expected[2])
+        if not close(value, row["metrics"]["official_metric"]):
+            raise Stop("Per-fold daily metric mismatch.")
+        if f == 0:
+            original = next(v for v in first["probe"]["results"] if v["variant"] == n)
+            if row != original:
+                raise Stop("First-fold result changed during continuation.")
+        sel = row["selection"]
+        if sel["candidate_templates"] != sel["retained_templates"] + sel["rejected_templates"]:
+            raise Stop("Screening accounting does not balance.")
+        added = [v for v in sel["selected_names"] if v.startswith("market_normalization__")]
+        if len(added) != row["added_retained_templates"] or not added:
+            raise Stop("No correctly counted new feature was admitted.")
+        if any(
+            k in sel["rejection_reasons"] for k in ("feature_budget", "correlated", "unstable_sign")
+        ):
+            raise Stop("Unreviewed feature exclusions.")
+        screening.append(
+            {
+                "variant": n,
+                "fold": f,
+                "candidate": sel["candidate_templates"],
+                "retained": sel["retained_templates"],
+                "rejected": sel["rejected_templates"],
+                "new_retained": len(added),
+                "selected_new_names": added,
+            }
+        )
+    rows = []
+    cd = np.asarray(control["daily_rank_correlations"])
+    for n in VARIANTS:
+        s = study["summaries"][n]
+        if s["date_ids"] != list(range(1169, 1704)):
+            raise Stop("Summary dates are not the complete development window.")
+        d = np.asarray(s["daily_rank_correlations"], dtype=float)
+        if not close(metric(d, 535), s["official_metric"]):
+            raise Stop("Pooled score was not computed from the same 535 daily correlations.")
+        expected_fold = [metric(d[a - 1169 : b - 1169], b - a) for _, _, a, b in FOLDS]
+        if len(s["fold_scores"]) != 3 or not all(
+            close(a, b) for a, b in zip(expected_fold, s["fold_scores"], strict=False)
+        ):
+            raise Stop("Pooled and fold scores disagree.")
+        fd = [a - b for a, b in zip(expected_fold, CONTROL_SCORES, strict=False)]
+        delta = metric(d) - metric(cd)
+        other_delta = metric(d[180:], 355) - metric(cd[180:], 355)
+        candidate = delta > 0 and sum(v > 0 for v in fd) >= 2 and other_delta > 0
+        rows.append(
+            {
+                "variant": n,
+                "official_metric": metric(d),
+                "matched_delta": delta,
+                "fold_scores": expected_fold,
+                "fold_deltas": fd,
+                "positive_folds": sum(v > 0 for v in fd),
+                "remaining_355_date_delta": other_delta,
+                "stable_candidate_for_review": bool(candidate),
+            }
+        )
+    contrasts = {(n, "current_market") for n in VARIANTS} | {
+        ("normalized_joint", "normalized_price"),
+        ("normalized_joint", "volume_confirmation"),
+    }
+    expected_keys = {(a, b, k) for a, b in contrasts for k in (10, 20, 40)}
+    got = []
+    for c in study.get("comparisons", []):
+        key = (c["variant"], c["reference"], c["block_dates"])
+        got.append(key)
+        if key not in expected_keys:
+            raise Stop("Unexpected uncertainty contrast or block size.")
+        a = study["summaries"][c["variant"]]["official_metric"]
+        b = study["summaries"][c["reference"]]["official_metric"]
+        if not close(c["delta"], a - b):
+            raise Stop("Uncertainty uses a different contrast.")
+        for field in ("conditional_95_interval", "simultaneous_95_interval"):
+            z = c[field]
+            if len(z) != 2 or not np.isfinite(z).all() or z[0] > z[1]:
+                raise Stop("Invalid uncertainty interval.")
+    if len(got) != 15 or set(got) != expected_keys:
+        raise Stop("Five declared contrasts at all three block lengths are required.")
+    return rows, screening
+
+
+def replay_child_predictions(root: Path, u) -> float:
+    """Strict zero-tolerance verification, independent of pandas default tolerances."""
+    import joblib
+    import pandas as pd
+    from threadpoolctl import threadpool_limits
+
+    from commodity_prediction.domain.market_normalization.features import augment
+    from commodity_prediction.domain.market_path.features import build_panel
+    from commodity_prediction.domain.market_path.run import load_inputs
+
+    error = 0.0
+    with threadpool_limits(limits=4):
+        x, y, pairs, original, folds = load_inputs(root, FEATURE)
+        base, _ = build_panel(original, x, pairs, "current_market")
+        for n in VARIANTS:
+            panel, _ = augment(base, x, pairs, n)
+            for f in folds:
+                p = root / "artifacts" / CHILD / f"fold_{f.number}" / n
+                model = joblib.load(p / "model.joblib")
+                saved = pd.read_parquet(p / "predictions.parquet")
+                pred = model.predict(panel, f.validation_start, f.validation_stop)
+                error = max(error, u.exact_predictions(saved, pred))
+                del model, saved, pred
+            del panel
+        del x, y, pairs, original, base
+    gc.collect()
+    return error
+
+
+def validation_worker(root: Path) -> dict:
+    u = support(root)
+    ready = u.readiness(root)
+    u.validate_runtime(root, ready)
+    u.validate_source(root)
+    first = verify_review(root, u)
+    before = stage_inventory(root, u)
+    previous = guarded_budget(root, u)
+    if previous >= LIMIT:
+        raise Stop("The 300-second study budget is exhausted; no automatic extension.")
+    start = time.monotonic()
+    frozen = u.checkpoint_snapshot(root, ready)
+    out = {
+        "project": "commodity-prediction",
+        "status": "RUNNING",
+        "started_utc": utc(),
+        "source_commit": SHA,
+        "lineage": CHILD,
+        "parent_lineage": PARENT,
+        "feature_gate": "open",
+        "final_test_evaluations": 0,
+        "github_writes": False,
+        "aws_api_calls": 0,
+        "control_refits": 0,
+        "first_fold_refits": 0,
+        "new_training_fits": 0,
+        "study_limit_seconds": 300,
+        "first_fold_checkpoints_reused": 3,
+        "stage_count_at_start": len(before),
+        "budget_before_seconds": previous,
+        "helper_sha256": u.digest(Path(__file__)),
+    }
+    from commodity_prediction.domain.market_normalization.run import (
+        declarations,
+        preflight,
+        run_study,
+    )
+
+    with (root / "logs/market_normalization.lock").open("a") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        try:
+            for rel, h in u.RAW.items():
+                if u.digest(u.safe_path(root, "data/raw/" + rel)) != h:
+                    raise Stop("Raw-data checksum changed: " + rel)
+            lineage, evidence = declarations(root)
+            if lineage != CHILD:
+                raise Stop("Study source/dependencies changed; no stale reuse allowed.")
+            parent = preflight(root, evidence)
+            control = replay_controls(root, u, parent)
+            u.account_time(root, previous, time.monotonic() - start)
+            event("CONTROLS_REPLAYED", maximum_error=0.0, new_fits=0)
+            out.update(fit_stage_entered=True, new_training_fits=None)
+            u.atomic_json(result_path(root), out)
+            event(
+                "continue_predeclared_family", maximum_new_fits=9 - len(before), reused_first_fold=3
+            )
+            study = run_study(root, first_fold=False, sync=False)
+            rows, screen = validate_full(study, control, first)
+            after = stage_inventory(root, u)
+            if len(after) != 9 or any(after[k] != v for k, v in before.items()):
+                raise Stop("Existing fit changed or full inventory incomplete.")
+            if study["fits_this_invocation"] != 9 - len(before):
+                raise Stop("New-fit count disagrees with sealed-stage inventory.")
+            error = replay_child_predictions(root, u)
+            if u.checkpoint_snapshot(root, ready) != frozen:
+                raise Stop("A saved parent changed.")
+            u.validate_source(root)
+            used = u.account_time(root, previous, time.monotonic() - start)
+            if used >= LIMIT:
+                raise Stop(
+                    "Results preserved, but total study budget reached; inspect before proceeding."
+                )
+            stable = [r["variant"] for r in rows if r["stable_candidate_for_review"]]
+            out.update(
+                status="VALIDATION_REVIEW_READY",
+                finished_utc=utc(),
+                study=study,
+                control=control,
+                comparison_rows=rows,
+                screening_rows=screen,
+                checkpoint_hashes=after,
+                model_checkpoints=9,
+                new_training_fits=9 - len(before),
+                cached_fits_reused=len(before),
+                maximum_prediction_replay_error=error,
+                parents_unchanged=True,
+                source_unchanged=True,
+                validation_dates=535,
+                cumulative_seconds=used,
+                candidates_for_review=stable,
+                promotion_allowed=False,
+                decision="REVIEW_STABLE_CANDIDATES" if stable else "NO_STABLE_GAIN_IN_THIS_FAMILY",
+                review_rule_timing="Declared after fold 0, before folds 1/2; descriptive triage, not an unbiased selection test.",
+                limitations=[
+                    "Previously inspected development periods; not fresh holdout or leaderboard data.",
+                    "Intervals cover the five within-family contrasts only, conditional on saved fitted models.",
+                    "Continuation includes the negative joint panel to complete the declared interaction ablation; no tuning/expansion.",
+                    "No final model is automatically promoted. Feature engineering remains open.",
+                ],
+            )
+            u.atomic_json(result_path(root), out)
+            return out
+        except BaseException as e:
+            out.update(status="STOPPED", error=type(e).__name__ + ": " + str(e))
+            with contextlib.suppress(Exception):
+                out["sealed_stages_at_stop"] = list(stage_inventory(root, u))
+            raise
+        finally:
+            out["cumulative_seconds"] = u.account_time(root, previous, time.monotonic() - start)
+            out["worker_elapsed_seconds"] = round(time.monotonic() - start, 3)
+            out["updated_utc"] = utc()
+            u.atomic_json(result_path(root), out)
+
+
+def supervise(root: Path, mode: str, seconds: float, u) -> None:
+    """Independent process-group deadline; console output and heartbeats persist."""
+    lab = mode == "lab"
+    output = outdir(root, lab)
+    output.mkdir(parents=True, exist_ok=True)
+    args = [
+        sys.executable,
+        "-u",
+        str(root / "scripts/commodity_feature_round.py"),
+        "--worker",
+        mode,
+    ]
+    p = subprocess.Popen(
+        args,
+        cwd=root,
+        env=u.environment(root),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        start_new_session=True,
+    )
+    q = queue.Queue()
+
+    def read():
+        try:
+            for line in p.stdout:
+                q.put(line)
+        finally:
+            q.put(None)
+
+    th = threading.Thread(target=read, daemon=True)
+    th.start()
+    start = time.monotonic()
+    last = start
+    closed = False
+    try:
+        with (output / "console.log").open("a") as log:
+            log.write("\n--- " + utc() + " ---\n")
+            while not (closed and p.poll() is not None):
+                if time.monotonic() - start >= seconds:
+                    raise Stop(
+                        f"{mode} deadline reached; worker stopped, completed checkpoints retained."
+                    )
+                try:
+                    line = q.get(timeout=0.25)
+                    if line is None:
+                        closed = True
+                    else:
+                        print(line, end="", flush=True)
+                        log.write(line)
+                        log.flush()
+                except queue.Empty:
+                    pass
+                if time.monotonic() - last >= 15:
+                    line = json.dumps(
+                        {
+                            "utc": utc(),
+                            "heartbeat": True,
+                            "mode": mode,
+                            "elapsed_seconds": round(time.monotonic() - start, 1),
+                            "limit_seconds": round(seconds, 2),
+                        }
+                    )
+                    print(line, flush=True)
+                    log.write(line + "\n")
+                    log.flush()
+                    last = time.monotonic()
+            p.wait(timeout=2)
+            if p.returncode:
+                raise Stop("Worker failed; preserve its report and console error.")
+    except BaseException:
+        u.stop_process(p)
+        raise
+    finally:
+        th.join(timeout=1)
+        if p.stdout:
+            p.stdout.close()
+
+
+def run_validation(root: Path = ROOT) -> dict:
+    root = Path(root)
+    u = support(root)
+    r = u.readiness(root)
+    u.validate_runtime(root, r)
+    u.validate_source(root)
+    first = verify_review(root, u)
+    output = outdir(root)
+    output.mkdir(parents=True, exist_ok=True)
+    with (output / "supervisor.lock").open("a") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if result_path(root).exists():
+            old = u.read_json(result_path(root))
+            if old.get("status") not in TERMINAL:
+                raise Stop(
+                    "A prior interrupted/failed continuation exists. Return the report; do not rerun unchanged."
+                )
+            validate_full(old["study"], old["control"], first)
+            if stage_inventory(root, u) != old["checkpoint_hashes"]:
+                raise Stop("Completed continuation checkpoint changed.")
+            event("COMPLETED_CONTINUATION_REUSED", new_fits=0)
+            return {**old, "new_fits_this_notebook_call": 0}
+        if (root / "artifacts" / CHILD / "summary/manifest.json").exists():
+            raise Stop(
+                "A completed full study already exists outside this wrapper. Recover its report rather than refit."
+            )
+        before = stage_inventory(root, u)
+        previous = guarded_budget(root, u)
+        if len(before) != 3:
+            raise Stop(
+                "Unexpected continuation stages exist. Review them before resume; no fits started."
+            )
+        if previous >= LIMIT:
+            raise Stop("Study budget exhausted.")
+        if __import__("shutil").disk_usage(root).free < 512 * 1024**2:
+            raise Stop("Need 512 MiB free; do not delete checkpoints to make room automatically.")
+        initial = {
+            "project": "commodity-prediction",
+            "status": "STARTING_WORKER",
+            "new_training_fits": 0,
+            "source_commit": SHA,
+            "lineage": CHILD,
+            "feature_gate": "open",
+            "final_test_evaluations": 0,
+            "aws_api_calls": 0,
+            "github_writes": False,
+            "started_utc": utc(),
+        }
+        u.atomic_json(result_path(root), initial)
+        start = time.monotonic()
+        try:
+            supervise(root, "validation", LIMIT - previous, u)
+        except BaseException as exc:
+            out = u.read_json(result_path(root))
+            if out.get("status") == "STARTING_WORKER":
+                out["new_training_fits"] = None
+            out.update(
+                status="STOPPED",
+                supervisor_error=type(exc).__name__ + ": " + str(exc),
+                cumulative_seconds=u.account_time(root, previous, time.monotonic() - start),
+            )
+            u.atomic_json(result_path(root), out)
+            raise
+        out = u.read_json(result_path(root))
+        out["new_fits_this_notebook_call"] = out["new_training_fits"]
+        return out
+
+
+# --- New candidate mechanism: session-specific, covariance-aware pair surprises. ---
+def session_features(x, pairs):
+    """41 input-only templates; all reference moments use rows strictly before t.
+
+    Signed pair components are computed BEFORE standardization. Unsupported entire
+    pairs get structural zero plus an applicability flag; invalid observed bars stay
+    NaN. Overnight/intraday labels describe provided bars, not a verified global clock.
+    """
+    import numpy as np
+    import pandas as pd
+
+    if (
+        not x.columns.is_unique
+        or not x.index.is_unique
+        or len(x) < 127
+        or not np.issubdtype(x.index.dtype, np.integer)
+        or not np.all(np.diff(x.index) == 1)
+    ):
+        raise Stop("Unique numeric columns and at least 127 contiguous integer dates required.")
+    if (
+        pairs.empty
+        or not pairs.columns.is_unique
+        or not {"target", "pair", "lag"}.issubset(pairs)
+        or pairs[["target", "pair", "lag"]].isna().any().any()
+        or pairs.target.duplicated().any()
+        or not pairs.lag.isin((1, 2, 3, 4)).all()
+    ):
+        raise Stop("Invalid target/pair/horizon metadata.")
+    legs = [str(p).split(" - ") for p in pairs.pair]
+    if any(len(p) not in (1, 2) or len(set(p)) != len(p) for p in legs):
+        raise Stop("Invalid pair legs.")
+    assets = sorted({a for p in legs for a in p})
+    if not set(assets).issubset(x.columns):
+        raise Stop("A target asset is absent from market inputs.")
+    vals = {}
+    n = len(x)
+    m = len(pairs)
+    for a in assets:
+        us = a.endswith("_adj_close")
+        stem = a.removesuffix("close" if us else "Close")
+        cols = [a] + [
+            stem + s for s in (("open", "high", "low") if us else ("Open", "High", "Low"))
+        ]
+        if not set(cols).issubset(x.columns):
+            continue
+        p = [np.log(x[c].where(np.isfinite(x[c]) & (x[c] > 0))) for c in cols]
+        c, o, h, low_price = p
+        valid = (
+            c.notna()
+            & o.notna()
+            & h.notna()
+            & low_price.notna()
+            & (h >= low_price)
+            & (h >= pd.concat([c, o], axis=1).max(axis=1))
+            & (low_price <= pd.concat([c, o], axis=1).min(axis=1))
+        )
+        c = c.where(valid)
+        o = o.where(valid)
+        vals[a] = {
+            "intraday": (c - o).to_numpy(),
+            "overnight": (o - c.shift(1)).to_numpy(),
+            "daily": c.diff().to_numpy(),
+        }
+    applicable = np.array([all(a in vals for a in p) for p in legs], dtype=bool)
+    paired = np.array([len(p) == 2 for p in legs], dtype=bool)
+    frames = {}
+    lefts = {}
+    rights = {}
+    for channel in ("intraday", "overnight", "daily"):
+        left = np.column_stack(
+            [
+                vals[p[0]][channel] if applicable[j] else np.full(n, np.nan)
+                for j, p in enumerate(legs)
+            ]
+        )
+        right = np.column_stack(
+            [
+                vals[p[1]][channel]
+                if applicable[j] and len(p) == 2
+                else (np.zeros(n) if applicable[j] else np.full(n, np.nan))
+                for j, p in enumerate(legs)
+            ]
+        )
+        joint = np.isfinite(left) & np.isfinite(right)
+        lefts[channel] = pd.DataFrame(np.where(joint, left, np.nan), index=x.index)
+        rights[channel] = pd.DataFrame(np.where(joint, right, np.nan), index=x.index)
+        frames[channel] = lefts[channel] - rights[channel]
+    arrays = []
+    meta = []
+    cache = {}
+
+    def add(name, frame, group, window, parity, mask=None):
+        a = np.array(frame, dtype=float, copy=True)
+        if a.shape != (n, m):
+            raise Stop("Unexpected candidate shape.")
+        active = applicable if mask is None else mask
+        a[:, ~active] = 0.0
+        if np.isinf(a).any():
+            raise Stop("Nonfinite candidate escaped its numerical mask.")
+        arrays.append(a.astype(np.float32))
+        meta.append(
+            {
+                "name": "session_pair__" + name,
+                "group": group,
+                "window": window,
+                "swap_parity": parity,
+                "applicability": "all_legs_and_pair" if mask is not None else "all_legs",
+            }
+        )
+
+    add("all_legs_applicable", np.broadcast_to(applicable, (n, m)), "structure", 0, "even")
+    add("paired_applicable", np.broadcast_to(applicable & paired, (n, m)), "structure", 0, "even")
+    for w in WINDOWS:
+        minimum = max(14, math.ceil(2 * w / 3))
+        daily_sd = (
+            frames["daily"].shift(1).rolling(w, min_periods=minimum).std(ddof=0).clip(lower=1e-6)
+        )
+        for ch in ("intraday", "overnight"):
+            hist = frames[ch].shift(1).rolling(w, min_periods=minimum)
+            mu = hist.mean()
+            sd = hist.std(ddof=0).clip(lower=1e-6)
+            a = lefts[ch].shift(1)
+            b = rights[ch].shift(1)
+            va = a.rolling(w, min_periods=minimum).var(ddof=0)
+            vb = b.rolling(w, min_periods=minimum).var(ddof=0)
+            cv = a.rolling(w, min_periods=minimum).cov(b, ddof=0)
+            corr = (cv / np.sqrt(va * vb).where((va * vb) > 1e-16)).clip(-1, 1)
+            adjustment = (2 * cv / (va + vb).where((va + vb) > 1e-12)).clip(-1, 1)
+            z = ((frames[ch] - mu) / sd).clip(-12, 12)
+            cache[(ch, w)] = (z, sd)
+            add(f"{ch}_shock_z_{w}", z, ch, w, "odd")
+            add(f"{ch}_drift_z_{w}", (mu / sd).clip(-12, 12), ch, w, "odd")
+            add(f"{ch}_log_risk_ratio_{w}", np.log(sd / daily_sd).clip(-8, 8), ch, w, "even")
+            add(f"{ch}_leg_correlation_{w}", corr, ch, w, "even", applicable & paired)
+            add(f"{ch}_covariance_adjustment_{w}", adjustment, ch, w, "even", applicable & paired)
+        zi, si = cache[("intraday", w)]
+        zo, so = cache[("overnight", w)]
+        add(f"session_agreement_{w}", (np.tanh(zi / 3) * np.tanh(zo / 3)), "interaction", w, "even")
+        add(
+            f"gap_reversal_pressure_{w}",
+            (-np.sign(zo) * zi).clip(-12, 12),
+            "interaction",
+            w,
+            "even",
+        )
+        add(f"overnight_risk_share_{w}", so**2 / (so**2 + si**2), "interaction", w, "even")
+    block = np.stack(arrays, axis=2)
+    if block.shape != (n, m, LAB_COLUMNS):
+        raise Stop("Declared candidate count changed.")
+    return block, meta, applicable, paired
+
+
+def daily_candidate_ic(values, labels):
+    """Cross-sectional Spearman on eligible targets, for TRAINING screening only."""
+    import numpy as np
+    import pandas as pd
+
+    if values.shape != labels.shape:
+        raise Stop("Candidate/outcome alignment differs.")
+    valid = np.isfinite(values) & np.isfinite(labels)
+    a = pd.DataFrame(np.where(valid, values, np.nan)).rank(axis=1, method="average").to_numpy()
+    b = pd.DataFrame(np.where(valid, labels, np.nan)).rank(axis=1, method="average").to_numpy()
+    count = valid.sum(1)
+    ma = np.divide(np.nansum(a, axis=1), count, out=np.zeros(len(a)), where=count > 0)
+    mb = np.divide(np.nansum(b, axis=1), count, out=np.zeros(len(b)), where=count > 0)
+    za = np.where(valid, a - ma[:, None], 0)
+    zb = np.where(valid, b - mb[:, None], 0)
+    den = np.sqrt((za * za).sum(1) * (zb * zb).sum(1))
+    return np.divide(
+        (za * zb).sum(1), den, out=np.full(len(a), np.nan), where=(count >= 3) & (den > 1e-12)
+    )
+
+
+def candidate_statistics(block, meta, applicable, paired, y, reference, reference_names):
+    import numpy as np
+
+    start = 252
+    stop = TRAIN_ROWS
+    mid = (start + stop) // 2
+    if block.shape[:2] != y.shape or len(y) != TRAIN_ROWS:
+        raise Stop("Training-only screening window differs.")
+    seen = {}
+    reference_hash = {}
+    for j, name in enumerate(reference_names):
+        v = np.ascontiguousarray(reference[start:stop, :, j], dtype=np.float32)
+        v = np.where(np.isnan(v), np.float32(np.nan), v)
+        reference_hash[hashlib.sha256(v.tobytes()).hexdigest()] = name
+    rows = []
+    for j, info in enumerate(meta):
+        v = block[start:stop, :, j]
+        h = hashlib.sha256(
+            np.ascontiguousarray(
+                np.where(np.isnan(v), np.float32(np.nan), v), dtype=np.float32
+            ).tobytes()
+        ).hexdigest()
+        active = applicable & paired if info["applicability"] == "all_legs_and_pair" else applicable
+        va = np.where(active[None, :], v, np.nan)
+        finite = va[np.isfinite(va)]
+        flat = finite[:: max(1, len(finite) // 50000)]
+        reason = None
+        if info["group"] == "structure":
+            reason = "structural_indicator_not_ranked"
+        elif h in reference_hash:
+            reason = "exact_duplicate_of_current_normalization"
+        elif h in seen:
+            reason = "exact_duplicate_of_new_candidate"
+        elif not len(finite):
+            reason = "no_finite_supported_observations"
+        elif np.std(finite) <= 1e-10:
+            reason = "constant_on_applicable_training_entries"
+        elif np.isfinite(va).sum() / max(1, va.shape[0] * int(active.sum())) < 0.6:
+            reason = "less_than_60pct_training_coverage"
+        ic = daily_candidate_ic(va, y[start:stop])
+        first = ic[: mid - start]
+        second = ic[mid - start :]
+
+        def average(a):
+            return float(a[np.isfinite(a)].mean()) if np.isfinite(a).any() else None
+
+        i1, i2 = average(first), average(second)
+        stable = i1 is not None and i2 is not None and i1 * i2 > 0
+        relevance = min(abs(i1), abs(i2)) if stable else 0.0
+        counts, edges = (
+            np.histogram(flat, bins=24)
+            if len(flat)
+            else (np.zeros(24, dtype=int), np.linspace(-1, 1, 25))
+        )
+        rows.append(
+            {
+                **info,
+                "training_coverage": float(
+                    np.isfinite(va).sum() / max(1, va.shape[0] * int(active.sum()))
+                ),
+                "applicable_targets": int(active.sum()),
+                "finite_entries": int(len(finite)),
+                "train_half_1_mean_ic": i1,
+                "train_half_2_mean_ic": i2,
+                "stable_direction": bool(stable),
+                "training_relevance": float(relevance),
+                "screen_exclusion": reason,
+                "duplicate_of": reference_hash.get(h, seen.get(h)),
+                "signature_sha256": h,
+                "q05": float(np.quantile(flat, 0.05)) if len(flat) else None,
+                "median": float(np.median(flat)) if len(flat) else None,
+                "q95": float(np.quantile(flat, 0.95)) if len(flat) else None,
+                "histogram": {
+                    "counts": counts.tolist(),
+                    "edges": edges.tolist(),
+                    "sampled_entries": len(flat),
+                },
+            }
+        )
+        seen.setdefault(h, info["name"])
+    eligible = [r for r in rows if r["screen_exclusion"] is None and r["stable_direction"]]
+    shortlist = sorted(eligible, key=lambda r: (-r["training_relevance"], r["name"]))[:12]
+    return rows, [r["name"] for r in shortlist]
+
+
+def lab_worker(root: Path) -> dict:
+    import numpy as np
+    import pandas as pd
+
+    u = support(root)
+    ready = u.readiness(root)
+    u.validate_runtime(root, ready)
+    u.validate_source(root)
+    start = time.monotonic()
+    output = outdir(root, True)
+    output.mkdir(parents=True, exist_ok=True)
+    event("session_feature_training_inputs", rows=TRAIN_ROWS, new_fits=0)
+    for rel, h in u.RAW.items():
+        if u.digest(u.safe_path(root, "data/raw/" + rel)) != h:
+            raise Stop("Raw checksum changed.")
+    x = pd.read_csv(root / "data/raw/train.csv", nrows=TRAIN_ROWS).set_index("date_id")
+    y = (
+        pd.read_csv(root / "data/raw/train_labels.csv", nrows=TRAIN_ROWS)
+        .set_index("date_id")
+        .replace(-999999, np.nan)
+    )
+    pairs = pd.read_csv(root / "data/raw/target_pairs.csv")
+    if (
+        len(x) != TRAIN_ROWS
+        or x.index.tolist() != list(range(TRAIN_ROWS))
+        or not x.index.equals(y.index)
+        or pairs.target.tolist() != list(y.columns)
+        or len(pairs) != 424
+    ):
+        raise Stop("Training schema/order differs.")
+    event("build_session_pair_candidates", declared_templates=LAB_COLUMNS)
+    block, meta, applicable, paired = session_features(x, pairs)
+    # Replay prefix endpoints to enforce point-in-time equivalence using real inputs.
+    for end in (300, 600):
+        short, _, _, _ = session_features(x.iloc[:end], pairs)
+        np.testing.assert_array_equal(short[-1], block[end - 1])
+        del short
+    from commodity_prediction.domain.market_normalization.features import feature_block
+
+    reference, names, _ = feature_block(x, pairs, "normalized_joint")
+    event("training_only_candidate_screen", rows=TRAIN_ROWS, validation_rows=0)
+    rows, shortlist = candidate_statistics(
+        block, meta, applicable, paired, y.to_numpy(), reference, names
+    )
+    h = u.digest(Path(__file__))
+    identity = {
+        "source_commit": SHA,
+        "helper_sha256": h,
+        "raw_sha256": u.RAW,
+        "training_stop_exclusive": TRAIN_ROWS,
+        "windows": list(WINDOWS),
+        "mechanism": "session_pair_v1",
+        "templates": LAB_COLUMNS,
+    }
+    lineage = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+    # New candidate representation; never stored under a frozen historical lineage.
+    stage = u.safe_path(root, "artifacts/session_pair_candidates/" + lineage)
+    stage.mkdir(parents=True, exist_ok=True)
+    npz = u.safe_path(stage, "candidates.npz")
+    if not npz.exists():
+        tmp = u.safe_path(stage, "candidates.npz.tmp")
+        with tmp.open("wb") as f:
+            np.savez_compressed(f, values=block, dates=x.index.to_numpy())
+        os.replace(tmp, npz)
+    else:
+        with np.load(npz, allow_pickle=False) as a:
+            np.testing.assert_array_equal(a["values"], block)
+            np.testing.assert_array_equal(a["dates"], x.index.to_numpy())
+    u.atomic_json(
+        stage / "inventory.json",
+        {
+            "lineage": lineage,
+            "identity": identity,
+            "features": meta,
+            "shortlist": shortlist,
+            "targets": pairs.target.tolist(),
+        },
+    )
+    manifests = {
+        "candidates.npz": u.digest(npz),
+        "inventory.json": u.digest(stage / "inventory.json"),
+    }
+    u.atomic_json(
+        stage / "manifest.json", {"lineage": lineage, "files": manifests, "completed_utc": utc()}
+    )
+    u.verify_stage(stage, lineage)
+    u.validate_source(root)
+    report = {
+        "project": "commodity-prediction",
+        "status": "SESSION_FEATURE_CANDIDATES_READY",
+        "source_commit": SHA,
+        "lineage": lineage,
+        "helper_sha256": h,
+        "feature_gate": "open",
+        "new_training_fits": 0,
+        "final_test_evaluations": 0,
+        "aws_api_calls": 0,
+        "github_writes": False,
+        "training_rows": TRAIN_ROWS,
+        "screen_start_date": 252,
+        "screen_stop_exclusive": TRAIN_ROWS,
+        "validation_rows_scored": 0,
+        "candidate_templates": LAB_COLUMNS,
+        "supported_targets": int(applicable.sum()),
+        "supported_paired_targets": int((applicable & paired).sum()),
+        "prefix_replay_passed": True,
+        "rows": rows,
+        "training_only_shortlist": shortlist,
+        "shortlist_limit": 12,
+        "checkpoint_path": str(stage),
+        "checkpoint_hashes": u.verify_stage(stage, lineage),
+        "elapsed_seconds": round(time.monotonic() - start, 3),
+        "promotion_allowed": False,
+        "readiness_input_report_sha256": u.digest(
+            root / "logs/manual_readiness/commodity_manual_readiness.json"
+        ),
+        "limitations": [
+            "Training associations are screening evidence, not out-of-sample gains or causal importance.",
+            "Exact-duplicate check covers this new family and current 14 normalization templates, not every historical feature.",
+            "Session bars follow supplied row alignment, not independently verified simultaneous global trading sessions.",
+            "Complete-leg OHLC support is required; unsupported FX/LME or incomplete pairs are masked explicitly.",
+            "No arbitrary economic dates, carry, inventories, or external features are fabricated from anonymous row IDs.",
+        ],
+    }
+    u.atomic_json(result_path(root, True), report)
+    event(
+        "SESSION_FEATURE_CANDIDATES_READY",
+        templates=LAB_COLUMNS,
+        shortlist=len(shortlist),
+        new_fits=0,
+    )
+    return report
+
+
+def run_lab(root: Path = ROOT) -> dict:
+    root = Path(root)
+    u = support(root)
+    r = u.readiness(root)
+    u.validate_runtime(root, r)
+    u.validate_source(root)
+    # Keep the expensive and cheap stages serial and explicit; no work after a failed continuation.
+    full = u.read_json(result_path(root))
+    if full.get("status") not in TERMINAL:
+        raise Stop("Complete and save notebook 05 before starting notebook 06.")
+    output = outdir(root, True)
+    output.mkdir(parents=True, exist_ok=True)
+    with (output / "supervisor.lock").open("a") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if result_path(root, True).exists():
+            old = u.read_json(result_path(root, True))
+            if old.get("status") not in (
+                "SESSION_FEATURE_CANDIDATES_READY",
+                "NOTEBOOK_AND_SESSION_FEATURES_READY",
+            ):
+                raise Stop(
+                    "An earlier candidate-lab error is recorded; inspect rather than retry unchanged."
+                )
+            if old.get("helper_sha256") != u.digest(Path(__file__)):
+                raise Stop("Candidate implementation changed.")
+            p = Path(old["checkpoint_path"])
+            u.safe_path(root, str(p.relative_to(root)))
+            u.verify_stage(p, old["lineage"], old["checkpoint_hashes"])
+            event("CANDIDATE_CHECKPOINT_REUSED", new_fits=0)
+            return old
+        u.atomic_json(
+            result_path(root, True),
+            {
+                "project": "commodity-prediction",
+                "status": "STARTING_WORKER",
+                "new_training_fits": 0,
+                "feature_gate": "open",
+                "final_test_evaluations": 0,
+            },
+        )
+        try:
+            supervise(root, "lab", LAB_LIMIT, u)
+        except BaseException as e:
+            out = u.read_json(result_path(root, True))
+            out.update(status="STOPPED", error=type(e).__name__ + ": " + str(e))
+            u.atomic_json(result_path(root, True), out)
+            raise
+        return u.read_json(result_path(root, True))
+
+
+def validation_charts(report: dict) -> list:
+    import numpy as np
+    import pandas as pd
+    import plotly.express as px
+    import plotly.graph_objects as go
+
+    rows = report["comparison_rows"]
+    s = report["study"]["summaries"]
+    order = ["current_market", *VARIANTS]
+    figs = []
+    values = pd.DataFrame([{"variant": n, "score": s[n]["official_metric"]} for n in order])
+    figs.append(
+        (
+            "Pooled official metric · 535 development dates",
+            px.bar(values, x="variant", y="score", text_auto=".6f"),
+        )
+    )
+    fdata = pd.DataFrame(
+        [
+            {"variant": n, "fold": str(f), "score": score}
+            for n in order
+            for f, score in enumerate(s[n]["fold_scores"])
+        ]
+    )
+    figs.append(
+        (
+            "Same-model temporal stability",
+            px.bar(fdata, x="fold", y="score", color="variant", barmode="group"),
+        )
+    )
+    delta = pd.DataFrame(
+        [
+            {"variant": r["variant"], "fold": str(f), "delta": v}
+            for r in rows
+            for f, v in enumerate(r["fold_deltas"])
+        ]
+    )
+    figs.append(
+        (
+            "Matched gain by validation period",
+            px.bar(delta, x="fold", y="delta", color="variant", barmode="group"),
+        )
+    )
+    ddata = pd.DataFrame(
+        [
+            {"variant": r["variant"], "scope": scope, "delta": r[key]}
+            for r in rows
+            for scope, key in [
+                ("All 535 dates", "matched_delta"),
+                ("Later 355 dates only", "remaining_355_date_delta"),
+            ]
+        ]
+    )
+    figs.append(
+        (
+            "First-fold selection versus later-period transfer",
+            px.bar(ddata, x="variant", y="delta", color="scope", barmode="group"),
+        )
+    )
+    bounds = [
+        c
+        for c in report["study"]["comparisons"]
+        if c["block_dates"] == 20 and c["reference"] == "current_market"
+    ]
+    ci = go.Figure()
+    for kind, label in [
+        ("conditional_95_interval", "Conditional 95%"),
+        ("simultaneous_95_interval", "Within-family simultaneous 95%"),
+    ]:
+        xs, ys = [], []
+        for c in bounds:
+            xs.extend([c[kind][0], c[kind][1], None])
+            ys.extend([c["variant"], c["variant"], None])
+        ci.add_trace(go.Scatter(x=xs, y=ys, mode="lines", name=label))
+    ci.add_trace(
+        go.Scatter(
+            x=[c["delta"] for c in bounds],
+            y=[c["variant"] for c in bounds],
+            mode="markers",
+            name="Observed matched change",
+        )
+    )
+    ci.add_vline(x=0)
+    figs.append(("Matched uncertainty · 20-date blocks; not global adaptive-search correction", ci))
+    temporal = go.Figure()
+    control = np.asarray(report["control"]["daily_rank_correlations"])
+    for n in VARIANTS:
+        temporal.add_trace(
+            go.Scatter(
+                x=s[n]["date_ids"],
+                y=np.cumsum(np.asarray(s[n]["daily_rank_correlations"]) - control),
+                name=n,
+            )
+        )
+    for x in (1349, 1529):
+        temporal.add_vline(x=x, line_dash="dot")
+    figs.append(("Cumulative daily-correlation difference · NOT investment returns", temporal))
+    sel = pd.DataFrame(report["screening_rows"])
+    figs.append(
+        (
+            "New templates admitted in training-only screening",
+            px.bar(sel, x="fold", y="new_retained", color="variant", barmode="group"),
+        )
+    )
+    horizon = pd.DataFrame(
+        [
+            {"variant": n, "horizon": str(h), "metric": val["official_metric"]}
+            for n in order
+            for h, val in s[n].get("horizon_metrics", {}).items()
+        ]
+    )
+    figs.append(
+        (
+            "Horizon diagnostics · not additive components of the global metric",
+            px.bar(horizon, x="horizon", y="metric", color="variant", barmode="group"),
+        )
+    )
+    for title, fig in figs:
+        fig.update_layout(
+            title={"text": title, "x": 0.03},
+            height=470,
+            margin={"l": 65, "r": 30, "t": 80, "b": 70},
+            legend={"orientation": "h", "y": -0.22},
+        )
+    return figs
+
+
+def lab_charts(report: dict) -> list:
+    import pandas as pd
+    import plotly.express as px
+    import plotly.graph_objects as go
+
+    df = pd.DataFrame(report["rows"])
+    figs = []
+    figs.append(
+        (
+            "Observed training coverage, excluding structural absence",
+            px.bar(df, x="training_coverage", y="name", color="group", orientation="h"),
+        )
+    )
+    usable = df[df.group != "structure"]
+    figs.append(
+        (
+            "Training-only association stability · NOT validation performance",
+            px.scatter(
+                usable,
+                x="train_half_1_mean_ic",
+                y="train_half_2_mean_ic",
+                color="group",
+                hover_name="name",
+            ),
+        )
+    )
+    short = df[df.name.isin(report["training_only_shortlist"])].sort_values("training_relevance")
+    figs.append(
+        (
+            "At most 12 candidates shortlisted using training data only",
+            px.bar(short, x="training_relevance", y="name", orientation="h", color="group"),
+        )
+    )
+    hist = go.Figure()
+    for row in report["rows"]:
+        if "_shock_z_" not in row["name"]:
+            continue
+        edges = row["histogram"]["edges"]
+        counts = row["histogram"]["counts"]
+        total = max(1, sum(counts))
+        hist.add_trace(
+            go.Scatter(
+                x=[(a + b) / 2 for a, b in zip(edges[:-1], edges[1:], strict=False)],
+                y=[c / total for c in counts],
+                name=row["name"].removeprefix("session_pair__"),
+            )
+        )
+    figs.append(("Session surprise distributions on applicable training observations", hist))
+    counts = (
+        df["screen_exclusion"]
+        .fillna("eligible_before_stability_filter")
+        .value_counts()
+        .rename_axis("outcome")
+        .reset_index(name="count")
+    )
+    figs.append(
+        ("Training-only candidate-screen accounting", px.bar(counts, x="outcome", y="count"))
+    )
+    groups = df.groupby("group", sort=False).size().rename("templates").reset_index()
+    figs.append(
+        (
+            "Mechanism inventory · 41 candidate templates, zero predictive fits",
+            px.bar(groups, x="group", y="templates", text_auto=True),
+        )
+    )
+    for i, (title, fig) in enumerate(figs):
+        fig.update_layout(
+            title={"text": title, "x": 0.02},
+            height=1000 if i == 0 else 530,
+            margin={"l": 280 if i in (0, 2) else 70, "r": 30, "t": 90, "b": 100},
+            legend={"orientation": "h", "y": -0.22},
+        )
+    return figs
+
+
+def export_dashboard(path: Path, title: str, figures: list) -> str:
+    sections = [
+        '<!doctype html><html><head><meta charset="utf-8"><title>'
+        + html.escape(title)
+        + "</title></head><body>",
+        "<h1>"
+        + html.escape(title)
+        + "</h1><p>Development research only. No final-test or leaderboard result. Feature engineering remains open.</p>",
+    ]
+    for i, (label, fig) in enumerate(figures):
+        sections.append("<h2>" + html.escape(label) + "</h2>")
+        sections.append(fig.to_html(full_html=False, include_plotlyjs=(i == 0)))
+    sections.append("</body></html>")
+    body = "\n".join(sections).encode()
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    if path.is_symlink() or tmp.is_symlink():
+        raise Stop("Refuse symlink dashboard destination.")
+    tmp.write_bytes(body)
+    os.replace(tmp, path)
+    return hashlib.sha256(body).hexdigest()
+
+
+def backup_models(root: Path, u) -> dict:
+    stages = stage_inventory(root, u)
+    base = root / "artifacts" / CHILD
+    paths = []
+    for rel, hashes in stages.items():
+        paths.extend(base / rel / name for name in hashes)
+    summary = base / "summary"
+    paths.extend(summary / name for name in u.verify_stage(summary, CHILD))
+    for name in ("probe.json", "lineage.json", "runtime_budget.json"):
+        paths.append(u.safe_path(base, name))
+    pins = {str(p.relative_to(root)): u.digest(p) for p in paths}
+    dest = outdir(root) / "normalization_validation_checkpoints.zip"
+    tmp = dest.with_name(dest.name + ".tmp")
+    if tmp.is_symlink() or dest.is_symlink():
+        raise Stop("Unsafe ZIP destination.")
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED, compresslevel=3) as z:
+        for p in paths:
+            z.write(p, str(p.relative_to(root)))
+        z.writestr("SHA256SUMS.json", json.dumps(pins, indent=2, sort_keys=True))
+    with zipfile.ZipFile(tmp) as z:
+        if z.testzip() is not None:
+            raise Stop("Checkpoint ZIP CRC failed.")
+        for name, h in pins.items():
+            if hashlib.sha256(z.read(name)).hexdigest() != h:
+                raise Stop("Checkpoint ZIP readback differs.")
+    os.replace(tmp, dest)
+    return {
+        "path": str(dest),
+        "sha256": u.digest(dest),
+        "files": len(paths),
+        "bytes": dest.stat().st_size,
+        "private": True,
+        "raw_data_included": False,
+        "off_disk_backup_confirmed": False,
+    }
+
+
+def finish_validation(root: Path, report: dict, figures: list) -> dict:
+    root = Path(root)
+    u = support(root)
+    if report.get("status") not in TERMINAL or len(figures) != 8:
+        raise Stop("Incomplete validation review or chart set.")
+    # Rendering/backup failure never invokes the fitting stage again.
+    out = {**report}
+    output = outdir(root)
+    output.mkdir(parents=True, exist_ok=True)
+    path = output / "normalization_validation_dashboard.html"
+    out.update(
+        dashboard=str(path),
+        dashboard_sha256=export_dashboard(path, "Normalization validation", figures),
+        plotly_figures=8,
+    )
+    try:
+        out["private_checkpoint_bundle"] = backup_models(root, u)
+    except Exception as e:
+        out["backup_warning"] = type(e).__name__ + ": " + str(e)
+    out.update(
+        status="NOTEBOOK_AND_VALIDATION_REVIEW_READY",
+        updated_utc=utc(),
+        notebook=str(root / "notebooks/05_normalization_validation.ipynb"),
+    )
+    u.atomic_json(result_path(root), out)
+    return out
+
+
+def finish_lab(root: Path, report: dict, figures: list) -> dict:
+    root = Path(root)
+    u = support(root)
+    if (
+        report.get("status")
+        not in ("SESSION_FEATURE_CANDIDATES_READY", "NOTEBOOK_AND_SESSION_FEATURES_READY")
+        or len(figures) != 6
+    ):
+        raise Stop("Incomplete candidate lab or chart set.")
+    output = outdir(root, True)
+    output.mkdir(parents=True, exist_ok=True)
+    path = output / "session_features_dashboard.html"
+    out = {**report}
+    out.update(
+        dashboard=str(path),
+        dashboard_sha256=export_dashboard(path, "Session-pair feature research", figures),
+        plotly_figures=6,
+        status="NOTEBOOK_AND_SESSION_FEATURES_READY",
+        updated_utc=utc(),
+        notebook=str(root / "notebooks/06_session_feature_lab.ipynb"),
+    )
+    u.atomic_json(result_path(root, True), out)
+    return out
+
+
+def notebook_document(lab: bool = False) -> dict:
+    cells = []
+
+    def md(s):
+        cells.append(
+            {"cell_type": "markdown", "metadata": {}, "source": s.splitlines(keepends=True)}
+        )
+
+    def code(s):
+        cells.append(
+            {
+                "cell_type": "code",
+                "metadata": {},
+                "source": s.splitlines(keepends=True),
+                "execution_count": None,
+                "outputs": [],
+            }
+        )
+
+    if not lab:
+        md(
+            "# 05 · Does the normalization gain survive other periods?\n\n"
+            "**Objective:** finish the predeclared three-variant, three-fold feature ablation. Reuse the three completed first-fold models. "
+            "At most **six new CPU fits**, no control refits, no tuning, no new feature definitions in this notebook. "
+            "The original **300-second cumulative study budget** remains in force; approximately **228.51 seconds** remained in the returned report. "
+            "No final-test observations are scored. Use **Commodity - manual (verified)**.\n\n"
+            "The first-fold price gain is **+0.003786**; volume confirmation is **+0.001157**; the union is **−0.017654**. "
+            "This is a small screening signal, not proof. The union is included only to finish the **already-declared interaction ablation**, "
+            "not to tune or expand the negative result. **Run All starts this bounded continuation.**"
+        )
+    else:
+        md(
+            "# 06 · Session-specific and covariance-aware pair feature laboratory\n\n"
+            "**A new, input-driven representation investigation: 41 candidate templates, zero model fits.** "
+            "This notebook constructs candidates, checks prefix equivalence, measures supported coverage, and screens them **only on the first training prefix**. "
+            "Do not interpret training correlations as predictive improvements. Run after notebook 05 completes successfully. "
+            "The separate worker has a **90-second cap**. No packages, AWS resources, Git branches, or existing study source are modified.\n\n"
+            "Keep models and feature arrays private; do not delete old project directories, which hold the borrowed verified environment."
+        )
+    code(
+        "from pathlib import Path\nimport os, importlib.util\nimport pandas as pd\nfrom IPython.display import display, Markdown\n"
+        "ROOT = Path(os.environ.get('COMMODITY_MANUAL_PROJECT', '/home/sagemaker-user/projects/commodity-prediction-manual'))\n"
+        "spec = importlib.util.spec_from_file_location('manual_feature_round', ROOT / 'scripts/commodity_feature_round.py')\n"
+        "support = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(support)\n"
+        "previous = support.support(ROOT)\nready = previous.readiness(ROOT)\nprevious.validate_runtime(ROOT, ready)\n"
+        "print('Source:', ready['source_commit'])\nprint('Verified kernel. No new fitting has started in this cell.')\n"
+    )
+    if not lab:
+        md(
+            "## Analysis plan frozen before the remaining periods\n\n"
+            "Fold 0 is reused: train `<1164`, validate `1169–1348`. Fold 1: train `<1344`, validate `1349–1528`. "
+            "Fold 2: train `<1524`, validate `1529–1703`. The pooled metric is computed from **all 535 daily correlations**, "
+            "**not the average of fold metrics**. All model-fitting rows follow the existing warmup and purging policy.\n\n"
+            "The descriptive review rule is: positive pooled gain, gains on at least 2/3 folds, and positive gain on the **later 355 dates**. "
+            "It was declared after seeing fold 0, before seeing the later results; it is **not** an unbiased statistical significance test. "
+            "Report every variant, whether it passes or fails. The five predeclared contrasts use 10/20/40-date blocks; "
+            "within-family intervals do not correct the entire adaptive research history. No model is automatically promoted."
+        )
+        code(
+            "display(pd.DataFrame(support.FOLDS, columns=['Fold', 'Train stop exclusive', 'Validation start', 'Validation stop exclusive']))\n"
+            "print('Recorded cumulative seconds:', previous.budget_used(ROOT))\n"
+            "print('Do not rerun notebook 04 or reset its budget.')\n"
+        )
+        md(
+            "## Supervised execution: verify → exact control replay → six remaining fits → exact child replay\n\n"
+            "Every completed checkpoint is protected by a seal and the first-fold files are compared with the supplied report hashes. "
+            "A previous failed/interrupted run stops for diagnosis; a completed result reopens without fitting. "
+            "Each successful new model has its own checkpoint. Do not start another terminal worker in parallel."
+        )
+        code(
+            "report = support.run_validation(ROOT)\nprint('RESULT:', report['status'])\n"
+            "print('New fits in this notebook call:', report.get('new_fits_this_notebook_call', report['new_training_fits']))\n"
+            "print('First-fold refits:', report['first_fold_refits'], '| Control refits:', report['control_refits'])\n"
+            "display(pd.DataFrame(report['comparison_rows']).drop(columns=['fold_scores','fold_deltas']))\n"
+            "figures = support.validation_charts(report)\n"
+        )
+        titles = [
+            "Pooled performance",
+            "Fold stability",
+            "Matched per-fold gains",
+            "Later-period transfer",
+            "Uncertainty, not just the best point estimate",
+            "Temporal concentration of information",
+            "Feature admission",
+            "Horizon diagnostics",
+        ]
+        for i, title in enumerate(titles):
+            md("## " + str(i + 1) + ". " + title)
+            code(f"figures[{i}][1].show(renderer='plotly_mimetype')\n")
+        md(
+            "## Preserve the evidence\n\n"
+            "The private ZIP contains nine models and their predictions/manifests, not raw data. Download it locally; "
+            "**do not attach it to chat or public GitHub**. The HTML uses inline Plotly, no Chrome/Kaleido. "
+            "Save the notebook with Ctrl+S. If execution stopped, return its report and do not run notebook 06. "
+            "On a completed run, notebook 06 is the next separate, zero-fit training-only milestone. Then stop the space."
+        )
+        code(
+            "completed = support.finish_validation(ROOT, report, figures)\nprint('RESULT:', completed['status'])\n"
+            "print('DECISION:', completed['decision'])\nprint('REPORT:', support.result_path(ROOT))\n"
+            "print('DASHBOARD:', completed['dashboard'])\n"
+            "print('PRIVATE BACKUP:', completed.get('private_checkpoint_bundle',{}).get('path',completed.get('backup_warning','Not created')))\n"
+            "print('Save this notebook. No model is promoted; feature engineering stays open.')\n"
+        )
+    else:
+        md(
+            "## Hypothesis and novelty check\n\n"
+            "The current features normalize each asset by close-to-close risk and then form pair differences. "
+            "This experiment first forms the **actual signed pair intraday/overnight return**, then estimates its own past mean and volatility. "
+            "That preserves each session’s covariance structure. The exact identity "
+            "`Var(A − B) = Var(A) + Var(B) − 2 Cov(A,B)` motivates the pair representation.\n\n"
+            "Existing `domain/relationships.py` already has close-to-close pair correlations, spread risk and hedge innovations. "
+            "**Those are not being relabeled as new.** The additions are component-specific surprises, relative session risk and explicit gap/reversal interactions. "
+            "These names describe the supplied OHLC bars; they do not assert that international exchanges close simultaneously. "
+            "All legs must have supported, valid bar definitions; otherwise an explicit support flag distinguishes structural absence from observed missingness."
+        )
+        md(
+            "## Candidate catalog: 41 templates\n\n"
+            "For **intraday and overnight**, at **21, 63 and 126** trailing observations: standardized shock, normalized historical drift, "
+            "log risk ratio to the pair’s close-to-close risk, same-session leg correlation, covariance adjustment. "
+            "That is 30 templates. Nine session interactions add agreement, reversal pressure, and overnight variance share at each window. "
+            "Two flags identify complete-leg support and paired support. All reference moments shift by one row before rolling. "
+            "The horizons are validated but the same observed context is shared across horizons; no unavailable target labels enter feature construction."
+        )
+        code(
+            "display(pd.DataFrame([['Intraday',15],['Overnight',15],['Cross-session interactions',9],['Structural flags',2]],columns=['Mechanism','Templates']))\n"
+        )
+        md(
+            "## Evidence behind the hypothesis — not a promise of predictability\n\n"
+            "Blanc, Chicheportiche and Bouchaud (2013), *The fine structure of volatility feedback II*, model overnight and intraday components separately "
+            "and report different volatility behavior: https://arxiv.org/abs/1309.5806. "
+            "Moreira and Muir (2016/2017) motivate conditioning on risk, but their portfolio evidence is not a test of this competition: https://www.nber.org/papers/w22208.\n\n"
+            "Gorton, Hayashi and Rouwenhorst link commodity risk premiums to inventories/basis: https://www.nber.org/papers/w13249. "
+            "Those mechanisms remain research leads, but no real inventory, curve or calendar feature is fabricated here from anonymous row IDs. "
+            "Original competition data and target metadata define the admissible inputs for this milestone."
+        )
+        md(
+            "## Run the training-only lab\n\n"
+            "Reads only `nrows=1164` from market inputs and training labels. Screening begins at row 252 (the existing model warmup), partitions that **training** window into two halves, "
+            "and reports mean daily cross-sectional candidate–target rank correlations on applicable targets. "
+            "Eligibility requires nonconstant inputs and at least 60% supported coverage. Structural flags and exact duplicates are not ranked. "
+            "A stable-sign, min-absolute-half-correlation ranking shortlists **at most 12** candidates. This is a shortlist for future ablations, not model promotion. "
+            "Exact-duplicate screening covers these candidates plus the existing 14 normalization templates, not every historical column. "
+            "No validation-outcome filter, hyperparameter search, ensemble or fitting occurs."
+        )
+        code(
+            "report = support.run_lab(ROOT)\nprint('RESULT:', report['status'])\n"
+            "print('Candidate templates:', report['candidate_templates'], '| New fits:', report['new_training_fits'])\n"
+            "print('Validation rows scored:', report['validation_rows_scored'])\n"
+            "display(pd.DataFrame(report['rows'])[['name','training_coverage','train_half_1_mean_ic','train_half_2_mean_ic','screen_exclusion']])\n"
+            "figures = support.lab_charts(report)\n"
+        )
+        titles = [
+            "Supported coverage",
+            "Training-half stability",
+            "Shortlist for later ablations",
+            "Candidate distributions",
+            "Screen accounting",
+            "Mechanism counts",
+        ]
+        for i, title in enumerate(titles):
+            md("## " + str(i + 1) + ". " + title)
+            code(f"figures[{i}][1].show(renderer='plotly_mimetype')\n")
+        md(
+            "## What this does and does not establish\n\n"
+            "This produces a versioned feature tensor, names, availability metadata, source/raw hashes, training-only screening and a reproducible shortlist. "
+            "**It does not establish a new validation score.** The next fitted comparison must keep the model fixed, compare additions/removals, "
+            "replay saved controls, and evaluate isolated chronological periods. Do not add every shortlisted feature to a promoted model automatically. "
+            "The goal is a sequence of attributable representation gains, not a target number of columns.\n\n"
+            "Raw-input learned representations, richer release-safe target/group context, point-in-time carry/inventory/fundamental data and ranking-aware loss remain "
+            "separate research avenues, not assumed exhausted. Save this notebook, download its JSON/HTML, and **Stop space**. Keep feature NPZ/model files private."
+        )
+        code(
+            "completed = support.finish_lab(ROOT, report, figures)\nprint('RESULT:', completed['status'])\n"
+            "print('REPORT:', support.result_path(ROOT, True))\nprint('DASHBOARD:', completed['dashboard'])\n"
+            "print('Candidate checkpoint:', completed['checkpoint_path'])\nprint('STOP: Save notebooks and stop the SageMaker space. Do not start new fits.')\n"
+        )
+    for i, c in enumerate(cells):
+        c["id"] = f"round-{'lab' if lab else 'validation'}-{i:02d}"
+    return {
+        "nbformat": 4,
+        "nbformat_minor": 5,
+        "metadata": {
+            "kernelspec": {
+                "name": "commodity-manual",
+                "display_name": "Commodity - manual (verified)",
+                "language": "python",
+            },
+            "language_info": {"name": "python", "version": "3.12"},
+            "manual_feature_round": {
+                "stage": "training_only_candidates" if lab else "remaining_validation",
+                "max_new_fits": 0 if lab else 6,
+            },
+        },
+        "cells": cells,
+    }
+
+
+def install(root: Path = ROOT) -> None:
+    root = Path(root)
+    u = support(root)
+    u.readiness(root)
+    u.validate_source(root)
+    verify_review(root, u)
+    dest = u.safe_path(root, "scripts/commodity_feature_round.py")
+    u.write_new(dest, Path(__file__).read_bytes())
+    for lab, name in [
+        (False, "05_normalization_validation.ipynb"),
+        (True, "06_session_feature_lab.ipynb"),
+    ]:
+        doc = notebook_document(lab)
+        path = u.safe_path(root, "notebooks/" + name)
+        if path.exists():
+            if not u.same_notebook_source(u.read_json(path), doc):
+                raise Stop("Existing notebook preserved: " + name)
+        else:
+            u.write_new(path, (json.dumps(doc, indent=1) + "\n").encode())
+    print(
+        "RESULT: FEATURE_ROUND_NOTEBOOKS_READY\nFIRST: "
+        + str(root / "notebooks/05_normalization_validation.ipynb")
+        + "\nSECOND: "
+        + str(root / "notebooks/06_session_feature_lab.ipynb")
+        + "\nKERNEL: Commodity - manual (verified)\nSetup performed no model fitting. Run notebook 05 first.",
+        flush=True,
+    )
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--worker", choices=("validation", "lab"), help=argparse.SUPPRESS)
+    args = p.parse_args()
+    try:
+        if args.worker:
+            sys.path.insert(0, str(ROOT / "src"))
+            if args.worker == "validation":
+                validation_worker(ROOT)
+            else:
+                lab_worker(ROOT)
+        else:
+
+            def deadline(signum, frame):
+                raise Stop("Notebook setup exceeded 45 seconds; no fitting started.")
+
+            signal.signal(signal.SIGALRM, deadline)
+            signal.alarm(45)
+            try:
+                install(ROOT)
+            finally:
+                signal.alarm(0)
+    except (Exception, KeyboardInterrupt) as e:
+        print(
+            "RESULT: STOPPED\nERROR: "
+            + type(e).__name__
+            + ": "
+            + str(e)
+            + "\nDo not repeat unchanged. Preserve the error/report. Stop space after saving it.",
+            flush=True,
+        )
+        raise SystemExit(2) from e
+
+
+if __name__ == "__main__":
+    main()

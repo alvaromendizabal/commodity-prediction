@@ -1,0 +1,648 @@
+{
+  "created_utc": "2026-09-14T01:06:38.602563+00:00",
+  "evidence_scope": "Saved user-run reports; exporter does not replay checkpoints or retrain. No leaderboard equivalence.",
+  "repository": "alvaromendizabal/commodity-prediction",
+  "research_source_pin": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "studies": [
+    {
+      "comparisons": [],
+      "completed": true,
+      "decision": "not recorded",
+      "elapsed_seconds": 35.457,
+      "evaluation_origins": 0,
+      "evidence_path": "reports/manual_research/study_03.json",
+      "new_training_fits": 0,
+      "notebook": 3,
+      "plotly_figures": 5,
+      "report_sha256": "2c16ec7dca306e01b7af33c0c90169d290bb19e8456f8f1551fb93d170d8a54c",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_FEATURE_AUDIT_READY",
+      "title": "Runtime and feature readiness"
+    },
+    {
+      "comparisons": [
+        {
+          "matched_delta": 0.0037857512993234588,
+          "official_metric": 0.40716683872228493,
+          "variant": "normalized_price"
+        },
+        {
+          "matched_delta": 0.0011570101567784374,
+          "official_metric": 0.4045380975797399,
+          "variant": "volume_confirmation"
+        },
+        {
+          "matched_delta": -0.017653958760301403,
+          "official_metric": 0.38572712866266007,
+          "variant": "normalized_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "decision": "REVIEW_BEFORE_REMAINING_FOLDS",
+      "evaluation_origins": 180,
+      "evidence_path": "reports/manual_research/study_04.json",
+      "lineage": "0bec922e64f09f4d051e2ded7b8d9e91b2e6a06e3f7e80af8ac1f4f044df8027",
+      "new_training_fits": 3,
+      "notebook": 4,
+      "plotly_figures": 6,
+      "report_sha256": "19e0c7c14d3bdf01c244ccd573e94b240f95eb1673dba16b631cfc9775ae1815",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_FIRST_FOLD_REVIEW_READY",
+      "title": "Normalization first-period screen"
+    },
+    {
+      "comparisons": [
+        {
+          "matched_delta": -0.003975364171483198,
+          "official_metric": 0.3057333590409221,
+          "positive_folds": 1,
+          "variant": "normalized_price"
+        },
+        {
+          "matched_delta": -0.002798115888163366,
+          "official_metric": 0.3069106073242419,
+          "positive_folds": 2,
+          "variant": "volume_confirmation"
+        },
+        {
+          "matched_delta": -0.01273830567032641,
+          "official_metric": 0.29697041754207887,
+          "positive_folds": 0,
+          "variant": "normalized_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "decision": "NO_STABLE_GAIN_IN_THIS_FAMILY",
+      "evaluation_origins": 535,
+      "evidence_path": "reports/manual_research/study_05.json",
+      "lineage": "0bec922e64f09f4d051e2ded7b8d9e91b2e6a06e3f7e80af8ac1f4f044df8027",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 6,
+      "notebook": 5,
+      "plotly_figures": 8,
+      "report_sha256": "7c8a7984f87c7ba8a48472194128a6f0173d58903f25c03f6b10c8dfa72dd14a",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_VALIDATION_REVIEW_READY",
+      "title": "Normalization temporal validation"
+    },
+    {
+      "comparisons": [],
+      "completed": true,
+      "decision": "not recorded",
+      "elapsed_seconds": 10.88,
+      "evaluation_origins": 0,
+      "evidence_path": "reports/manual_research/study_06.json",
+      "lineage": "aefcc9201825211d64780701062212ae2b0ab1acf6ed17d84b0dad5821d01b98",
+      "new_training_fits": 0,
+      "notebook": 6,
+      "plotly_figures": 6,
+      "report_sha256": "b6185ed15a0db01efa15aa70ae1d04e40ad6a6cdd7efb3a26f5550f8b391f50d",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_SESSION_FEATURES_READY",
+      "title": "Session candidate laboratory"
+    },
+    {
+      "comparisons": [
+        {
+          "delta_vs_current_market": 0.0,
+          "official_metric": 0.40338108742296147,
+          "passes_review_gate": false,
+          "variant": "session_support_only"
+        },
+        {
+          "delta_vs_current_market": -0.006269402059383755,
+          "official_metric": 0.3971116853635777,
+          "passes_review_gate": false,
+          "variant": "session_intraday"
+        },
+        {
+          "delta_vs_current_market": -0.0017868403135371524,
+          "official_metric": 0.4015942471094243,
+          "passes_review_gate": false,
+          "variant": "session_overnight_risk"
+        },
+        {
+          "delta_vs_current_market": -0.027926856464398242,
+          "official_metric": 0.37545423095856323,
+          "passes_review_gate": false,
+          "variant": "session_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "decision": "STOP_FITTED_SESSION_FORMULATION",
+      "elapsed_seconds": 53.994,
+      "evaluation_origins": 180,
+      "evidence_path": "reports/manual_research/study_07.json",
+      "lineage": "aded3a6c019d6e8d10739700f5bc6abca5e07983f9afc0a9eec8db06ebdf2cd1",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 4,
+      "notebook": 7,
+      "plotly_figures": 9,
+      "report_sha256": "e56c8ca7c1da5f77faa6a7544ed1fe26f25814173e423853e79538f2f12ceeff",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_SESSION_ABLATION_READY",
+      "supervised_seconds": 58.465,
+      "title": "Session feature ablations"
+    },
+    {
+      "comparisons": [
+        {
+          "delta_vs_current_market": -0.030684542316791796,
+          "official_metric": 0.3726965451061697,
+          "passes_review_gate": false,
+          "variant": "network_availability"
+        },
+        {
+          "delta_vs_current_market": -0.028656122514533477,
+          "official_metric": 0.374724964908428,
+          "passes_review_gate": false,
+          "variant": "network_synchronous"
+        },
+        {
+          "delta_vs_current_market": -0.04017320655482631,
+          "official_metric": 0.36320788086813516,
+          "passes_review_gate": false,
+          "variant": "network_directed"
+        },
+        {
+          "delta_vs_current_market": -0.039489462661964514,
+          "official_metric": 0.36389162476099696,
+          "passes_review_gate": false,
+          "variant": "network_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "decision": "STOP_THIS_NETWORK_FORMULATION",
+      "elapsed_seconds": 76.833,
+      "evaluation_origins": 180,
+      "evidence_path": "reports/manual_research/study_08.json",
+      "lineage": "d13660eed28efef3b938b898f502a2b88359c2d6a774f22c4f16d66f28314ccc",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 4,
+      "notebook": 8,
+      "plotly_figures": 10,
+      "report_sha256": "3131f1a96e6a7a9f3ca90ad0de0aa7b6b3f6ee685588af327f8ead9346fa0bb1",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_CLOSE_NETWORK_READY",
+      "supervised_seconds": 81.429,
+      "title": "Cross-asset peer features"
+    },
+    {
+      "comparisons": [
+        {
+          "delta_vs_current_market": -0.025835692920397002,
+          "official_metric": 0.37754539450256447,
+          "passes_review_gate": false,
+          "variant": "numeric_synchronous"
+        },
+        {
+          "delta_vs_current_market": -0.0037270150670694613,
+          "official_metric": 0.399654072355892,
+          "passes_review_gate": false,
+          "variant": "numeric_directed"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "cumulative_supervised_seconds": 53.762,
+      "decision": "STOP_TESTED_NETWORK_VARIANTS",
+      "elapsed_seconds": 34.256,
+      "evaluation_origins": 180,
+      "evidence_path": "reports/manual_research/study_09.json",
+      "lineage": "2d7bf39364262dea9ba091a6f67899ab8c40fee9f7efd4a43c724a28ffa8807b",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 2,
+      "notebook": 9,
+      "plotly_figures": 10,
+      "report_sha256": "7003517459b1fbb71c1dfe6e131de47ce1d7c36243d324a0c33166f6cb727c48",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_DIAGNOSIS_READY",
+      "supervised_seconds": 38.815,
+      "title": "Network removal and rank laboratory"
+    },
+    {
+      "comparisons": [
+        {
+          "delta_vs_current_market": -0.012803698675995512,
+          "official_metric": 0.39057738874696596,
+          "passes_review_gate": false,
+          "variant": "rank_global"
+        },
+        {
+          "delta_vs_current_market": -0.004307620043498495,
+          "official_metric": 0.399073467379463,
+          "passes_review_gate": false,
+          "variant": "rank_horizon_relative"
+        },
+        {
+          "delta_vs_current_market": -0.014814395676247483,
+          "official_metric": 0.388566691746714,
+          "passes_review_gate": false,
+          "variant": "rank_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "decision": "STOP_TESTED_RANK_STATE_PANELS",
+      "elapsed_seconds": 47.187,
+      "evaluation_origins": 180,
+      "evidence_path": "reports/manual_research/study_10.json",
+      "lineage": "736913e32506fcd3f9379d5b1d166e611a819848f0699ada7c50f71d8c0ecbbd",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 3,
+      "notebook": 10,
+      "plotly_figures": 10,
+      "report_sha256": "9eae64662af41f6fb9409cd96faf2414ca6ae219f75e2d46556263e5dc356fec",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_RANK_STATE_READY",
+      "supervised_seconds": 52.741,
+      "title": "Released historical-rank states"
+    },
+    {
+      "comparisons": [
+        {
+          "delta_vs_current_market": -0.013693000265007305,
+          "official_metric": 0.15334865292560604,
+          "passes_review_gate": false,
+          "variant": "context_identity"
+        },
+        {
+          "delta_vs_current_market": -0.03339269206789605,
+          "official_metric": 0.1336489611227173,
+          "passes_review_gate": false,
+          "variant": "context_shocks"
+        },
+        {
+          "delta_vs_current_market": -0.03815395814298597,
+          "official_metric": 0.12888769504762737,
+          "passes_review_gate": false,
+          "variant": "context_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "decision": "STOP_TESTED_TARGET_CONTEXT_PANELS",
+      "elapsed_seconds": 69.782,
+      "evaluation_origins": 180,
+      "evidence_path": "reports/manual_research/study_11.json",
+      "lineage": "c2d8078948d72467b75dc30f692ad9cbf4f38b4ff1f74600b00e2aea63413d2c",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 3,
+      "notebook": 11,
+      "plotly_figures": 10,
+      "report_sha256": "7a577e40c4c0c87de13da8de573e529214220fd5f5b46bae9ee8c42950f33bf5",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_TARGET_CONTEXT_READY",
+      "supervised_seconds": 74.281,
+      "title": "Instrument context"
+    },
+    {
+      "comparisons": [
+        {
+          "all_intended_inputs_admitted": true,
+          "delta_vs_current_market": -0.012615600773473457,
+          "official_metric": 0.1544260524171399,
+          "passes_review_gate": false,
+          "variant": "response_drivers"
+        },
+        {
+          "all_intended_inputs_admitted": true,
+          "delta_vs_current_market": -0.00180411857763213,
+          "official_metric": 0.1652375346129812,
+          "passes_review_gate": false,
+          "variant": "response_encoded"
+        },
+        {
+          "all_intended_inputs_admitted": true,
+          "delta_vs_current_market": -0.008180785020204778,
+          "official_metric": 0.15886086817040856,
+          "passes_review_gate": false,
+          "variant": "response_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "decision": "STOP_TESTED_RESPONSE_PANELS",
+      "elapsed_seconds": 56.988,
+      "evaluation_origins": 180,
+      "evidence_path": "reports/manual_research/study_12.json",
+      "lineage": "e50f47658517d7ca35fa9e112c388b208c75cf240fb1508d49066a3dd179fcf0",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 3,
+      "notebook": 12,
+      "plotly_figures": 10,
+      "report_sha256": "7e5fc8b133129149d2d2332e351889bd9c1d2a45b39c0a8670408fd72aea77af",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_RESPONSE_READY",
+      "supervised_seconds": 62.605,
+      "title": "Delayed response encoding"
+    },
+    {
+      "comparisons": [],
+      "completed": true,
+      "control_refits": 0,
+      "decision": "REVIEW_RELIANCE_AND_CANDIDATES_BEFORE_FITS",
+      "elapsed_seconds": 37.623,
+      "evaluation_origins": 535,
+      "evidence_path": "reports/manual_research/study_13.json",
+      "lineage": "38e222706a234b1f8b1cf05e430581ae4660b588a184e012d9dca9cdfcc11a6d",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 0,
+      "notebook": 13,
+      "plotly_figures": 10,
+      "report_sha256": "01f5cef137cc0527b4fd59b9e56b1c31e0258913d85534f3d318f4bfc3778bee",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_INFORMATION_AUDIT_READY",
+      "supervised_seconds": 42.32,
+      "title": "Saved-model information audit"
+    },
+    {
+      "comparisons": [
+        {
+          "all_intended_inputs_admitted": true,
+          "delta_vs_current_market": -0.00575028361528096,
+          "official_metric": 0.16129136957533238,
+          "passes_review_gate": false,
+          "variant": "audit_shortlist"
+        },
+        {
+          "all_intended_inputs_admitted": true,
+          "delta_vs_current_market": -0.01985839080154822,
+          "official_metric": 0.14718326238906512,
+          "passes_review_gate": false,
+          "variant": "ordinary_innovations"
+        },
+        {
+          "all_intended_inputs_admitted": true,
+          "delta_vs_current_market": -0.020930098347728354,
+          "official_metric": 0.146111554842885,
+          "passes_review_gate": false,
+          "variant": "robust_innovations"
+        },
+        {
+          "all_intended_inputs_admitted": true,
+          "delta_vs_current_market": -0.041639788878576084,
+          "official_metric": 0.12540186431203726,
+          "passes_review_gate": false,
+          "variant": "innovation_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "decision": "STOP_TESTED_PANELS",
+      "elapsed_seconds": 93.427,
+      "evaluation_origins": 180,
+      "evidence_path": "reports/manual_research/study_14.json",
+      "lineage": "77823f968c492ad31e3d0b8973360be8a1ccf2dff951debe7a208c8e03128c60",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 4,
+      "notebook": 14,
+      "plotly_figures": 10,
+      "report_sha256": "8c3ef8a7a0989dab4cab6253c4ad9e8f141201fe3710e03b70abc3e6accc1fd6",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_FEATURE_ROUND_READY",
+      "supervised_seconds": 98.152,
+      "title": "Ordinary and robust innovations"
+    },
+    {
+      "comparisons": [
+        {
+          "all_intended_inputs_admitted": true,
+          "delta_vs_current_market": -0.00934927288727419,
+          "official_metric": 0.15769238030333915,
+          "passes_review_gate": false,
+          "variant": "risk_dynamics_only"
+        },
+        {
+          "all_intended_inputs_admitted": true,
+          "delta_vs_current_market": -0.003408595902224365,
+          "official_metric": 0.16363305728838898,
+          "passes_review_gate": false,
+          "variant": "own_history_dynamics"
+        },
+        {
+          "all_intended_inputs_admitted": true,
+          "delta_vs_current_market": -0.022675350672883565,
+          "official_metric": 0.14436630251772978,
+          "passes_review_gate": false,
+          "variant": "pool_and_risk_dynamics"
+        },
+        {
+          "all_intended_inputs_admitted": true,
+          "delta_vs_current_market": 0.0036943359375302687,
+          "official_metric": 0.1707359891281436,
+          "passes_review_gate": true,
+          "variant": "prior_dynamics_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "decision": "REVIEW_ON_OTHER_PERIODS",
+      "elapsed_seconds": 73.926,
+      "evaluation_origins": 180,
+      "evidence_path": "reports/manual_research/study_15.json",
+      "lineage": "3eb229ccd19c391a37d19d3efa7693017622918da882355f605fda07fd1e85a1",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 4,
+      "notebook": 15,
+      "plotly_figures": 10,
+      "report_sha256": "d62a3d88b1c336d40127011755236d094c75dbe2d4a077389a276fc947fb0a03",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_AND_FEATURE_ROUND_READY",
+      "supervised_seconds": 78.601,
+      "title": "Prior dynamics screening"
+    },
+    {
+      "comparisons": [
+        {
+          "all_inputs_admitted": true,
+          "delta_vs_current_market": -0.009375072648446336,
+          "official_metric": 0.30033365056395894,
+          "passes_review_gate": false,
+          "positive_folds": 0,
+          "variant": "risk_dynamics_only"
+        },
+        {
+          "all_inputs_admitted": true,
+          "delta_vs_current_market": -0.015067008679544136,
+          "official_metric": 0.29464171453286114,
+          "passes_review_gate": false,
+          "positive_folds": 0,
+          "variant": "own_history_dynamics"
+        },
+        {
+          "all_inputs_admitted": true,
+          "delta_vs_current_market": -0.013702060778124414,
+          "official_metric": 0.29600666243428086,
+          "passes_review_gate": false,
+          "positive_folds": 0,
+          "variant": "pool_and_risk_dynamics"
+        },
+        {
+          "all_inputs_admitted": true,
+          "delta_vs_current_market": -0.006094816474201847,
+          "official_metric": 0.30361390673820343,
+          "passes_review_gate": false,
+          "positive_folds": 1,
+          "variant": "prior_dynamics_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "cumulative_supervised_seconds": 159.95928964001314,
+      "decision": "NO_STABLE_PRIOR_DYNAMICS_GAIN",
+      "evaluation_origins": 535,
+      "evidence_path": "reports/manual_research/study_16.json",
+      "lineage": "137bd06c719e531294c047eca3e2c24686757ad9c9c317ce872ab303ba2067bc",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 8,
+      "notebook": 16,
+      "plotly_figures": 10,
+      "report_sha256": "48faf0c54e4f95a6e4f6f2c7c0416edc72795a80a4b9dccb0a12c52126768364",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_COMPLETE",
+      "title": "Prior dynamics temporal replication"
+    },
+    {
+      "comparisons": [
+        {
+          "all_inputs_admitted": true,
+          "delta_vs_current_market": -0.025199431884861012,
+          "official_metric": 0.37818165553810046,
+          "passes_review_gate": false,
+          "positive_folds": 0,
+          "variant": "event_clock_only"
+        },
+        {
+          "all_inputs_admitted": true,
+          "delta_vs_current_market": -0.08108454932508963,
+          "official_metric": 0.32229653809787184,
+          "passes_review_gate": false,
+          "positive_folds": 0,
+          "variant": "event_location"
+        },
+        {
+          "all_inputs_admitted": true,
+          "delta_vs_current_market": -0.04372038328463862,
+          "official_metric": 0.35966070413832285,
+          "passes_review_gate": false,
+          "positive_folds": 0,
+          "variant": "event_shape"
+        },
+        {
+          "all_inputs_admitted": true,
+          "delta_vs_current_market": -0.09625000813428597,
+          "official_metric": 0.3071310792886755,
+          "passes_review_gate": false,
+          "positive_folds": 0,
+          "variant": "event_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "cumulative_supervised_seconds": 79.191,
+      "decision": "STOP_TESTED_EVENT_HISTORY_PANELS",
+      "evaluation_origins": 180,
+      "evidence_path": "reports/manual_research/study_17.json",
+      "lineage": "a1cce61d0aae1c6191882d260c9236f08400af207fb75263227472476c070534",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 4,
+      "notebook": 17,
+      "plotly_figures": 10,
+      "report_sha256": "32485001c39595e87ede0151cbb597b15d2e96dd2ec0b0d1db059411419b575b",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_COMPLETE",
+      "title": "Observed-event histories"
+    },
+    {
+      "comparisons": [
+        {
+          "delta_vs_current_market": -0.0007057327973670202,
+          "official_metric": 0.38991313206627354,
+          "passes_review_gate": false,
+          "variant": "sequence_clock"
+        },
+        {
+          "delta_vs_current_market": 0.0010970350477600421,
+          "official_metric": 0.3917158999114006,
+          "passes_review_gate": false,
+          "variant": "sequence_magnitude"
+        },
+        {
+          "delta_vs_current_market": -0.0007057327973670202,
+          "official_metric": 0.38991313206627354,
+          "passes_review_gate": false,
+          "variant": "sequence_transitions"
+        },
+        {
+          "delta_vs_current_market": 0.00500176218442322,
+          "official_metric": 0.3956206270480638,
+          "passes_review_gate": true,
+          "variant": "sequence_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "cumulative_supervised_seconds": 88.463,
+      "decision": "REVIEW_ON_OTHER_PERIODS",
+      "evaluation_origins": 175,
+      "evidence_path": "reports/manual_research/study_18.json",
+      "lineage": "7678d6f4d37dcdb517cc74fda9cd22d48239df9b55274d986271af9f97cea692",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 4,
+      "notebook": 18,
+      "plotly_figures": 10,
+      "report_sha256": "96dc161cbd35a8d3633dd22802c7c2bb6365954b05de30b20f6f47e2294dcc21",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_COMPLETE",
+      "title": "Released sequence structure"
+    },
+    {
+      "comparisons": [
+        {
+          "delta_vs_current_market": -0.003318200952792283,
+          "official_metric": 0.3873006639108483,
+          "passes_review_gate": false,
+          "variant": "error_clock"
+        },
+        {
+          "delta_vs_current_market": 0.005703243912249911,
+          "official_metric": 0.39632210877589047,
+          "passes_review_gate": true,
+          "variant": "error_bias"
+        },
+        {
+          "delta_vs_current_market": 0.005843899389005647,
+          "official_metric": 0.3964627642526462,
+          "passes_review_gate": true,
+          "variant": "error_dispersion"
+        },
+        {
+          "delta_vs_current_market": -0.013542842333203908,
+          "official_metric": 0.37707602253043665,
+          "passes_review_gate": false,
+          "variant": "error_joint"
+        }
+      ],
+      "completed": true,
+      "control_refits": 0,
+      "cumulative_supervised_seconds": 89.233,
+      "decision": "REVIEW_ON_OTHER_PERIODS",
+      "evaluation_origins": 175,
+      "evidence_path": "reports/manual_research/study_19.json",
+      "lineage": "195a9c0254f4cc79a9a2087fccf2a656a60b22c7dccdeaada7c704ce9eee9496",
+      "maximum_prediction_replay_error": 0.0,
+      "new_training_fits": 4,
+      "notebook": 19,
+      "plotly_figures": 10,
+      "report_sha256": "8de2d6013733f51042556a8c3843c375643478d05c5982819c06e027b131cc17",
+      "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+      "status": "NOTEBOOK_COMPLETE",
+      "title": "As-of prior-error memory"
+    }
+  ]
+}

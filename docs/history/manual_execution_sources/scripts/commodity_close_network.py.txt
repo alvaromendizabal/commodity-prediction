@@ -1,0 +1,870 @@
+#!/usr/bin/env python3
+"""Install notebook 08; test bounded close-only peer-network feature additions.
+
+Default action installs only. Notebook execution launches at most four first-fold
+CPU fits using existing dependencies. No AWS/Git write, network access, package
+install, holdout evaluation, old-study rerun, or automatic space shutdown.
+"""
+from __future__ import annotations
+
+import argparse
+import fcntl
+import gc
+import hashlib
+import importlib.util
+import json
+import math
+import os
+from pathlib import Path
+import signal
+import sys
+import time
+import zipfile
+from datetime import datetime, timezone
+
+ROOT = Path('/home/sagemaker-user/projects/commodity-prediction-manual')
+SHA = 'd142a4cb57a5c4b2880f9341619e13a735b1cddc'
+PARENT = '04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605'
+FEATURE = '52d3650abd20481db1a88fe7793085360bb0b4b684c501518ae9f4cb1c9405ba'
+PRIOR_HELPER = '7efef4574d55bd9aad8da8ecf4e7f4ba7cc54907412dcfb4a754100d9e34f88f'
+PRIOR_REPORT = 'e56c8ca7c1da5f77faa6a7544ed1fe26f25814173e423853e79538f2f12ceeff'
+TRAIN_STOP, VALIDATION_START, VALIDATION_STOP = 1164, 1169, 1349
+WINDOW, MIN_OBS, REFRESH, K, MIN_PEERS = 126, 84, 21, 5, 3
+MIN_CORR, MIN_WEIGHT_FRACTION = 0.10, 0.60
+LIMIT, GAIN, CONTROL = 240.0, 0.002, 0.40338108742296147
+NOTEBOOK = '08_close_network_ablation.ipynb'
+KINDS = ('synchronous', 'directed')
+CHANNELS = ('current_impulse', 'trend_5', 'response_gap')
+MASKS = [f'close_network__{kind}_available_weight_{side}' for kind in KINDS for side in ('difference', 'sum')]
+NUMERIC = {kind: [f'close_network__{kind}_{c}_{side}' for c in CHANNELS for side in ('difference', 'sum')] for kind in KINDS}
+VARIANTS = ('network_availability', 'network_synchronous', 'network_directed', 'network_joint')
+TERMINAL = {'CLOSE_NETWORK_REVIEW_READY', 'NOTEBOOK_AND_CLOSE_NETWORK_READY'}
+
+
+class Stop(RuntimeError):
+    """Preserve evidence and diagnose before repeating a failed stage."""
+
+
+def utc() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def emit(stage: str, **fields) -> None:
+    print(json.dumps({'utc': utc(), 'stage': stage, **fields}, allow_nan=False), flush=True)
+
+
+def previous(root: Path):
+    path = root / 'scripts/commodity_session_ablation.py'
+    if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != PRIOR_HELPER:
+        raise Stop('Verified notebook-07 helper is missing or changed. Do not overwrite or rerun it.')
+    spec = importlib.util.spec_from_file_location('commodity_verified_session_support', path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    older, utilities = mod.previous(root)
+    return mod, older, utilities
+
+
+def report_path(root: Path) -> Path:
+    return root / 'logs/manual_close_network/commodity_close_network_report.json'
+
+
+def plan() -> dict:
+    return {
+        'study': 'close_only_leave_pair_out_peer_networks', 'source_commit': SHA,
+        'parent_lineage': PARENT, 'training_stop_exclusive': TRAIN_STOP,
+        'validation_start': VALIDATION_START, 'validation_stop_exclusive': VALIDATION_STOP,
+        'warmup_dates': 252, 'window_rows': WINDOW, 'minimum_pair_observations': MIN_OBS,
+        'refresh_rows': REFRESH, 'first_refresh_date': WINDOW + 1,
+        'max_peers': K, 'minimum_observed_peers': MIN_PEERS,
+        'minimum_absolute_correlation': MIN_CORR, 'minimum_observed_weight_fraction': MIN_WEIGHT_FRACTION,
+        'standardized_return_clip': 8.0, 'peer_trend_rows': 5, 'peer_trend_min_observations': 4,
+        'lag_orientation': 'Corr(follower return at s, peer return at s-1); follower s <= refresh_date-1',
+        'peer_exclusion': 'Exclude follower itself AND both legs of the prediction target before top-K selection.',
+        'universe': 'Sorted unique asset identifiers in target_pairs, using only their supplied price columns.',
+        'variants': {
+            'network_availability': MASKS,
+            'network_synchronous': MASKS + NUMERIC['synchronous'],
+            'network_directed': MASKS + NUMERIC['directed'],
+            'network_joint': MASKS + NUMERIC['synchronous'] + NUMERIC['directed'],
+        },
+        'candidate_templates': 16, 'numerical_templates': 12, 'availability_templates': 4,
+        'feature_label_use': False, 'max_new_fits': 4, 'worker_limit_seconds': LIMIT,
+        'continue_gain_vs_each_control': GAIN,
+        'decision_rule': 'Numeric panel gain >=0.002 over BOTH saved current_market and fitted network-availability controls, exact replay and numerical admission. Review only; no automatic other folds.',
+        'rule_timing': 'Declared after the negative session study, before any network validation scores; this first fold has been used in earlier research.',
+        'model_policy': 'Original histogram settings. Training-only existing preprocessing and duplicate/constant/missing screening. No learner tuning or control refit.',
+        'feature_gate': 'open', 'promotion_allowed': False, 'final_test_evaluations': 0,
+        'further_folds_in_this_helper': False,
+    }
+
+
+def read_prior(root: Path, prior, u) -> dict:
+    p = u.safe_path(root, 'logs/manual_session_ablation/commodity_session_ablation_report.json')
+    if u.digest(p) != PRIOR_REPORT:
+        raise Stop('Notebook-07 report changed. Return the current report rather than rerun old fits.')
+    report = u.read_json(p)
+    if (report.get('status') != 'NOTEBOOK_AND_SESSION_ABLATION_READY'
+            or report.get('decision') != 'STOP_FITTED_SESSION_FORMULATION'
+            or report.get('new_training_fits') != 4 or report.get('control_refits') != 0
+            or report.get('maximum_prediction_replay_error') != 0.0
+            or report.get('source_commit') != SHA or report.get('final_test_evaluations') != 0):
+        raise Stop('Unexpected session completion evidence.')
+    # Hash validation, not model loading or study execution.
+    prior.verify_complete(root, report, u)
+    return report
+
+
+def identity(root: Path, u) -> tuple[str, dict]:
+    p = u.safe_path(root, 'configs/manual_close_network.json')
+    if not p.is_file() or u.read_json(p) != plan():
+        raise Stop('Installed network declaration differs; no unreviewed threshold change.')
+    obj = {'plan': plan(), 'helper_sha256': u.digest(Path(__file__)),
+           'prior_helper_sha256': PRIOR_HELPER, 'session_report_sha256': PRIOR_REPORT,
+           'domain_config_sha256': u.digest(root / 'configs/domain_study.json')}
+    return hashlib.sha256(json.dumps(obj, sort_keys=True).encode()).hexdigest(), obj
+
+
+def pairwise_correlation(follower, leader):
+    """Pearson correlations using pairwise observed rows, no filling by future means."""
+    import numpy as np
+    a, b = np.asarray(follower, dtype=float), np.asarray(leader, dtype=float)
+    if a.ndim != 2 or b.ndim != 2 or a.shape[0] != b.shape[0] or a.shape[0] < MIN_OBS:
+        raise Stop('Correlation history axes or length invalid.')
+    f, g = np.isfinite(a).astype(float), np.isfinite(b).astype(float)
+    aa, bb = np.where(np.isfinite(a), a, 0.0), np.where(np.isfinite(b), b, 0.0)
+    count = f.T @ g
+    sx, sy = aa.T @ g, f.T @ bb
+    n = np.maximum(count, 1)
+    cov = aa.T @ bb - sx * sy / n
+    vx = np.maximum((aa * aa).T @ g - sx * sx / n, 0)
+    vy = np.maximum(f.T @ (bb * bb) - sy * sy / n, 0)
+    den = np.sqrt(vx * vy)
+    good = (count >= MIN_OBS) & (vx > 1e-20) & (vy > 1e-20)
+    corr = np.divide(cov, den, out=np.full_like(cov, np.nan), where=good)
+    return np.clip(corr, -1, 1), count
+
+
+def neighbors(corr, counts, left, right):
+    """Select incoming peers independently of labels and excluding both target legs."""
+    import numpy as np
+    m, n = len(left), corr.shape[0]
+    if corr.shape != (n, n) or counts.shape != corr.shape or len(right) != m:
+        raise Stop('Network axes mismatch.')
+    if any(i < 0 or i >= n for i in left) or any(j < -1 or j >= n for j in right):
+        raise Stop('Invalid target-to-asset mapping.')
+    index = np.zeros((m, 2, K), dtype=int)
+    weights = np.zeros((m, 2, K), dtype=float)
+    for target, (a, b) in enumerate(zip(left, right, strict=True)):
+        for leg, anchor in enumerate((a, b)):
+            if anchor < 0:
+                continue
+            eligible = np.isfinite(corr[anchor]) & (counts[anchor] >= MIN_OBS) & (np.abs(corr[anchor]) >= MIN_CORR)
+            eligible[a] = False
+            if b >= 0:
+                eligible[b] = False
+            ids = np.flatnonzero(eligible)
+            # Stable tie break uses the canonically sorted asset index.
+            ids = sorted(ids, key=lambda j: (-abs(float(corr[anchor, j])), int(j)))[:K]
+            if len(ids) < MIN_PEERS:
+                continue
+            index[target, leg, :len(ids)] = ids
+            weights[target, leg, :len(ids)] = corr[anchor, ids]
+    return index, weights
+
+
+def aggregate_peers(values, index, weights):
+    """Signed correlation-weighted mean; weak observed coverage remains missing."""
+    import numpy as np
+    a = np.asarray(values, dtype=float)
+    sampled = a[:, index]  # rows, target, leg, peer
+    active = np.abs(weights) > 0
+    finite = np.isfinite(sampled) & active[None]
+    observed_mass = (np.abs(weights)[None] * finite).sum(axis=-1)
+    total = np.abs(weights).sum(axis=-1)
+    fraction = np.divide(observed_mass, total[None], out=np.zeros_like(observed_mass), where=total[None] > 0)
+    good = (finite.sum(axis=-1) >= MIN_PEERS) & (fraction >= MIN_WEIGHT_FRACTION)
+    numerator = (np.where(finite, sampled, 0) * weights[None]).sum(axis=-1)
+    result = np.divide(numerator, observed_mass, out=np.full_like(numerator, np.nan), where=good)
+    return result, fraction
+
+
+def validate_inputs(x, pairs):
+    import numpy as np
+    import pandas as pd
+    if not isinstance(x, pd.DataFrame) or not isinstance(pairs, pd.DataFrame):
+        raise Stop('Expected market and target DataFrames.')
+    if (not x.columns.is_unique or not pairs.columns.is_unique or pairs.empty
+            or not {'target', 'pair', 'lag'}.issubset(pairs.columns)):
+        raise Stop('Ambiguous market columns or incomplete target metadata.')
+    dates = x.index.to_numpy()
+    if (len(x) < WINDOW + 2 or not np.issubdtype(dates.dtype, np.integer)
+            or dates.tolist() != list(range(len(x))) or len(x) > VALIDATION_STOP):
+        raise Stop('Use the contiguous zero-based first-fold prefix only.')
+    if (pairs[['target', 'pair', 'lag']].isna().any().any() or pairs.target.duplicated().any()
+            or not pairs.lag.isin([1, 2, 3, 4]).all()):
+        raise Stop('Invalid target/horizon contract.')
+    legs = [v.split(' - ') if isinstance(v, str) else [] for v in pairs.pair]
+    if any(len(v) not in (1, 2) or len(set(v)) != len(v) or any(not a for a in v) for v in legs):
+        raise Stop('Invalid target leg identifiers.')
+    assets = sorted({a for row in legs for a in row})
+    if len(assets) < MIN_PEERS + 2 or not set(assets).issubset(x.columns):
+        raise Stop('Insufficient or missing target-asset price columns.')
+    if not all(pd.api.types.is_numeric_dtype(x[a]) for a in assets):
+        raise Stop('Target-asset prices must be numeric.')
+    return assets, legs
+
+
+def network_features(x, pairs, progress=False):
+    """Build 16 causal templates; no target outcomes accepted by this function.
+
+    The directed matrix uses follower r_s and peer r_(s-1), s < refresh t.
+    Same-time and directed matrices have identical windows/top-K/standardization.
+    Coefficients and scales remain fixed for 21 rows, then use a new past-only window.
+    """
+    import numpy as np
+    import pandas as pd
+    assets, legs = validate_inputs(x, pairs)
+    loc = {a: i for i, a in enumerate(assets)}
+    left = np.array([loc[v[0]] for v in legs])
+    right = np.array([loc[v[1]] if len(v) == 2 else -1 for v in legs])
+    raw = x[assets].to_numpy(dtype=float)
+    logs = np.log(np.where(np.isfinite(raw) & (raw > 0), raw, np.nan))
+    returns = np.vstack([np.full((1, len(assets)), np.nan), np.diff(logs, axis=0)])
+    n, m = len(x), len(pairs)
+    names = MASKS + NUMERIC['synchronous'] + NUMERIC['directed']
+    values = np.full((n, m, len(names)), np.nan, dtype=np.float32)
+    values[:, :, :len(MASKS)] = 0
+    refreshes, snapshots = [], []
+    for start in range(WINDOW + 1, n, REFRESH):
+        stop = min(n, start + REFRESH)
+        follower = returns[start-WINDOW:start]
+        count = np.isfinite(follower).sum(axis=0)
+        total = np.where(np.isfinite(follower), follower, 0).sum(axis=0)
+        mean = np.divide(total, count, out=np.full(len(assets), np.nan), where=count >= MIN_OBS)
+        dif = np.where(np.isfinite(follower), follower - mean, 0)
+        variance = np.divide((dif * dif).sum(axis=0), count, out=np.full(len(assets), np.nan), where=count >= MIN_OBS)
+        scale = np.sqrt(variance)
+        scale[~np.isfinite(scale) | (scale <= 1e-10)] = np.nan
+        # Include only the small lag prefix needed for latest/5-row/response features.
+        zstart = start - 5
+        z = np.clip((returns[zstart:stop] - mean) / scale, -8, 8)
+        current = z[5:]
+        earlier = z[4:-1]
+        trend = pd.DataFrame(z).rolling(5, min_periods=4).mean().to_numpy()[5:]
+        row_record = {'date_id': start, 'fit_last_date': start-1}
+        for kind, lag in [('synchronous', 0), ('directed', 1)]:
+            leader = returns[start-WINDOW-lag:start-lag]
+            corr, observations = pairwise_correlation(follower, leader)
+            index, weights = neighbors(corr, observations, left, right)
+            impulse, fraction = aggregate_peers(current, index, weights)
+            smooth, _ = aggregate_peers(trend, index, weights)
+            old_impulse, _ = aggregate_peers(earlier, index, weights)
+            own = np.stack([current[:, left], current[:, np.maximum(right, 0)]], axis=-1)
+            gap = old_impulse - own
+            for name, arr in [('available_weight', fraction), ('current_impulse', impulse), ('trend_5', smooth), ('response_gap', gap)]:
+                # A genuinely absent second leg is exactly zero. Unavailable real legs stay NaN.
+                a, b = arr[:, :, 0], arr[:, :, 1].copy()
+                b[:, right < 0] = 0
+                for suffix, v in [('difference', a-b), ('sum', a+b)]:
+                    values[start:stop, :, names.index(f'close_network__{kind}_{name}_{suffix}')] = v.astype(np.float32)
+            active = (np.abs(weights) > 0).sum(axis=-1)
+            usable = (active[:, 0] >= MIN_PEERS) & ((right < 0) | (active[:, 1] >= MIN_PEERS))
+            row_record[kind+'_target_graphs'] = int(usable.sum())
+            # Training-end connectivity summary; no validation-based graph selection.
+            if start <= TRAIN_STOP-1 < stop:
+                unique = {}
+                for i, pair in enumerate(legs):
+                    for leg, anchor in enumerate(pair):
+                        for j, w in zip(index[i, leg], weights[i, leg], strict=True):
+                            if w:
+                                unique[(anchor, assets[int(j)])] = float(w)
+                by_market = {}
+                for (anchor, peer), w in unique.items():
+                    key = (peer.split('_')[0], anchor.split('_')[0])
+                    by_market[key] = by_market.get(key, 0) + 1
+                snapshots.append({'graph': kind, 'fit_last_date': start-1,
+                    'edges': [{'peer': peer, 'follower': anchor, 'correlation': w} for (anchor, peer), w in sorted(unique.items())],
+                    'market_edges': [{'peer_market': a, 'follower_market': b, 'edges': c} for (a,b),c in sorted(by_market.items())],
+                    'note': 'Unique pair-specific incoming associations; not verified causal/economic links.'})
+        refreshes.append(row_record)
+        if progress and len(refreshes) % 10 == 0:
+            emit('causal_network_build',last_origin=stop-1,completed_refreshes=len(refreshes))
+    if np.isinf(values).any() or values.shape != (n, m, 16):
+        raise Stop('Invalid network representation.')
+    return values, names, {'asset_count': len(assets), 'assets': assets,
+        'candidate_templates': 16, 'price_defined_targets': m,
+        'refreshes': refreshes, 'training_end_networks': snapshots,
+        'timing': 'All graph estimates and scales frozen before block start; all applied inputs at or before each origin.'}
+
+
+def feature_audit(block, names, base_values, base_names):
+    import numpy as np
+    rows, known = [], {}
+    def h(v):
+        a = np.ascontiguousarray(v, dtype=np.float32).copy()
+        a[np.isnan(a)] = np.float32(np.nan); a[a == 0] = 0
+        return hashlib.sha256(a.tobytes()).hexdigest()
+    for i, name in enumerate(base_names):
+        known.setdefault(h(base_values[252:TRAIN_STOP, :, i]), name)
+    for i, name in enumerate(names):
+        a = block[252:TRAIN_STOP, :, i]; finite = np.isfinite(a); v = a[finite]
+        sig = h(a)
+        duplicate = known.get(sig)
+        known.setdefault(sig, name)
+        hist, edges = np.histogram(v, bins=24) if len(v) else ([], [])
+        rows.append({'name': name, 'type': 'availability' if name in MASKS else 'numeric',
+            'group': name.split('__',1)[1].split('_',1)[0],
+            'training_finite_fraction': float(finite.mean()),
+            'targets_with_80pct_coverage': int((finite.mean(axis=0) >= .8).sum()),
+            'q05': float(np.quantile(v,.05)) if len(v) else None,
+            'q95': float(np.quantile(v,.95)) if len(v) else None,
+            'exact_duplicate_of': duplicate, 'training_sha256': sig,
+            'histogram': {'counts': list(map(int,hist)), 'edges': list(map(float,edges))}})
+    return rows
+
+
+def validate_prior_scores(report: dict) -> None:
+    expected = {'session_support_only': CONTROL, 'session_intraday': 0.3971116853635777,
+                'session_overnight_risk': 0.4015942471094243, 'session_joint': 0.37545423095856323}
+    got = {r['variant']: r['official_metric'] for r in report['comparison_rows']}
+    if got != expected:
+        raise Stop('Prior matched results differ from reviewed evidence.')
+
+
+def comparison_rows(results, control, metric):
+    if len(results) != 4 or {r['variant'] for r in results} != set(VARIANTS):
+        raise Stop('Expected four network model results.')
+    scores = {r['variant']: metric(r['metrics']['daily_rank_correlations'],180) for r in results}
+    rows, eligible = [], []
+    for r in results:
+        name, sel = r['variant'], r['selection']
+        if ((r['fold'],r['train_stop'],r['validation_start'],r['validation_stop']) != (0,1164,1169,1349)
+                or r['metrics']['date_ids'] != list(range(1169,1349))
+                or not math.isclose(scores[name],r['metrics']['official_metric'],rel_tol=0,abs_tol=1e-12)):
+            raise Stop('Network score dates or calculation differ.')
+        if (sel['candidate_templates'] != sel['retained_templates'] + sel['rejected_templates']
+                or sel['retained_templates'] != len(sel['selected_names'])):
+            raise Stop('Feature accounting does not balance.')
+        numeric = set(sel['selected_names']).intersection(NUMERIC['synchronous']+NUMERIC['directed'])
+        if name != 'network_availability' and not numeric:
+            raise Stop('No numerical information was admitted; cannot claim a feature test.')
+        delta = scores[name] - control['official_metric']
+        extra = scores[name] - scores['network_availability']
+        passes = name != 'network_availability' and delta >= GAIN and extra >= GAIN
+        if passes: eligible.append(name)
+        rows.append({'variant':name,'official_metric':scores[name],'delta_vs_current_market':delta,
+                     'delta_vs_availability':extra,'passes_review_gate':passes,
+                     'numeric_candidates':len(plan()['variants'][name])-4,'numeric_admitted':len(numeric),
+                     'availability_admitted':len(set(sel['selected_names']).intersection(MASKS)),
+                     'candidate_templates':sel['candidate_templates'],'retained_templates':sel['retained_templates'],
+                     'rejected_templates':sel['rejected_templates']})
+    return rows,eligible
+
+
+def fit_one(root,u,stage,lineage,name,base,block,names,y,pairs,fold,config,report):
+    import numpy as np
+    import pandas as pd
+    import joblib
+    from commodity_prediction.domain.catalog import Panel
+    from commodity_prediction.domain.model import prepare, select
+    from commodity_prediction.domain.experiment import Experiment
+    from commodity_prediction.domain.attribution.run import fit_stage
+    chosen = plan()['variants'][name]
+    added = block[:,:,[names.index(n) for n in chosen]]
+    panel = Panel(np.concatenate([base.values,added],axis=2),base.dates,base.targets,base.names+chosen,dict(base.source_series))
+    panel.validate()
+    if stage.exists():
+        raise Stop('Unexpected pre-existing model stage; recover it rather than refit automatically.')
+    settings = {**config,'max_features':len(panel.names),'max_abs_correlation':1.01}
+    emit('training_only_screen',variant=name,completed=len(report['results']),total=4)
+    stats = prepare(panel,y,fold.train_stop,settings)
+    _, audit = select(stats,Experiment(name,algorithm='histogram').candidates(panel.names),settings,False)
+    if name != 'network_availability' and not set(audit['selected_names']).intersection(set(chosen)-set(MASKS)):
+        raise Stop('No usable numerical network feature survives training screening; no fit for '+name)
+    if set(audit['rejection_reasons']).intersection({'feature_budget','correlated','unstable_sign'}):
+        raise Stop('Unreviewed screening exclusion.')
+    report['fit_attempts_this_call'] += 1;u.atomic_json(report_path(root),report)
+    result = fit_stage(panel,y,pairs,fold,Experiment(name,algorithm='histogram'),settings,stats,stage,lineage)
+    saved = pd.read_parquet(stage/'predictions.parquet')
+    replay = joblib.load(stage/'model.joblib').predict(panel,fold.validation_start,fold.validation_stop)
+    error = u.exact_predictions(saved,replay)
+    report['checkpoint_hashes'][name] = u.verify_stage(stage,lineage)
+    report['results'].append(result);report['new_training_fits']+=1
+    report['maximum_prediction_replay_error']=max(report['maximum_prediction_replay_error'],error)
+    u.atomic_json(report_path(root),report)
+    emit('checkpoint_verified',variant=name,completed=len(report['results']),total=4,
+         official_metric=result['metrics']['official_metric'],new_fits=report['new_training_fits'])
+    del panel,stats,replay;gc.collect()
+    return saved
+
+
+def bar_support(x,pairs):
+    import numpy as np
+    supported=set()
+    for v in {a for p in pairs.pair for a in p.split(' - ')}:
+        us=v.endswith('_adj_close');stem=v.removesuffix('close' if us else 'Close')
+        if all(stem+a in x.columns for a in (['open','high','low'] if us else ['Open','High','Low'])):
+            supported.add(v)
+    return np.array([all(a in supported for a in v.split(' - ')) for v in pairs.pair])
+
+
+def worker(root:Path):
+    import numpy as np
+    import pandas as pd
+    import joblib
+    from threadpoolctl import threadpool_limits
+    from commodity_prediction.data import Fold
+    from commodity_prediction.domain.catalog import Panel
+    from commodity_prediction.domain.run import load_panel
+    from commodity_prediction.domain.market_path.features import build_panel
+    from commodity_prediction.studies.evaluation import evaluate,compare_predictions
+    from commodity_prediction.runtime import seal_checkpoint
+    prior,older,u=previous(root)
+    started=time.monotonic();out=u.safe_path(root,'logs/manual_close_network');out.mkdir(parents=True,exist_ok=True)
+    lineage,evidence=identity(root,u);directory=u.safe_path(root,'artifacts/close_network_ablation/'+lineage)
+    directory.mkdir(parents=True,exist_ok=True)
+    report={'project':'commodity-prediction','status':'RUNNING','source_commit':SHA,'lineage':lineage,
+            'parent_lineage':PARENT,'plan':plan(),'identity':evidence,'started_utc':utc(),
+            'feature_gate':'open','promotion_allowed':False,'final_test_evaluations':0,
+            'new_training_fits':0,'control_refits':0,'fit_attempts_this_call':0,
+            'maximum_prediction_replay_error':0.0,'results':[],'checkpoint_hashes':{},
+            'validation_dates':180,'study_limit_seconds':LIMIT,'aws_api_calls':0,'github_writes':False,
+            'subgroup_diagnostics':[]}
+    def save():
+        report['elapsed_seconds']=round(time.monotonic()-started,3);u.atomic_json(report_path(root),report)
+    def expired(*_):raise Stop('240-second close-network deadline reached; completed stages preserved.')
+    signal.signal(signal.SIGALRM,expired);signal.setitimer(signal.ITIMER_REAL,LIMIT)
+    try:
+        save();ready=u.readiness(root);u.validate_runtime(root,ready);u.validate_source(root)
+        last=read_prior(root,prior,u);validate_prior_scores(last)
+        report['prior_session_comparisons']=last['comparison_rows'];report['prior_control_pooled']=last['prior_control_pooled']
+        parents=u.checkpoint_snapshot(root,ready)
+        for rel,h in u.RAW.items():
+            if u.digest(u.safe_path(root,'data/raw/'+rel))!=h:raise Stop('Raw input changed: '+rel)
+        final=u.read_json(root/'configs/final_evaluation.json')
+        if final['evaluated'] or final['final_test_start_date_id']!=1714:raise Stop('Final-test boundary changed.')
+        x=pd.read_csv(root/'data/raw/train.csv',nrows=VALIDATION_STOP).set_index('date_id')
+        y=pd.read_csv(root/'data/raw/train_labels.csv',nrows=VALIDATION_STOP).set_index('date_id').replace(-999999,np.nan)
+        pairs=pd.read_csv(root/'data/raw/target_pairs.csv')
+        if (len(x)!=VALIDATION_STOP or x.index.tolist()!=list(range(VALIDATION_STOP)) or not x.index.equals(y.index)
+                or pairs.target.tolist()!=list(y.columns) or list(y.columns)!=[f'target_{i}' for i in range(424)]):
+            raise Stop('First-fold schema or alignment changed.')
+        config=u.read_json(root/'configs/domain_study.json')
+        if config['warmup_dates']!=252 or config['threads']!=4:raise Stop('Frozen training configuration changed.')
+        u.atomic_json(directory/'plan.json',evidence)
+        with threadpool_limits(limits=4):
+            emit('reuse_original_features_and_control',new_control_fits=0)
+            original=load_panel(root/'artifacts'/FEATURE/'features')
+            prefix=Panel(original.values[:VALIDATION_STOP],original.dates[:VALIDATION_STOP],original.targets,original.names,dict(original.source_series))
+            base,_=build_panel(prefix,x,pairs,'current_market');del prefix,original;gc.collect()
+            cp=root/'artifacts'/PARENT/'fold_0/current_market'
+            saved=pd.read_parquet(cp/'predictions.parquet')
+            replay=joblib.load(cp/'model.joblib').predict(base,VALIDATION_START,VALIDATION_STOP)
+            u.exact_predictions(saved,replay)
+            control=evaluate(y.loc[saved.index],saved,pairs)
+            if not prior.close(control['official_metric'],CONTROL) or saved.index.tolist()!=list(range(1169,1349)):
+                raise Stop('Frozen-control metric or date reproduction failed.')
+            report['control']=control;emit('SAVED_CONTROL_REPLAY_PASSED',score=CONTROL)
+            block,names,metadata=network_features(x,pairs,progress=True)
+            # Exact prefix checks at one interior training date and train-end. No label fitting.
+            for stop in [505,TRAIN_STOP]:
+                pre,pnames,_=network_features(x.iloc[:stop],pairs)
+                if pnames!=names:raise Stop('Prefix feature names differ.')
+                np.testing.assert_array_equal(pre,block[:stop])
+            report['prefix_replay_passed']=True
+            report['network_metadata']=metadata
+            report['feature_audit']=feature_audit(block,names,base.values,base.names)
+            report['overlap_scope']='Exact duplicate audit against the active 87-template control and within new candidates; semantic comparison to historical trend, asynchrony, PCA, currency graph and fixed-proxy code. No claim of exhaustive historical numerical deduplication.'
+            stage=directory/'features';stage.mkdir()
+            # Feature checkpoint includes no target outcomes; still private competition-derived data.
+            np.savez_compressed(stage/'candidates.npz',values=block,dates=np.arange(len(x)))
+            u.atomic_json(stage/'inventory.json',{'names':names,'targets':pairs.target.tolist(),'metadata':metadata})
+            seal_checkpoint(stage,lineage,['candidates.npz','inventory.json'])
+            report['feature_checkpoint_hashes']=u.verify_stage(stage,lineage);save()
+            masks=bar_support(x,pairs)
+            if int(masks.sum())!=89:raise Stop('Earlier 89-target OHLC grouping changed.')
+            for mask,label in [(masks,'Prior complete-bar targets'),(~masks,'Other 335 targets')]:
+                report['subgroup_diagnostics'].append({'variant':'current_market',**prior.subset_diagnostic(y.loc[saved.index],saved,mask,label,older)})
+            fold=Fold(0,TRAIN_STOP,VALIDATION_START,VALIDATION_STOP)
+            for name in VARIANTS:
+                pred=fit_one(root,u,directory/'fold_0'/name,lineage,name,base,block,names,y,pairs,fold,config,report)
+                for mask,label in [(masks,'Prior complete-bar targets'),(~masks,'Other 335 targets')]:
+                    report['subgroup_diagnostics'].append({'variant':name,**prior.subset_diagnostic(y.loc[pred.index],pred,mask,label,older)})
+            rows,eligible=comparison_rows(report['results'],control,prior.metric)
+            daily={r['variant']:np.asarray(r['metrics']['daily_rank_correlations']) for r in report['results']}
+            daily['current_market']=np.asarray(control['daily_rank_correlations'])
+            contrasts=[(n,'current_market') for n in VARIANTS]+[(n,'network_availability') for n in VARIANTS[1:]]+ [('network_directed','network_synchronous')]
+            report['comparisons']=compare_predictions(daily,[180],contrasts,config)
+            report['comparison_rows']=rows;report['candidates_for_review']=eligible
+            report['decision']='REVIEW_BEFORE_OTHER_FOLDS' if eligible else 'STOP_THIS_NETWORK_FORMULATION'
+            report['uncertainty_scope']='Eight declared first-fold contrasts, conditional on these fitted models; no correction for the full adaptive research history.'
+            report['limitations']=[
+                'A statistical close-return association is not an identified causal, supply-chain or simultaneous-session link.',
+                'Top-five links are not individually significance-tested or selected by validation outcomes.',
+                'All 424 targets have potential close-based definitions; actual usable coverage must be read from the audit.',
+                'This first development fold has already been inspected. No leaderboard/holdout claim or automatic model promotion.',
+                'No new labelled target history, external calendar, inventory, carry or fundamental data was created.',
+                'Frozen learner tests representation utility only for this learner/configuration.',
+                'Checkpoint ZIP is not an off-disk backup until downloaded elsewhere.']
+        report['parents_unchanged']=u.checkpoint_snapshot(root,ready)==parents
+        if not report['parents_unchanged']:raise Stop('Frozen parent changed.')
+        u.validate_source(root);report['source_unchanged']=True
+        report.update(status='CLOSE_NETWORK_REVIEW_READY',finished_utc=utc());save()
+        u.atomic_json(directory/'review.json',report)
+        return report
+    except BaseException as exc:
+        report.update(status='STOPPED',error=type(exc).__name__+': '+str(exc),finished_utc=utc());save();raise
+    finally:signal.setitimer(signal.ITIMER_REAL,0)
+
+
+def verify_complete(root,report,prior,u):
+    lineage,_=identity(root,u)
+    if (report.get('status') not in TERMINAL or report.get('lineage')!=lineage
+            or report.get('source_commit')!=SHA or report.get('control_refits')!=0
+            or report.get('maximum_prediction_replay_error')!=0.0 or report.get('final_test_evaluations')!=0
+            or report.get('parents_unchanged') is not True or report.get('source_unchanged') is not True
+            or report.get('prefix_replay_passed') is not True or report.get('new_training_fits')!=4):
+        raise Stop('Not a completed verified network study.')
+    rows,eligible=comparison_rows(report['results'],report['control'],prior.metric)
+    if rows!=report['comparison_rows'] or eligible!=report['candidates_for_review']:
+        raise Stop('Stored network decision cannot be reproduced.')
+    if report['decision']!=('REVIEW_BEFORE_OTHER_FOLDS' if eligible else 'STOP_THIS_NETWORK_FORMULATION'):
+        raise Stop('Stored decision changed.')
+    base=root/'artifacts/close_network_ablation'/lineage
+    u.verify_stage(base/'features',lineage,report['feature_checkpoint_hashes'])
+    if set(report['checkpoint_hashes'])!=set(VARIANTS):raise Stop('Incomplete child checkpoint inventory.')
+    for n in VARIANTS:u.verify_stage(base/'fold_0'/n,lineage,report['checkpoint_hashes'][n])
+
+
+def run(root:Path=ROOT):
+    root=Path(root);prior,older,u=previous(root)
+    ready=u.readiness(root);u.validate_runtime(root,ready);u.validate_source(root);read_prior(root,prior,u)
+    out=u.safe_path(root,'logs/manual_close_network');out.mkdir(parents=True,exist_ok=True)
+    with u.safe_path(out,'supervisor.lock').open('a') as lock:
+        fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+        if report_path(root).exists():
+            r=u.read_json(report_path(root))
+            if r.get('status') not in TERMINAL:
+                raise Stop('An interrupted/failed network run exists. Return the report; no automatic refitting or budget reset.')
+            verify_complete(root,r,prior,u)
+            emit('COMPLETE_NETWORK_STUDY_REUSED',new_fits=0)
+            return {**r,'new_fits_this_notebook_call':0}
+        lineage,_=identity(root,u)
+        if (root/'artifacts/close_network_ablation'/lineage).exists():
+            raise Stop('Existing network artifacts have no completion report; recover rather than refit.')
+        if __import__('shutil').disk_usage(root).free<1024**3:raise Stop('Need 1 GiB free; do not delete old work.')
+        u.atomic_json(report_path(root),{'status':'STARTING_WORKER','project':'commodity-prediction','lineage':lineage,
+            'new_training_fits':0,'feature_gate':'open','final_test_evaluations':0,'started_utc':utc()})
+        cmd=[ready['runtime']['python'],'-u',str(Path(__file__).resolve()),'--worker','--root',str(root)]
+        start=time.monotonic()
+        try:prior._supervise_command(cmd,root,LIMIT,out/'close_network_worker.log',u.environment(root))
+        except BaseException as exc:
+            r=u.read_json(report_path(root))
+            if r.get('status')=='STARTING_WORKER':r['new_training_fits']=None
+            r.update(status='STOPPED',supervisor_error=type(exc).__name__+': '+str(exc),supervised_seconds=round(time.monotonic()-start,3))
+            u.atomic_json(report_path(root),r);raise
+        r=u.read_json(report_path(root));verify_complete(root,r,prior,u)
+        r.update(supervised_seconds=round(time.monotonic()-start,3),new_fits_this_notebook_call=r['new_training_fits'])
+        u.atomic_json(report_path(root),r)
+        return r
+
+
+def charts(report):
+    import numpy as np
+    import pandas as pd
+    import plotly.express as px
+    import plotly.graph_objects as go
+    figs=[]
+    f=px.bar(pd.DataFrame(report['prior_session_comparisons']),x='variant',y='delta_vs_current_market',text_auto='.6f')
+    figs.append(('Previous session study: all numerical additions below control',f))
+    counts=pd.DataFrame(report['network_metadata']['refreshes'])
+    f=go.Figure()
+    for kind in KINDS:f.add_trace(go.Scatter(x=counts.date_id,y=counts[kind+'_target_graphs'],name=kind,mode='lines'))
+    f.add_hline(y=89,line_dash='dot');f.update_yaxes(title='Targets with at least 3 selected peers for every real leg');f.update_xaxes(title='Graph refresh origin (prior rows only)')
+    figs.append(('Graph availability across origins · not observed-value coverage',f))
+    rows=report['feature_audit'];f=px.bar(pd.DataFrame(rows),y='name',x='training_finite_fraction',color='group',orientation='h')
+    figs.append(('Observed training coverage: do the new features actually reach more targets?',f))
+    edges=[{**v,'graph':r['graph']} for r in report['network_metadata']['training_end_networks'] for v in r['market_edges']]
+    f=px.bar(pd.DataFrame(edges),x='peer_market',y='edges',color='follower_market',pattern_shape='graph',barmode='group') if edges else go.Figure()
+    figs.append(('Training-end incoming associations · empirical, not causal links',f))
+    scores=[{'variant':'current_market','score':report['control']['official_metric']}]+[{'variant':r['variant'],'score':r['official_metric']} for r in report['comparison_rows']]
+    figs.append(('Same first-fold 180 dates · full-target official metric',px.bar(pd.DataFrame(scores),x='variant',y='score',text_auto='.6f')))
+    delta=[{'variant':r['variant'],'control':name,'gain':r[key]} for r in report['comparison_rows'] for name,key in [('Saved current_market','delta_vs_current_market'),('Network availability','delta_vs_availability')]]
+    f=px.bar(pd.DataFrame(delta),x='variant',y='gain',color='control',barmode='group');f.add_hline(y=GAIN,line_dash='dash')
+    figs.append(('Added numerical information must beat both controls',f))
+    f=go.Figure()
+    for r in report['comparisons']:
+        if r['block_dates']!=20:continue
+        label=r['variant']+' − '+r['reference'];lo,hi=r['conditional_95_interval']
+        f.add_trace(go.Scatter(x=[lo,hi],y=[label,label],mode='lines',showlegend=False))
+        f.add_trace(go.Scatter(x=[r['delta']],y=[label],mode='markers',showlegend=False))
+    f.add_vline(x=0,line_dash='dot')
+    figs.append(('20-date paired intervals · not full adaptive-search correction',f))
+    f=go.Figure();d0=np.asarray(report['control']['daily_rank_correlations'])
+    for r in report['results']:
+        f.add_trace(go.Scatter(x=r['metrics']['date_ids'],y=np.cumsum(np.asarray(r['metrics']['daily_rank_correlations'])-d0),name=r['variant'],mode='lines'))
+    f.update_yaxes(title='Cumulative daily-correlation difference, not trading return')
+    figs.append(('Is any gain concentrated in a few observations?',f))
+    admit=[{'variant':r['variant'],'type':name,'count':r[key]} for r in report['comparison_rows'] for name,key in [('Numeric admitted','numeric_admitted'),('Availability admitted','availability_admitted')]]
+    figs.append(('Train-only screening: actually admitted information',px.bar(pd.DataFrame(admit),x='variant',y='count',color='type',barmode='group')))
+    figs.append(('Coverage groups · diagnostic scores, not pooled decompositions',px.bar(pd.DataFrame(report['subgroup_diagnostics']),x='group',y='official_metric',color='variant',barmode='group')))
+    for title,f in figs:f.update_layout(title=title,height=470,margin=dict(l=60,r=25,t=85,b=100),legend_title_text='')
+    figs[2][1].update_layout(height=690,margin=dict(l=400,r=25,t=90,b=65))
+    figs[6][1].update_layout(height=610,margin=dict(l=340,r=25,t=90,b=65))
+    return figs
+
+
+def private_backup(root,report,u):
+    base=root/'artifacts/close_network_ablation'/report['lineage']
+    paths=[base/'plan.json',base/'review.json']
+    paths += [base/'features'/f for f in report['feature_checkpoint_hashes']]
+    for n in VARIANTS:paths += [base/'fold_0'/n/f for f in report['checkpoint_hashes'][n]]
+    pins={str(p.relative_to(root)):u.digest(p) for p in paths}
+    dest=report_path(root).parent/'close_network_checkpoints.zip';temp=u.safe_path(dest.parent,dest.name+'.tmp')
+    if dest.is_symlink():raise Stop('Unsafe backup destination.')
+    with zipfile.ZipFile(temp,'w',zipfile.ZIP_DEFLATED,compresslevel=1) as z:
+        for p in paths:z.write(p,str(p.relative_to(root)))
+        z.writestr('SHA256SUMS.json',json.dumps(pins,sort_keys=True,indent=2))
+    with zipfile.ZipFile(temp) as z:
+        if z.testzip():raise Stop('Private archive CRC failure.')
+        for name,h in pins.items():
+            if hashlib.sha256(z.read(name)).hexdigest()!=h:raise Stop('Private archive content mismatch.')
+    os.replace(temp,dest)
+    return {'path':str(dest),'sha256':u.digest(dest),'bytes':dest.stat().st_size,'files':len(paths),
+            'private':True,'raw_csvs_included':False,'contains_derived_features_models_predictions':True,'off_disk_backup_confirmed':False}
+
+
+def finish(root,report,figures):
+    root=Path(root);prior,older,u=previous(root);verify_complete(root,report,prior,u)
+    if len(figures)!=10:raise Stop('Expected ten figures.')
+    result={**report};path=report_path(root).parent/'close_network_dashboard.html'
+    result.update(dashboard=str(path),dashboard_sha256=older.export_dashboard(path,'Close-only peer networks',figures),plotly_figures=10)
+    try:result['private_checkpoint_bundle']=private_backup(root,report,u)
+    except Exception as exc:result['backup_warning']=type(exc).__name__+': '+str(exc)
+    result.update(status='NOTEBOOK_AND_CLOSE_NETWORK_READY',updated_utc=utc(),notebook=str(root/'notebooks'/NOTEBOOK))
+    u.atomic_json(report_path(root),result)
+    return result
+
+
+def protocol_markdown():
+    return '''# Close-only, leave-pair-out peer networks
+
+## What the completed experiment said
+Notebook 07 completed four fits. Availability only matched the old first-fold
+score exactly (0.403381); intraday 0.397112, overnight/risk 0.401594, combined
+0.375454 were worse. All numerical candidates were admitted. Do not run additional
+session folds or tune that unchanged formulation. These are conditional negative
+results, not a proof that all session information is useless for every learner.
+
+## New mechanism and scope
+Can other assets' recent moves inform a target whose own lag features miss the
+incoming market move? Use only the price/exchange-rate series named by target
+legs. No open/high/low/volume requirement. All 424 targets have a *potential*
+close-based definition; actual graph/observation availability is measured.
+
+Estimate both a synchronous graph C(i,j)=Corr(r_i(s),r_j(s)) and a directed graph
+D(i,j)=Corr(r_i(s),r_j(s-1)). Each uses 126 past rows, at least 84 pairwise
+observations, and is rebuilt every 21 rows beginning at origin 127. Scales and
+means use those same past follower-return rows. At refresh t, s ends at t-1.
+The directed peer sample therefore ends at t-2. No current/future data enter
+graph fitting. The block's graph and scaling remain frozen until its next update.
+
+For each target leg, exclude that leg AND its target's other leg. Select at most
+five peers by absolute correlation (>=0.10), with canonical-name tie breaking.
+Require at least three selected and observed peers and 60% observed absolute
+weight. Use signed correlation-weighted means; missing real observations are
+not zero-filled. A genuinely absent second leg is zero only at target projection.
+Current standardized returns are clipped at 8 under past-only moments.
+
+Each graph produces current peer impulse, a five-row peer mean (min 4 observed
+rows), and previous-peer-impulse minus current own standardized return. Project
+each as target-leg difference and sum: 6 numeric columns per graph. Four common
+availability columns describe observed absolute-weight fractions. Total: 16
+candidate templates, not 16 independently proven signals.
+
+The directed graph captures historical one-row response ordering; it is not
+causal identification, a verified economic customer/supplier map, or evidence
+that international closing times are simultaneous. Signed correlations may
+reflect FX identities/common drivers. Their estimated links are not individually
+significance tested; top-K is a fixed representation choice, not verified edges.
+
+## Existing-feature overlap audit
+Inspected frozen source at d142a4cb57a5c4b2880f9341619e13a735b1cddc:
+- domain/market.py already has return lags, global momentum ranks, observation-age
+  signals and trailing PCA. Do not relabel these as new.
+- domain/relationships.py has named-proxy exposures, a structural currency graph,
+  and within-target pair dynamics. Its graph is not this empirical cross-asset
+  incoming-neighbor graph excluding both prediction legs.
+- domain/features.py already has released target priors. These new features do
+  not use target labels, static target mean ranks or signed released-label peers.
+The runtime checks exact duplicates against the active 87-template base and
+within this family, not against every historical intermediate array.
+
+## Fitted additions/removals and budget
+Four fixed panels: availability-only (4), synchronous (4+6), directed (4+6), exact
+union (4+12). The union comparisons expose removal of one numerical graph family.
+Hold histogram learner and original fitting settings fixed. Existing training
+preprocessing handles missing/constant/exact-duplicate screening. No label-driven
+graph selection, hyperparameter sweep or univariate-sign shortlist. The original
+current_market model is checksum-verified and replayed exactly, never refitted.
+
+Training stop 1164, warmup 252, validation origins 1169–1348. At most four fits;
+240 seconds including checks/construction/replay/fitting, with 15-second logs.
+Only first-fold labels are read. Final 247 origins remain gated. Every model is
+sealed independently, feature checkpoint preserved, and completed runs reopen
+without refitting. Interruptions stop for diagnosis, not automatic retries.
+
+Before fitting: two exact prefix comparisons (505 and 1164 rows) and numerical,
+axis, raw-source, parent-checkpoint and environment checks. Graph selection uses
+only raw historical prices; model screening uses training outcomes only.
+
+Gain >=0.002 versus BOTH saved original and fitted availability controls earns
+review, not promotion or automatic later-fold execution. This rule is declared
+before network scores but after prior studies used the same validation period.
+Eight contrasts use 10/20/40-row block uncertainty, conditional on current fitted
+models. Those intervals do not correct the full adaptive research history. A
+first-fold winner must later survive separate periods and family ablations.
+
+## Research basis and transfer caveat
+Bennett, Cucuringu & Reinert (2022), *Lead-lag detection and network clustering for
+multivariate time series with an application to the US equity market*:
+https://arxiv.org/abs/2201.08283
+The authors study directed lead-lag structures and predictive signals. This
+implementation is a simple feature hypothesis inspired by that mechanism, NOT
+a replication of their clustering/validation procedure or guaranteed commodity
+alpha. The paper's results cannot be substituted for this experiment's metrics.
+
+Curme et al. (2014), *Emergence of statistically validated financial intraday
+lead-lag relationships*: https://arxiv.org/abs/1401.0462
+Their multiple-testing-aware network study reinforces the distinction between
+candidate correlation links and validated economic/predictive relationships.
+Here the fitted ablation is the predictive test; individual links remain unproven.
+
+## Research remains open
+Keep the current pooled development leader 0.309709 unless a comparable full
+study actually changes it. Do not compare this first-fold score with .63834 on a
+different leaderboard period. Residual label context, richer target identity,
+learned shared representations and real dated commodity fundamentals remain
+separate hypotheses, conditional on leakage-safe timing and actual data rights.
+Never fabricate carry, inventories or economic dates from anonymous row IDs.
+
+## Operating instructions
+Upload commodity_close_network.py to JupyterLab home and run it once in a terminal.
+It installs notebook 08 and this declaration without training. Run notebook 08
+using Commodity - manual (verified); its execution cell can fit four models.
+Save the notebook, download the JSON/HTML and private ZIP, then STOP SPACE.
+Do not delete old working copies, which contain the reused Python environment.
+The script makes no AWS API calls, Git writes, S3 changes or package installations.
+New notebook/helper/config/docs are local additions, not published to GitHub.
+'''
+
+
+def notebook_document():
+    cells=[]
+    def md(s):cells.append({'cell_type':'markdown','metadata':{},'source':s.splitlines(keepends=True)})
+    def code(s):cells.append({'cell_type':'code','metadata':{},'source':s.splitlines(keepends=True),'execution_count':None,'outputs':[]})
+    md('# 08 · Beyond price bars: cross-asset close-network features\n\n'
+       '**Question:** can incoming peer-market information add value beyond own-asset history? '
+       'Notebook 07 was a completed negative session experiment. Do not repeat it.\n\n'
+       '**Run All can fit four new CPU models in the execution cell.** First fold only; '
+       '240-second worker cap, 15-second heartbeats, exact control replay, no GPU, no package '
+       'install, no ensemble, no final test. Use **Commodity - manual (verified)**. '
+       'No automatic SageMaker shutdown occurs.')
+    code("from pathlib import Path\nimport os, importlib.util\nimport pandas as pd\nfrom IPython.display import display\n"
+         "ROOT=Path(os.environ.get('COMMODITY_MANUAL_PROJECT','/home/sagemaker-user/projects/commodity-prediction-manual'))\n"
+         "spec=importlib.util.spec_from_file_location('close_network',ROOT/'scripts/commodity_close_network.py')\n"
+         "support=importlib.util.module_from_spec(spec);spec.loader.exec_module(support)\n"
+         "prior,older,utilities=support.previous(ROOT)\nready=utilities.readiness(ROOT)\nutilities.validate_runtime(ROOT,ready)\n"
+         "print('Source:',ready['source_commit'])\nprint('No fitting in this cell.')\n")
+    md('## 1. Keep the negative evidence\n\n'
+       'Availability-only reproduced the old score; every numerical session addition was lower. '
+       'The former 89-bar-target coverage is narrow. This new family requires only supplied '
+       'price/exchange-rate columns; usable network coverage is measured rather than assumed.')
+    code("last=support.read_prior(ROOT,prior,utilities)\nsupport.validate_prior_scores(last)\n"
+         "display(pd.DataFrame(last['comparison_rows'])[['variant','official_metric','delta_vs_current_market','numeric_admitted']])\n"
+         "print('Old pooled leader (535 dates):',last['prior_control_pooled'])\n"
+         "display(pd.DataFrame([{'panel':n,'availability_columns':4,'numeric_columns':len(v)-4} for n,v in support.plan()['variants'].items()]))\n")
+    md('## 2. Mechanism, timing and overlap\n\n'
+       'Two comparable graphs use 126 prior rows and five incoming peers, refreshed every 21 rows. '
+       'Synchronous weights compare returns at the same prior row. Directed weights compare '
+       'follower return at s with peer return at s−1. At refresh t, follower history ends at t−1. '
+       '**Both prediction legs are excluded from their own peer pool.** '
+       'Correlations are signed; missing actual observations are not silently set to zero.\n\n'
+       'The 12 numerical columns describe current peer impulse, a five-row peer mean, and '
+       'previous peer impulse relative to current own response, each projected as a target-leg '
+       'difference and sum. Four availability columns control for network/observation coverage.\n\n'
+       'Existing global ranks, PCA, currency-identity graphs, proxy betas and close-pair risk '
+       'features are not new discoveries. The distinct hypothesis is leave-pair-out **incoming '
+       'raw-price network information**. It is not a verified causal network or a target-label prior.\n\n'
+       '[Bennett, Cucuringu & Reinert](https://arxiv.org/abs/2201.08283) motivates this line of '
+       'research in equities. This is not a replication or proof of commodity-return predictability. '
+       'Read `docs/manual_close_network.md` for the exact experimental and source-availability contract.')
+    md('## 3. Execute one bounded matched experiment\n\n'
+       'This cell verifies the frozen inputs, replays the saved control, checks two exact '
+       'feature prefixes, and runs at most four fits. No other folds run. A completed result '
+       'is reused; an interrupted run stops for diagnosis. Do not run a second copy in a terminal.\n\n'
+       'A numeric panel must gain at least **0.002 over both controls** to earn review. '
+       'This is a compute-allocation gate, not significance. The first fold has already been '
+       'used in earlier research. Eight paired contrasts do not correct all adaptive search.')
+    code("report=support.run(ROOT)\nprint('RESULT:',report['status'])\nprint('DECISION:',report['decision'])\n"
+         "print('New fits this notebook call:',report.get('new_fits_this_notebook_call',report['new_training_fits']))\n"
+         "display(pd.DataFrame(report['comparison_rows']))\nfigures=support.charts(report)\n")
+    titles=['Prior decision','Graph availability','Observed training coverage','Incoming association structure',
+            'Official first-fold scores','Matched ablations','Uncertainty','Temporal concentration','Feature admission','Coverage-group effects']
+    for i,t in enumerate(titles):md('## '+t);code(f"figures[{i}][1].show(renderer='plotly_mimetype')\n")
+    md('## 4. Decide, preserve, stop\n\n'
+       '**REVIEW_BEFORE_OTHER_FOLDS** means inspect which numerical group beat both controls, '
+       'then design its later-period confirmation; it does not start extra models. '
+       '**STOP_THIS_NETWORK_FORMULATION** means preserve the completed negative result and '
+       'do not tune the same windows/top-K choices to this fold. The graph-family hypothesis '
+       'is not universally disproved. No final model is automatically promoted.\n\n'
+       'The 335-target subset can change under pooled fitting; subset metrics are diagnostics '
+       'and cannot be added to produce the full metric. Covariance/lead-lag patterns may reflect '
+       'quotation identities or global closing conventions, not causal information propagation.\n\n'
+       'Save with Ctrl+S. Download the JSON and executed notebook for review, HTML for offline '
+       'viewing, and the private ZIP to retain models/features away from EBS. Do not publish '
+       'the ZIP or attach it to chat. **Stop space in Studio—not Delete space.**')
+    code("completed=support.finish(ROOT,report,figures)\nprint('RESULT:',completed['status'])\nprint('DECISION:',completed['decision'])\n"
+         "print('REPORT:',support.report_path(ROOT))\nprint('DASHBOARD:',completed['dashboard'])\n"
+         "print('PRIVATE BACKUP:',completed.get('private_checkpoint_bundle',{}).get('path',completed.get('backup_warning','Not available')))\n"
+         "print('Save notebook, download evidence, then Stop space. No other folds run automatically.')\n")
+    for i,c in enumerate(cells):c['id']=f'close-network-{i:02d}'
+    return {'cells':cells,'metadata':{'kernelspec':{'display_name':'Commodity - manual (verified)','language':'python','name':'commodity-manual'},
+         'language_info':{'name':'python','version':'3.12.14'}},'nbformat':4,'nbformat_minor':5}
+
+
+def install(root:Path=ROOT):
+    root=Path(root);prior,older,u=previous(root);u.validate_source(root)
+    last=read_prior(root,prior,u);validate_prior_scores(last)
+    nb=notebook_document()
+    files={u.safe_path(root,'scripts/commodity_close_network.py'):Path(__file__).read_bytes(),
+        u.safe_path(root,'configs/manual_close_network.json'):(json.dumps(plan(),sort_keys=True,indent=2)+'\n').encode(),
+        u.safe_path(root,'docs/manual_close_network.md'):protocol_markdown().encode(),
+        u.safe_path(root,'notebooks/'+NOTEBOOK):(json.dumps(nb,indent=1)+'\n').encode()}
+    for path,body in files.items():
+        if path.exists():
+            if path.suffix=='.ipynb':
+                existing=u.read_json(path)
+                if [(c['cell_type'],c.get('source')) for c in existing['cells']] != [(c['cell_type'],c['source']) for c in nb['cells']]:
+                    raise Stop('Existing notebook edits preserved: '+str(path))
+            elif path.read_bytes()!=body:raise Stop('Existing different file preserved: '+str(path))
+    for path,body in files.items():
+        if not path.exists():u.write_new(path,body)
+    print('RESULT: CLOSE_NETWORK_NOTEBOOK_READY\nNOTEBOOK: '+str(root/'notebooks'/NOTEBOOK)+'\nKERNEL: Commodity - manual (verified)',flush=True)
+    return {'new_fits':0,'files':[str(p) for p in files]}
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--root',type=Path,default=ROOT)
+    p.add_argument('--worker',action='store_true',help=argparse.SUPPRESS);a=p.parse_args()
+    try:
+        if a.worker:worker(a.root)
+        else:install(a.root)
+    except BaseException as exc:
+        print('RESULT: STOPPED\nERROR: '+type(exc).__name__+': '+str(exc),flush=True)
+        print('Preserve error/report and stop space. Do not repeat unchanged. No automatic shutdown.',flush=True)
+        return 2
+    return 0
+
+
+if __name__=='__main__':raise SystemExit(main())

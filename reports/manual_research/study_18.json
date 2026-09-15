@@ -1,0 +1,43 @@
+{
+  "comparisons": [
+    {
+      "delta_vs_current_market": -0.0007057327973670202,
+      "official_metric": 0.38991313206627354,
+      "passes_review_gate": false,
+      "variant": "sequence_clock"
+    },
+    {
+      "delta_vs_current_market": 0.0010970350477600421,
+      "official_metric": 0.3917158999114006,
+      "passes_review_gate": false,
+      "variant": "sequence_magnitude"
+    },
+    {
+      "delta_vs_current_market": -0.0007057327973670202,
+      "official_metric": 0.38991313206627354,
+      "passes_review_gate": false,
+      "variant": "sequence_transitions"
+    },
+    {
+      "delta_vs_current_market": 0.00500176218442322,
+      "official_metric": 0.3956206270480638,
+      "passes_review_gate": true,
+      "variant": "sequence_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "cumulative_supervised_seconds": 88.463,
+  "decision": "REVIEW_ON_OTHER_PERIODS",
+  "evaluation_origins": 175,
+  "evidence_path": "reports/manual_research/study_18.json",
+  "lineage": "7678d6f4d37dcdb517cc74fda9cd22d48239df9b55274d986271af9f97cea692",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 4,
+  "notebook": 18,
+  "plotly_figures": 10,
+  "report_sha256": "96dc161cbd35a8d3633dd22802c7c2bb6365954b05de30b20f6f47e2294dcc21",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_COMPLETE",
+  "title": "Released sequence structure"
+}

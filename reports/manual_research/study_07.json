@@ -1,0 +1,44 @@
+{
+  "comparisons": [
+    {
+      "delta_vs_current_market": 0.0,
+      "official_metric": 0.40338108742296147,
+      "passes_review_gate": false,
+      "variant": "session_support_only"
+    },
+    {
+      "delta_vs_current_market": -0.006269402059383755,
+      "official_metric": 0.3971116853635777,
+      "passes_review_gate": false,
+      "variant": "session_intraday"
+    },
+    {
+      "delta_vs_current_market": -0.0017868403135371524,
+      "official_metric": 0.4015942471094243,
+      "passes_review_gate": false,
+      "variant": "session_overnight_risk"
+    },
+    {
+      "delta_vs_current_market": -0.027926856464398242,
+      "official_metric": 0.37545423095856323,
+      "passes_review_gate": false,
+      "variant": "session_joint"
+    }
+  ],
+  "completed": true,
+  "control_refits": 0,
+  "decision": "STOP_FITTED_SESSION_FORMULATION",
+  "elapsed_seconds": 53.994,
+  "evaluation_origins": 180,
+  "evidence_path": "reports/manual_research/study_07.json",
+  "lineage": "aded3a6c019d6e8d10739700f5bc6abca5e07983f9afc0a9eec8db06ebdf2cd1",
+  "maximum_prediction_replay_error": 0.0,
+  "new_training_fits": 4,
+  "notebook": 7,
+  "plotly_figures": 9,
+  "report_sha256": "e56c8ca7c1da5f77faa6a7544ed1fe26f25814173e423853e79538f2f12ceeff",
+  "source_commit": "d142a4cb57a5c4b2880f9341619e13a735b1cddc",
+  "status": "NOTEBOOK_AND_SESSION_ABLATION_READY",
+  "supervised_seconds": 58.465,
+  "title": "Session feature ablations"
+}
