@@ -1,0 +1,101 @@
+name: Prepare closeout patch
+on:
+  push:
+    branches: [chore/research-closeout-20260922]
+    paths: [.github/workflows/prepare-closeout-patch.yml]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --extra dev
+      - name: Repair publication-only lint defects and collect quality evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run --frozen --extra dev python - <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import subprocess
+          import sys
+          import zipfile
+
+          root = pathlib.Path.cwd()
+          out = root / '.ci_publication_patch'
+          out.mkdir()
+          paths = [
+              'scripts/execute_round21a_notebook.py',
+              'scripts/run_competitive_feature_forecast.py',
+              'scripts/run_third_place_reproduction.py',
+              'src/commodity_prediction/competitive/feature_forecast.py',
+              'src/commodity_prediction/competitive/third_place_reproduction.py',
+              'tests/test_competitive_feature_forecast.py',
+              'tests/test_third_place_reproduction.py',
+          ]
+          before = {p: hashlib.sha256((root / p).read_bytes()).hexdigest() for p in paths}
+          p = root / 'scripts/run_competitive_feature_forecast.py'
+          text = p.read_text()
+          old = 'def maker(space=space, variant=variant, stage=stage):'
+          new = 'def maker(space=space, variant=variant, stage=stage, fold=fold, prediction_positions=prediction_positions, truth=truth, baseline_daily=baseline_daily):'
+          if text.count(old) != 1:
+              raise RuntimeError('Unexpected closure source; no speculative patch')
+          p.write_text(text.replace(old, new))
+
+          p = root / 'scripts/run_third_place_reproduction.py'
+          text = p.read_text()
+          a = text.index('ROOT = Path(')
+          b = text.index('from commodity_prediction.data import')
+          c = text.index('\ndef utc()')
+          constants = text[a:b]
+          line = 'sys.path.insert(0, str(ROOT / "src"))'
+          if constants.count(line) != 1:
+              raise RuntimeError('Unexpected import bootstrap source')
+          constants = constants.replace(line, '').strip()
+          imports = text[b:c].strip()
+          bootstrap = 'sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))'
+          p.write_text(text[:a] + bootstrap + '\n\n' + imports + '\n\n\n' + constants + '\n\n' + text[c:])
+
+          results = []
+          commands = [
+              ['ruff', 'check', '--fix', *paths],
+              ['ruff', 'format', *paths],
+              ['ruff', 'check', 'src', 'tests', 'scripts'],
+              ['ruff', 'format', '--check', 'src', 'tests', 'scripts'],
+              ['mypy', 'src'],
+              ['pytest', '-q'],
+          ]
+          for i, args in enumerate(commands):
+              run = subprocess.run([sys.executable, '-m', *args], text=True, capture_output=True, timeout=300)
+              (out / ('check_%02d.log' % i)).write_text(run.stdout + '\n' + run.stderr)
+              results.append({'command': args, 'returncode': run.returncode})
+              print('CHECK', i, args[0], 'EXIT', run.returncode, flush=True)
+          diff = subprocess.run(['git', 'diff', '--', *paths], check=True, text=True, capture_output=True)
+          (out / 'publication_ci_cleanup.diff').write_text(diff.stdout)
+          payload = []
+          for name in paths:
+              data = (root / name).read_bytes()
+              after = hashlib.sha256(data).hexdigest()
+              if after != before[name]:
+                  payload.append({'path': name, 'before_sha256': before[name], 'after_sha256': after, 'bytes': len(data)})
+          manifest = {'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(), 'files': payload, 'checks': results, 'new_project_model_fits': 0, 'scope': 'public source quality repair; no experiment or notebook output changes'}
+          (out / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+          with zipfile.ZipFile(out / 'source_patch.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+              for item in payload:
+                  z.write(root / item['path'], item['path'])
+          if any(r['returncode'] for r in results):
+              print('NOT_READY: inspect collected logs before applying the patch')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: commodity-publication-ci-patch
+          path: .ci_publication_patch/
+          retention-days: 7
+          if-no-files-found: error
