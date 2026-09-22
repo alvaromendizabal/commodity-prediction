@@ -1,90 +1,46 @@
-# Commodity Prediction Research
+# Commodity Forecasting | ML Engineering Case Study
 
-A reproducible, feature-first investigation of short-horizon, multi-asset return ranking.
+**Alvaro Mendizabal** · [GitHub profile](https://github.com/alvaromendizabal)
 
-**Start here:** [research overview notebook](notebooks/portfolio_overview.ipynb) ·
-[experiment ledger](docs/MANUAL_RESEARCH_RESULTS.md) ·
-[reproduction guide](docs/MANUAL_REPRODUCTION.md) ·
-[aggregate evidence](reports/manual_research/index.json)
+An end-to-end investigation of multi-horizon commodity return ranking: point-in-time data engineering, domain-informed representations, controlled model comparisons, restartable AWS execution, and a locked historical assessment.
 
-## Research question
+**Start with the [portfolio notebook](notebooks/27_portfolio_case_study.ipynb).** Read the [technical case study](docs/PORTFOLIO_CASE_STUDY.md) for the engineering decisions and results.
 
-Which representations of market observations and legally released target history improve
-short-horizon cross-sectional forecasts, and do those improvements transfer across time?
-The project studies target/pair structure, market behavior, released priors, temporal
-representations and controlled feature-family additions/removals. Negative findings are
-retained rather than hidden.
+**Status: research cycle and historical assessment completed.** This portfolio presents selected evidence for hiring review. It is not a release of the latest training system, model weights, or a replication kit.
 
-## Evaluation boundary
+## What this project demonstrates
 
-The established `current_market` reference scores **0.309709 over 535 development origins**.
-Its three period scores are **0.403381**, **0.167042**, and **0.390619**, respectively.
-This is a historical local development reference, **not a Kaggle leaderboard score or a
-claim that no later contender has a higher point estimate**. Consult the period-specific
-ledger below for newer comparisons. Do not rank runs evaluated on different dates together.
+| Capability | Evidence from the work |
+|---|---|
+| Prediction-time data engineering | Horizon-aware label availability, chronological partitions, and a reserved assessment boundary |
+| Experimental design | Matched target/date comparisons; separate screening, temporal replication, and final assessment |
+| ML research | Domain features, pooled nonlinear models, and a separately evaluated top-solution-inspired stack |
+| Debugging and efficiency | Saved-prediction reconciliation isolated a target-coverage effect without retraining |
+| Reliable execution | Bounded runs, restartable checkpoints, integrity receipts, and preserved analytical outputs |
+| Technical judgment | An inconclusive improvement was not promoted; the final control comparison was reported without reselection |
 
-The metric is the mean daily cross-sectional Spearman correlation divided by its population
-standard deviation, without annualization. Feature values follow prediction-time availability;
-label-derived features respect horizon-specific release delays. The final evaluation remains
-separate from repeated exploratory development. A positive point estimate is not automatic
-model promotion or proof of a competition record.
+## Results, with the evaluation populations kept separate
 
-![Historical development reference](reports/manual_research/development_reference.svg)
+| Evaluation | Systems compared on the same population | Result |
+|---|---|---|
+| Development reference | Established `current_market` system; 535 dates and 424 targets | **0.309709** |
+| Later-period replication | Incumbent **0.276025** vs frozen panel **0.289365**; 355 dates and 424 targets | **+0.013340**, conditional 95% interval **[-0.009061, +0.035750]**; not promoted |
+| Locked historical assessment | Frozen incumbent **0.190453** vs training-only mean **0.212085**; 247 dates and 424 targets | **-0.021632**, conditional 95% interval **[-0.133651, +0.080336]**; no demonstrated advantage |
 
-GitHub displays notebooks statically; use JupyterLab or a compatible notebook
-viewer for interactive Plotly controls. The SVG preview above needs no JavaScript.
+The metric is mean daily cross-sectional rank correlation divided by its population standard deviation, without annualization. These are **local historical results, not Kaggle leaderboard scores, trading returns, or a competition-win claim**. Scores from different rows of this table should not be ranked as if they used the same population.
 
-## What is public
+![Locked historical assessment](reports/figures/portfolio_final.svg)
 
-This repository includes research implementation, tests, declared configurations, and
-notebooks with inline Plotly output when execution evidence exists. Raw/derived dataset
-files, fitted weights, credentials, environments and infrastructure logs are not distributed
-here. There is **one public repository**: no separate private code repository is required.
-Existing license and third-party notices are preserved.
+The final comparison did not justify a performance claim. The project demonstrates the ability to build and evaluate a complex forecasting system, investigate apparent gains, and distinguish a useful experiment from a deployable improvement. No production deployment is claimed.
 
-## Experiment index
+## Read the work, not a setup manual
 
-| Notebook | Investigation | Evidence status | Origins |
-|---|---|---|---:|
-| 03 | Runtime and feature readiness | NOTEBOOK_AND_FEATURE_AUDIT_READY | 0 |
-| 04 | Normalization first-period screen | NOTEBOOK_AND_FIRST_FOLD_REVIEW_READY | 180 |
-| 05 | Normalization temporal validation | NOTEBOOK_AND_VALIDATION_REVIEW_READY | 535 |
-| 06 | Session candidate laboratory | NOTEBOOK_AND_SESSION_FEATURES_READY | 0 |
-| 07 | Session feature ablations | NOTEBOOK_AND_SESSION_ABLATION_READY | 180 |
-| 08 | Cross-asset peer features | NOTEBOOK_AND_CLOSE_NETWORK_READY | 180 |
-| 09 | Network removal and rank laboratory | NOTEBOOK_AND_DIAGNOSIS_READY | 180 |
-| 10 | Released historical-rank states | NOTEBOOK_AND_RANK_STATE_READY | 180 |
-| 11 | Instrument context | NOTEBOOK_AND_TARGET_CONTEXT_READY | 180 |
-| 12 | Delayed response encoding | NOTEBOOK_AND_RESPONSE_READY | 180 |
-| 13 | Saved-model information audit | NOTEBOOK_AND_INFORMATION_AUDIT_READY | 535 |
-| 14 | Ordinary and robust innovations | NOTEBOOK_AND_FEATURE_ROUND_READY | 180 |
-| 15 | Prior dynamics screening | NOTEBOOK_AND_FEATURE_ROUND_READY | 180 |
-| 16 | Prior dynamics temporal replication | NOTEBOOK_COMPLETE | 535 |
-| 17 | Observed-event histories | NOTEBOOK_COMPLETE | 180 |
-| 18 | Released sequence structure | NOTEBOOK_COMPLETE | 175 |
-| 19 | As-of prior-error memory | NOTEBOOK_COMPLETE | 175 |
+The [portfolio notebook](notebooks/27_portfolio_case_study.ipynb) is a deliberately **read-only presentation export** with inline visual evidence. It contains no training cells, feature formulas, fitted artifacts, or environment-setup instructions. The [case study](docs/PORTFOLIO_CASE_STUDY.md) explains the problem, ownership, architecture, experiments, and conclusions. The [aggregate summary](reports/portfolio_summary.json) records the published numbers and evidence provenance.
 
-`REPORT_NOT_AVAILABLE` means no matching report was available in the active workspace at
-export time; it does not mean the experiment did not occur. Pending or failed work is never
-listed as a completed score. Export reads saved evidence without fitting models or executing
-research notebooks. See [disclosure notes](docs/PUBLICATION_SCOPE.md).
+The **market-path** study supplies the 0.309709 development reference. Earlier public source and historical notebooks remain in this repository, but they are archival material and are not a release of the latest privately retained research workflow. Earlier configuration files describe their original study states; the current assessment status is recorded in the portfolio summary.
 
-## Engineering and reproducibility
+## Publication boundary
 
-Experiments use bounded workers, training-partition preprocessing, explicit stage manifests,
-checkpoint checksums, saved-prediction replay and per-study fit/time accounting. These are
-reported safeguards, not a substitute for independent reproduction. Prepared tests are not
-called passing tests without their execution receipts. Inline figures remain in notebooks;
-self-contained HTML is supplemental. Reproduction is manual and requires licensed data.
+The current release is for employer evaluation. The latest complete implementation, detailed training configurations, raw data, private prediction matrices, model weights, environments, and AWS operational records are withheld. Existing public material is not made private by this statement. This update does not rewrite history, change repository visibility, or revoke previously granted rights. See [publication scope](docs/PUBLICATION_SCOPE.md).
 
-Earlier source, methodological notes and historical publication evidence remain in this
-repository. The original README is retained under `docs/history/` when this update is first
-prepared. No Git history rewrite, repository rename or visibility change is part of this release.
-
-**Current phase: feature research remains open.** The goal is the strongest valid comparable
-performance, not an unsupported leaderboard claim.
-
-<!-- manual-publication:market-path-reference -->
-## Development reference
-
-The strongest pooled development reference preserved by the **market-path** study is **0.309709** on the official development metric across 535 validation dates. This is a local development result—not a final-test or Kaggle leaderboard score. See [`docs/market-path-research.md`](docs/market-path-research.md) for the bounded study and [`docs/MANUAL_RESEARCH_RESULTS.md`](docs/MANUAL_RESEARCH_RESULTS.md) for the later manual feature ledger.
+Top-solution mechanisms were studied and selectively adapted; a complete reproduction of all leading systems is **not** claimed. Attribution and original notices remain applicable. The work is presented as a completed research case study, not an open-source support commitment.

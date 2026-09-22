@@ -9,6 +9,12 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      OMP_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      NUMEXPR_NUM_THREADS: '2'
+      VECLIB_MAXIMUM_THREADS: '2'
     steps:
       - uses: actions/checkout@v4
       # One-time PR #7 handoff check against the user's verified export.
