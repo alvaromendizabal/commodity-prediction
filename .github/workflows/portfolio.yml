@@ -1,0 +1,43 @@
+name: Portfolio evidence
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  presentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check presentation evidence and disclosure boundaries
+        run: |
+          python3 - <<'PY'
+          import json
+          import math
+          import pathlib
+          import xml.etree.ElementTree as ET
+          root = pathlib.Path('.')
+          report = json.loads((root/'reports/portfolio_summary.json').read_text())
+          final = report['final_historical_assessment']
+          assert final['evaluated'] is True
+          assert (final['dates'], final['targets'], final['excluded_dates']) == (247,424,0)
+          assert math.isclose(final['incumbent']-final['historical_mean_control'], final['delta'], rel_tol=0, abs_tol=1e-14)
+          assert final['conditional_paired_95_interval'][0] < 0 < final['conditional_paired_95_interval'][1]
+          assert report['latest_implementation_published'] is False
+          assert report['existing_public_history_removed'] is False
+          for name in ['portfolio_final.svg','portfolio_temporal.svg']:
+              tree = ET.parse(root/'reports/figures'/name)
+              assert tree.getroot().attrib['width'] == '900'
+          nb = json.loads((root/'notebooks/27_portfolio_case_study.ipynb').read_text())
+          assert nb['metadata']['presentation_only'] is True
+          assert not any(c['cell_type']=='code' and ''.join(c.get('source',[])).strip() for c in nb['cells'])
+          figures = [o for c in nb['cells'] for o in c.get('outputs',[]) if 'application/vnd.plotly.v1+json' in o.get('data',{})]
+          assert len(figures)==2
+          assert all('image/svg+xml' in o['data'] for o in figures)
+          readme = (root/'README.md').read_text()
+          assert '0.190453' in readme and '0.212085' in readme
+          assert 'not a release' in readme
+          print('PASS: presentation evidence, matched metrics, two inline figures, and source-withholding boundary')
+          PY

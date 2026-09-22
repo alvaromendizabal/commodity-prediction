@@ -1,20 +1,27 @@
-# Public repository scope
+# Portfolio publication scope
 
-This update keeps the same public repository and publishes research code, tests,
-configurations and notebooks, not just a showcase hiding the implementation.
-The export covers the active manual checkout, not every historical workspace.
-Raw and derived datasets, model weights, credentials, environments and machine
-logs are excluded; this does not require a private GitHub repository.
+## Current purpose
 
-Notebook publication copies retain code, markdown and inline Plotly outputs.
-Console output, HTML tables, image/other outputs, attachments and tracebacks are
-omitted, and a visible provenance note records the original error count.
-Original working notebooks are not changed. Retained Plotly payloads must also
-be reviewed for data rights and disclosure. Automated scanning is incomplete.
+This release presents Alvaro Mendizabal's commodity-forecasting project for employer and technical-interview review. It is an evidence-based case study, not a replication kit or a commitment to maintain an open-source training product.
 
-Prepared, failed and completed studies are distinguished using saved receipts.
-Checksums establish file identity, not the correctness of scientific claims.
-No research code is reformatted, no lineage pin is silently relaxed, no old
-workflow is removed and no license is replaced. Existing remote material not
-in this overlay is preserved. A normal update does not erase earlier history.
-The owner must review all staged source and outputs before public upload.
+## Included in this release
+
+The public additions are the portfolio narrative, selected aggregate evaluation results, two visual comparisons, and a read-only presentation notebook. The figures represent recorded comparisons; they are not newly run experiments. The presentation notebook has no training source and does not claim clean-kernel execution of the private research system.
+
+## Withheld from this release
+
+The latest complete feature/model implementation, exact training configurations, model weights, raw and derived data, private per-target prediction matrices, environment copies, credentials, and AWS operational logs are not published. The prior 60-file reproduction-oriented publication plan is superseded and must not be uploaded by its old publisher.
+
+## Existing public material
+
+Older source, notebooks, configuration files, branches, and commit history were already public before this scope change. They remain public. A README, restrictive notice, ordinary deletion commit, or closed pull request cannot make those existing copies confidential. This update performs no history rewrite, visibility change, repository deletion, or license replacement. Existing licenses and third-party notices remain applicable.
+
+Historical configuration files and earlier research reports describe their original study state. For the completed assessment status, use `reports/portfolio_summary.json`; older statements that a final set was still reserved must not be read as current status.
+
+## Private and public evidence
+
+The canonical AWS research artifacts remain separate from the public presentation. Private notebooks and checkpoints retain the detailed engineering record. Public completeness means a coherent account of scope, work, results, and limitations; it does not mean distributing everything needed to recreate the implementation.
+
+## Attribution and claims
+
+Publicly documented leading methods informed selected experiments. Their authors retain credit for those methods. This project does not claim complete reproduction of all leading systems, a new official submission, a competition win, live deployment, or trading profitability. The final local comparison is reported whether or not it favors the selected system.
