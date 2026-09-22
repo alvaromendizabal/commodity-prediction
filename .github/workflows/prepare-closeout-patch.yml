@@ -8,130 +8,161 @@ permissions:
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     env:
       OMP_NUM_THREADS: '2'
       OPENBLAS_NUM_THREADS: '2'
-      MKL_NUM_THREADS: '2'
-      NUMEXPR_NUM_THREADS: '2'
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
       - run: uv sync --frozen --extra dev
-      - name: Prepare source-only corrections and run unchanged quality gates
+      - name: Preserve historical checks and validate the context resolver
         shell: bash
         run: |
           set -euo pipefail
           uv run --frozen --extra dev python - <<'PY'
           import hashlib
+          import importlib.util
           import json
           import pathlib
           import subprocess
           import sys
+          import tempfile
           import zipfile
-
-          root = pathlib.Path.cwd()
-          out = root / 'ci_publication_patch'
+          root=pathlib.Path.cwd()
+          out=root/'ci_publication_history'
           out.mkdir()
-          python_paths = [
-              'scripts/execute_round21a_notebook.py',
-              'scripts/run_competitive_feature_forecast.py',
-              'scripts/run_third_place_reproduction.py',
-              'src/commodity_prediction/competitive/feature_forecast.py',
-              'src/commodity_prediction/competitive/third_place_reproduction.py',
-              'tests/test_competitive_feature_forecast.py',
-              'tests/test_third_place_reproduction.py',
-          ]
-          paths = python_paths + ['.github/workflows/quality.yml']
-          before = {p: hashlib.sha256((root / p).read_bytes()).hexdigest() for p in paths}
-          p = root / 'scripts/run_competitive_feature_forecast.py'
-          text = p.read_text()
-          old = 'def maker(space=space, variant=variant, stage=stage):'
-          new = 'def maker(space=space, variant=variant, stage=stage, fold=fold, prediction_positions=prediction_positions, truth=truth, baseline_daily=baseline_daily):'
-          if text.count(old) != 1:
-              raise RuntimeError('Unexpected closure source; no speculative patch')
-          p.write_text(text.replace(old, new))
-          p = root / 'scripts/run_third_place_reproduction.py'
-          text = p.read_text()
-          a = text.index('ROOT = Path(')
-          b = text.index('from commodity_prediction.data import')
-          c = text.index('\ndef utc()')
-          constants = text[a:b]
-          line = 'sys.path.insert(0, str(ROOT / "src"))'
-          if constants.count(line) != 1:
-              raise RuntimeError('Unexpected import bootstrap source')
-          constants = constants.replace(line, '').strip()
-          imports = text[b:c].strip()
-          bootstrap = 'sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))'
-          p.write_text(text[:a] + bootstrap + '\n\n' + imports + '\n\n\n' + constants + '\n\n' + text[c:])
-          p = root / 'src/commodity_prediction/competitive/feature_forecast.py'
-          text = p.read_text()
-          old = 'from typing import Callable'
-          if text.count(old) != 1 or text.count('model: object,') != 1 or text.count('tuple[object, ScaleState, dict]') != 1:
-              raise RuntimeError('Unexpected forecast annotation source')
-          text = text.replace(old, 'from typing import TYPE_CHECKING, Callable')
-          anchor = 'from commodity_prediction.metrics import correlation_sharpe, daily_rank_correlations'
-          if text.count(anchor) != 1:
-              raise RuntimeError('Unexpected forecast imports')
-          text = text.replace(anchor, anchor + '\n\nif TYPE_CHECKING:\n    from torch.nn import Module')
-          text = text.replace('model: object,', 'model: Module,').replace('tuple[object, ScaleState, dict]', 'tuple[Module, ScaleState, dict]')
-          p.write_text(text)
-          p = root / '.github/workflows/quality.yml'
-          text = p.read_text()
-          anchor = '    runs-on: ubuntu-latest\n'
-          if text.count(anchor) != 1:
-              raise RuntimeError('Unexpected Quality job structure')
-          text = text.replace(anchor, anchor + "    env:\n      OMP_NUM_THREADS: '2'\n      OPENBLAS_NUM_THREADS: '2'\n      MKL_NUM_THREADS: '2'\n      NUMEXPR_NUM_THREADS: '2'\n")
-          p.write_text(text)
+          names=['scripts/verify_publication.py','scripts/verify_market_path_publication.py','scripts/publication_history.py']
+          before={n:(root/n).read_bytes() for n in names[:2]}
+          helper='''"""Resolve sealed historical context without misreporting the current assessment."""
 
-          results = []
-          commands = [
-              ['ruff', 'check', '--fix', *python_paths],
-              ['ruff', 'format', *python_paths],
-              ['ruff', 'check', 'src', 'tests', 'scripts'],
-              ['ruff', 'format', '--check', 'src', 'tests', 'scripts'],
-              ['mypy', 'src'],
-              ['pytest', '-q', 'tests/test_competitive_feature_forecast.py', 'tests/test_third_place_reproduction.py'],
-          ]
-          for i, args in enumerate(commands):
-              try:
-                  run = subprocess.run([sys.executable, '-m', *args], text=True, capture_output=True, timeout=120)
-                  code, output = run.returncode, run.stdout + '\n' + run.stderr
-              except subprocess.TimeoutExpired as exc:
-                  code, output = 124, repr(exc) + '\n' + str(exc.stdout or '') + '\n' + str(exc.stderr or '')
-              (out / ('check_%02d.log' % i)).write_text(output)
-              results.append({'command': args, 'returncode': code})
-              print('CHECK', i, args[0], 'EXIT', code, '\n', output[:18000], flush=True)
-          if all(r['returncode'] == 0 for r in results):
-              try:
-                  run = subprocess.run([sys.executable, '-m', 'pytest', '-q'], text=True, capture_output=True, timeout=240)
-                  code, output = run.returncode, run.stdout + '\n' + run.stderr
-              except subprocess.TimeoutExpired as exc:
-                  code, output = 124, repr(exc) + '\n' + str(exc.stdout or '')
-              results.append({'command': ['pytest', '-q'], 'returncode': code})
-              (out / 'full_pytest.log').write_text(output)
-              print('FULL_TEST_EXIT', code, '\n', output[:18000], flush=True)
-          diff = subprocess.run(['git', 'diff', '--', *paths], check=True, text=True, capture_output=True)
-          (out / 'publication_ci_cleanup.diff').write_text(diff.stdout)
-          payload = []
-          for name in paths:
-              data = (root / name).read_bytes()
-              after = hashlib.sha256(data).hexdigest()
-              if after != before[name]:
-                  payload.append({'path': name, 'before_sha256': before[name], 'after_sha256': after, 'bytes': len(data)})
-          manifest = {'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(), 'files': payload, 'checks': results, 'ready': all(r['returncode'] == 0 for r in results), 'new_project_model_fits': 0, 'scope': 'source quality corrections and two-thread CI limits; no experiment or notebook-output changes; no check removed'}
-          (out / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-          with zipfile.ZipFile(out / 'source_patch.zip', 'w', zipfile.ZIP_DEFLATED) as z:
-              for item in payload:
-                  z.write(root / item['path'], item['path'])
-          print('PATCH_READY', manifest['ready'], flush=True)
+          from __future__ import annotations
+
+          import hashlib
+          import json
+          import runpy
+          from pathlib import Path
+
+          ARCHIVED = {
+              "configs/final_evaluation.json": (
+                  "docs/history/final_evaluation_before_closeout.json",
+                  "cedbf47de0f6d142e405044b5ebb76d80dc95bb83f159fcfcce5ba97a619b1ba",
+              ),
+              "README.md": (
+                  "docs/history/README_before_closeout.md",
+                  "6e709716c95c2a81ea3072fdd973d2171ea02176885802892d21a7a820717408",
+              ),
+          }
+
+
+          def historical_path(root: Path, relative: str) -> Path:
+              """Keep legacy assertions tied to their original publication context."""
+              if relative not in ARCHIVED:
+                  raise ValueError("Only the declared historical configuration and README are supported")
+              state = json.loads((root / "configs/final_evaluation.json").read_text())
+              if state.get("evaluated") is False:
+                  return root / relative
+              if state.get("evaluated") is not True:
+                  raise ValueError("Unknown current final-assessment state")
+              verifier = root / "research/closeout/verify.py"
+              if not verifier.is_file() or verifier.is_symlink():
+                  raise ValueError("Completed assessment requires the closeout evidence verifier")
+              namespace = runpy.run_path(str(verifier), run_name="closeout_history_verifier")
+              result = namespace["run"](root)
+              if result.get("status") != "PASS":
+                  raise ValueError("Current closeout evidence did not pass verification")
+              name, expected = ARCHIVED[relative]
+              archived = root / name
+              if not archived.is_file() or archived.is_symlink():
+                  raise ValueError("The sealed historical publication context is missing")
+              if hashlib.sha256(archived.read_bytes()).hexdigest() != expected:
+                  raise ValueError("The original historical publication context changed")
+              return archived
+
+
+          def historical_final_evaluation(root: Path) -> Path:
+              return historical_path(root, "configs/final_evaluation.json")
+
+
+          def historical_readme(root: Path) -> Path:
+              return historical_path(root, "README.md")
+          '''
+          # The heredoc is YAML-dedented before execution; this string is already normal Python.
+          (root/names[2]).write_text(helper)
+          for name in names[:2]:
+              text=before[name].decode()
+              literal='root / "configs/final_evaluation.json"'
+              expected=3 if name==names[0] else 1
+              if text.count(literal)!=expected:
+                  raise RuntimeError('Unexpected legacy configuration references')
+              text=text.replace(literal,'historical_final_evaluation(root)')
+              if name==names[0]:
+                  anchor='from verify_compact import verify as verify_compact'
+                  text=text.replace(anchor,'from publication_history import historical_final_evaluation\n'+anchor)
+              else:
+                  anchor='import numpy as np'
+                  text=text.replace(anchor,anchor+'\nfrom publication_history import historical_final_evaluation, historical_readme')
+                  if text.count('root / "README.md"')!=1:
+                      raise RuntimeError('Unexpected historical README reference')
+                  text=text.replace('root / "README.md"','historical_readme(root)')
+              (root/name).write_text(text)
+          checks=[]
+          for args in [['ruff','check','--fix',*names],['ruff','format',*names],['ruff','check',*names],['ruff','format','--check',*names]]:
+              r=subprocess.run([sys.executable,'-m',*args],capture_output=True,text=True,timeout=60)
+              checks.append({'command':args,'returncode':r.returncode})
+              print(r.stdout+r.stderr,flush=True)
+              if r.returncode:raise RuntimeError('History patch quality failure')
+          spec=importlib.util.spec_from_file_location('publication_history',root/names[2])
+          module=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          assert module.historical_final_evaluation(root)==root/'configs/final_evaluation.json'
+          assert module.historical_readme(root)==root/'README.md'
+          with tempfile.TemporaryDirectory() as temp:
+              fake=pathlib.Path(temp)
+              (fake/'configs').mkdir()
+              (fake/'configs/final_evaluation.json').write_text('{"evaluated": true}')
+              (fake/'docs/history').mkdir(parents=True)
+              (fake/'docs/history/final_evaluation_before_closeout.json').write_bytes((root/'configs/final_evaluation.json').read_bytes())
+              (fake/'docs/history/README_before_closeout.md').write_bytes((root/'README.md').read_bytes())
+              try:module.historical_readme(fake)
+              except ValueError:pass
+              else:raise AssertionError('Missing current evidence must fail')
+              (fake/'research/closeout').mkdir(parents=True)
+              vf=fake/'research/closeout/verify.py'
+              vf.write_text('def run(root):\n    return {"status": "PASS"}\n')
+              assert module.historical_final_evaluation(fake)==fake/'docs/history/final_evaluation_before_closeout.json'
+              assert module.historical_readme(fake)==fake/'docs/history/README_before_closeout.md'
+              vf.write_text('def run(root):\n    return {"status": "FAIL"}\n')
+              try:module.historical_readme(fake)
+              except ValueError:pass
+              else:raise AssertionError('Failed current evidence must fail')
+              vf.write_text('def run(root):\n    return {"status": "PASS"}\n')
+              (fake/'docs/history/README_before_closeout.md').write_text('changed')
+              try:module.historical_readme(fake)
+              except ValueError:pass
+              else:raise AssertionError('Changed historical context must fail')
+          checks.append({'command':['context_resolver_contract_tests'],'returncode':0,'assertions':7,'fixture':'synthetic completed-state gate; original archive bytes'})
+          for script in names[:2]:
+              r=subprocess.run([sys.executable,script],capture_output=True,text=True,timeout=60)
+              checks.append({'command':[script],'returncode':r.returncode})
+              print(r.stdout+r.stderr,flush=True)
+          files=[]
+          with zipfile.ZipFile(out/'history_patch.zip','w',zipfile.ZIP_DEFLATED) as z:
+              for name in names:
+                  raw=(root/name).read_bytes()
+                  files.append({'path':name,'before_sha256':hashlib.sha256(before[name]).hexdigest() if name in before else None,'after_sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)})
+                  z.writestr(name,raw)
+                  if name in before:z.writestr('original/'+name,before[name])
+          manifest={'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'files':files,'checks':checks,'ready':all(c['returncode']==0 for c in checks),'model_fits':0,'scope':'historical assertions preserved; current closeout must pass before archived context is selected'}
+          (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          print(json.dumps(manifest,indent=2),flush=True)
           PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: commodity-publication-ci-patch
-          path: ci_publication_patch/
+          name: commodity-publication-history-patch
+          path: ci_publication_history/
           retention-days: 7
           if-no-files-found: error
