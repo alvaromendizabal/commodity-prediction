@@ -9,6 +9,11 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      OMP_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      NUMEXPR_NUM_THREADS: '2'
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -28,7 +33,7 @@ jobs:
           import zipfile
 
           root = pathlib.Path.cwd()
-          out = root / '.ci_publication_patch'
+          out = root / 'ci_publication_patch'
           out.mkdir()
           paths = [
               'scripts/execute_round21a_notebook.py',
@@ -47,7 +52,6 @@ jobs:
           if text.count(old) != 1:
               raise RuntimeError('Unexpected closure source; no speculative patch')
           p.write_text(text.replace(old, new))
-
           p = root / 'scripts/run_third_place_reproduction.py'
           text = p.read_text()
           a = text.index('ROOT = Path(')
@@ -69,13 +73,28 @@ jobs:
               ['ruff', 'check', 'src', 'tests', 'scripts'],
               ['ruff', 'format', '--check', 'src', 'tests', 'scripts'],
               ['mypy', 'src'],
-              ['pytest', '-q'],
+              ['pytest', '-q', 'tests/test_competitive_feature_forecast.py', 'tests/test_third_place_reproduction.py'],
           ]
           for i, args in enumerate(commands):
-              run = subprocess.run([sys.executable, '-m', *args], text=True, capture_output=True, timeout=300)
-              (out / ('check_%02d.log' % i)).write_text(run.stdout + '\n' + run.stderr)
-              results.append({'command': args, 'returncode': run.returncode})
-              print('CHECK', i, args[0], 'EXIT', run.returncode, flush=True)
+              try:
+                  run = subprocess.run([sys.executable, '-m', *args], text=True, capture_output=True, timeout=120)
+                  code, output = run.returncode, run.stdout + '\n' + run.stderr
+              except subprocess.TimeoutExpired as exc:
+                  code = 124
+                  output = repr(exc) + '\n' + str(exc.stdout or '') + '\n' + str(exc.stderr or '')
+              (out / ('check_%02d.log' % i)).write_text(output)
+              results.append({'command': args, 'returncode': code})
+              print('CHECK', i, args[0], 'EXIT', code, '\n', output[:18000], flush=True)
+          if all(r['returncode'] == 0 for r in results):
+              args = [sys.executable, '-m', 'pytest', '-q']
+              try:
+                  run = subprocess.run(args, text=True, capture_output=True, timeout=240)
+                  code, output = run.returncode, run.stdout + '\n' + run.stderr
+              except subprocess.TimeoutExpired as exc:
+                  code, output = 124, repr(exc) + '\n' + str(exc.stdout or '')
+              results.append({'command': ['pytest', '-q'], 'returncode': code})
+              (out / 'full_pytest.log').write_text(output)
+              print('FULL_TEST_EXIT', code, '\n', output[:18000], flush=True)
           diff = subprocess.run(['git', 'diff', '--', *paths], check=True, text=True, capture_output=True)
           (out / 'publication_ci_cleanup.diff').write_text(diff.stdout)
           payload = []
@@ -84,18 +103,17 @@ jobs:
               after = hashlib.sha256(data).hexdigest()
               if after != before[name]:
                   payload.append({'path': name, 'before_sha256': before[name], 'after_sha256': after, 'bytes': len(data)})
-          manifest = {'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(), 'files': payload, 'checks': results, 'new_project_model_fits': 0, 'scope': 'public source quality repair; no experiment or notebook output changes'}
+          manifest = {'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(), 'files': payload, 'checks': results, 'ready': all(r['returncode'] == 0 for r in results), 'new_project_model_fits': 0, 'scope': 'public source quality repair; no experiment or notebook output changes'}
           (out / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
           with zipfile.ZipFile(out / 'source_patch.zip', 'w', zipfile.ZIP_DEFLATED) as z:
               for item in payload:
                   z.write(root / item['path'], item['path'])
-          if any(r['returncode'] for r in results):
-              print('NOT_READY: inspect collected logs before applying the patch')
+          print('PATCH_READY', manifest['ready'], flush=True)
           PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: commodity-publication-ci-patch
-          path: .ci_publication_patch/
+          path: ci_publication_patch/
           retention-days: 7
           if-no-files-found: error
