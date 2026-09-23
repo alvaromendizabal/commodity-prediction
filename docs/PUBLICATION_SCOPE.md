@@ -2,26 +2,41 @@
 
 ## Current purpose
 
-This release presents Alvaro Mendizabal's commodity-forecasting project for employer and technical-interview review. It is an evidence-based case study, not a replication kit or a commitment to maintain an open-source training product.
+This release presents Alvaro Mendizabal's commodity-forecasting work for employer and technical-interview review. It is an evidence-based case study and research portfolio, not a replication kit or a commitment to maintain an open-source training product.
+
+The original historical-assessment cycle is complete. A separate **private frontier-research program is active** and is summarized publicly only at the level of verified results, engineering decisions, and limitations.
 
 ## Included in this release
 
-The public additions are the portfolio narrative, selected aggregate evaluation results, two visual comparisons, and a read-only presentation notebook. The figures represent recorded comparisons; they are not newly run experiments. The presentation notebook has no training source and does not claim clean-kernel execution of the private research system.
+The public portfolio includes:
+
+- the portfolio narrative and technical case study;
+- selected aggregate evaluation results;
+- presentation figures and a read-only portfolio notebook;
+- a high-level frontier-research update covering independently reconstructed public-method families and their measured decisions.
+
+The frontier update does not contain the latest implementation or enough detail to reproduce the private system.
 
 ## Withheld from this release
 
-The latest complete feature/model implementation, exact training configurations, model weights, raw and derived data, private per-target prediction matrices, environment copies, credentials, and AWS operational logs are not published. The prior 60-file reproduction-oriented publication plan is superseded and must not be uploaded by its old publisher.
+The latest complete feature/model implementation, exact training configurations, model weights, raw and derived data, private per-target prediction matrices, GPU checkpoints, environment copies, credentials, and AWS operational logs are not published.
+
+The prior reproduction-oriented publication plan remains superseded. Private AWS research is not mirrored wholesale to GitHub.
 
 ## Existing public material
 
-Older source, notebooks, configuration files, branches, and commit history were already public before this scope change. They remain public. A README, restrictive notice, ordinary deletion commit, or closed pull request cannot make those existing copies confidential. This update performs no history rewrite, visibility change, repository deletion, or license replacement. Existing licenses and third-party notices remain applicable.
+Older source, notebooks, configuration files, branches, and commit history were already public before this scope change. They remain public. This update performs no history rewrite, visibility change, repository deletion, or license replacement. Existing licenses and third-party notices remain applicable.
 
-Historical configuration files and earlier research reports describe their original study state. For the completed assessment status, use `reports/portfolio_summary.json`; older statements that a final set was still reserved must not be read as current status.
+Historical files can describe prior states such as “research open,” “final set reserved,” or “project closed.” The current status is defined by `reports/portfolio_summary.json` and the frontier update.
 
 ## Private and public evidence
 
-The canonical AWS research artifacts remain separate from the public presentation. Private notebooks and checkpoints retain the detailed engineering record. Public completeness means a coherent account of scope, work, results, and limitations; it does not mean distributing everything needed to recreate the implementation.
+The canonical frontier artifacts remain in the private AWS research workspace. Private notebooks, checkpoints, and operational receipts retain the detailed engineering record.
+
+Public completeness means a coherent account of scope, work, results, and limitations. It does **not** mean distributing everything needed to recreate the latest implementation.
 
 ## Attribution and claims
 
-Publicly documented leading methods informed selected experiments. Their authors retain credit for those methods. This project does not claim complete reproduction of all leading systems, a new official submission, a competition win, live deployment, or trading profitability. The final local comparison is reported whether or not it favors the selected system.
+Publicly documented leading methods informed selected experiments. Their authors retain credit for those methods. Where source code or exact settings were unavailable, the project records an independent reconstruction rather than claiming code parity.
+
+The project does not claim complete reproduction of all leading systems, an official current leaderboard result, a competition win, live deployment, or trading profitability. Negative and inconclusive experiments remain part of the research record.

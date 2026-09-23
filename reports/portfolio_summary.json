@@ -2,7 +2,7 @@
   "project": "Commodity forecasting",
   "owner": "Alvaro Mendizabal",
   "publication_mode": "employer_presentation_not_replication_kit",
-  "research_cycle_status": "historical_assessment_completed",
+  "research_cycle_status": "historical_assessment_completed_frontier_research_resumed_privately",
   "latest_implementation_published": false,
   "existing_public_history_removed": false,
   "official_leaderboard_result": false,
@@ -41,12 +41,39 @@
     "decision": "recorded_without_post_assessment_reselection",
     "evaluated": true,
     "excluded_dates": 0,
-    "development_replay_max_error": 0.0,
+    "development_replay_max_error": 0,
     "development_replay_shape": [
       175,
       424
     ],
     "scope": "documented reserved historical population; not Kaggle hidden evaluation"
+  },
+  "frontier_research": {
+    "status": "active_private_research",
+    "publication_boundary": "aggregate evidence and engineering decisions only",
+    "later_development_population": {
+      "dates": 355,
+      "targets": 424
+    },
+    "retained_panel": {
+      "score": 0.2893649296119325,
+      "incumbent_score": 0.27602468695941523,
+      "decision": "retained_as_strongest_later_period_candidate"
+    },
+    "direct_neural_reconstruction": {
+      "score": 0.105102,
+      "decision": "rejected_no_later_period_improvement"
+    },
+    "three_way_blend": {
+      "score": 0.287436,
+      "retained_panel_score": 0.2893649296119325,
+      "decision": "rejected_below_retained_panel"
+    },
+    "feature_token_transformer": {
+      "status": "engineering_ready_scientific_score_pending"
+    },
+    "official_submission_status": "unverified_no_official_mitsui_leaderboard_result",
+    "private_implementation_published": false
   },
   "evidence_run_ids": [
     "20260921T231222Z-500",
@@ -55,29 +82,24 @@
     "20260922T005540Z-518"
   ],
   "limitations": [
-    "Leading-solution coverage is partial.",
-    "No demonstrated final advantage over the historical-mean control.",
-    "Historical scores are not official leaderboard scores.",
+    "Leading-solution coverage remains partial.",
+    "No demonstrated final advantage over the historical-mean control on the completed historical assessment.",
+    "Frontier development scores are not official Kaggle leaderboard scores.",
+    "The current Transformer frontier has no scientific score yet.",
     "This presentation withholds the latest training implementation and configuration.",
     "Earlier published source and history remain public."
   ],
-  "project_status": "closed",
+  "project_status": "active_private_frontier_research_public_portfolio_complete",
   "closeout": {
-    "owner_directive": "End this research cycle and retain the employer-facing portfolio.",
+    "prior_cycle_status": "completed",
+    "owner_directive_at_prior_closeout": "End the historical-assessment cycle and retain the employer-facing portfolio.",
     "public_portfolio_status": "published",
     "portfolio_pull_request": 14,
     "portfolio_merge_commit": "03faf742e8e981b329d1e46acea97a9cf4833ea8",
-    "further_experiments_planned": false,
-    "further_submissions_planned": false,
-    "further_model_tuning_planned": false,
-    "superseded_publication_pull_requests": [
-      9,
-      13
-    ],
-    "superseded_pull_requests_merged": false,
+    "frontier_research_resumed": true,
+    "private_aws_research": "preserved_separately_not_uploaded",
     "historical_branches_preserved": true,
     "old_bulk_publisher_handoffs": "superseded_do_not_rerun",
-    "private_aws_research": "preserved_separately_not_uploaded",
-    "scope": "Research-cycle closure, not a claim that all possible methods were exhausted."
+    "scope": "The completed historical assessment remains frozen; resumed frontier work is a separate private research program."
   }
 }
