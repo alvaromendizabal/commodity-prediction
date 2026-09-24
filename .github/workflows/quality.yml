@@ -48,3 +48,6 @@ jobs:
       - name: Verify market-path publication
         timeout-minutes: 1
         run: uv run --frozen python scripts/verify_market_path_publication.py
+      - name: Verify frontier publication
+        timeout-minutes: 1
+        run: uv run --frozen python scripts/verify_frontier_publication.py

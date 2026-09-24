@@ -1,0 +1,57 @@
+{
+  "seed": 42,
+  "threads": 4,
+  "baseline_s3_bucket": "sagemaker-commodity-prediction-560403859723-us-west-2",
+  "baseline_s3_lineage": "04544d4b1a1d63487a24e88749d03d3259326c63902f2d0c74214e711147d605",
+  "fold_number": 0,
+  "smoke_targets": 8,
+  "panel_targets": 64,
+  "positive_lags": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "forensic_negative_lags": [
+    -1,
+    -2,
+    -3,
+    -4
+  ],
+  "rolling_windows": [
+    3,
+    5,
+    10,
+    20
+  ],
+  "oof_splits": 3,
+  "oof_gap": 5,
+  "source_described_models": [
+    "lightgbm",
+    "random_forest",
+    "xgboost"
+  ],
+  "meta_model": "xgboost",
+  "fixed_replacement_weights": [
+    0.25,
+    0.5,
+    0.75,
+    1.0
+  ],
+  "bootstrap_repetitions": 500,
+  "bootstrap_block_dates": 20,
+  "heartbeat_seconds": 15,
+  "feature_gate": "open",
+  "source_unspecified_reconstruction_choices": {
+    "rolling_windows": [
+      3,
+      5,
+      10,
+      20
+    ],
+    "model_hyperparameters": "explicit deterministic library-default-like settings are recorded in code because the public writeup states the model families but does not disclose exact hyperparameters",
+    "negative_lag_semantics": "implemented only as optional forensic noncausal mode and never promotable",
+    "offline_validation": "project fold-0 chronological protocol; source used full-history competition training"
+  },
+  "target_reconstruction_tolerance": 2e-06
+}

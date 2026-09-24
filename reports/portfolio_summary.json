@@ -1,105 +1,80 @@
 {
-  "project": "Commodity forecasting",
-  "owner": "Alvaro Mendizabal",
-  "publication_mode": "employer_presentation_not_replication_kit",
-  "research_cycle_status": "historical_assessment_completed_frontier_research_resumed_privately",
-  "latest_implementation_published": false,
-  "existing_public_history_removed": false,
-  "official_leaderboard_result": false,
-  "production_deployment_claimed": false,
-  "metric": "mean daily cross-sectional rank correlation divided by population standard deviation; not annualized",
+  "competition_data_published": false,
   "development_reference": {
     "dates": 535,
-    "targets": 424,
-    "score": 0.3097087232124053
-  },
-  "temporal_replication": {
-    "dates": 355,
-    "targets": 424,
-    "incumbent": 0.27602468695941523,
-    "candidate": 0.2893649296119325,
-    "delta": 0.013340242652517265,
-    "conditional_paired_95_interval": [
-      -0.009060959184478707,
-      0.03575041491078848
-    ],
-    "decision": "not_promoted_inconclusive",
-    "scope": "retrospective development periods previously used in research"
+    "score": 0.3097087232124053,
+    "targets": 424
   },
   "final_historical_assessment": {
-    "dates": 247,
-    "targets": 424,
-    "first_date_id": 1714,
-    "last_date_id": 1960,
-    "incumbent": 0.19045287662840643,
-    "historical_mean_control": 0.21208472708347217,
-    "delta": -0.021631850455065743,
     "conditional_paired_95_interval": [
       -0.13365054618196048,
       0.0803359478745666
     ],
+    "dates": 247,
     "decision": "recorded_without_post_assessment_reselection",
+    "delta": -0.021631850455065743,
     "evaluated": true,
-    "excluded_dates": 0,
-    "development_replay_max_error": 0,
-    "development_replay_shape": [
-      175,
-      424
-    ],
-    "scope": "documented reserved historical population; not Kaggle hidden evaluation"
+    "first_date_id": 1714,
+    "historical_mean_control": 0.21208472708347217,
+    "incumbent": 0.19045287662840643,
+    "last_date_id": 1960,
+    "scope": "documented historical population; not Kaggle hidden evaluation",
+    "targets": 424
   },
   "frontier_research": {
-    "status": "active_private_research",
-    "publication_boundary": "aggregate evidence and engineering decisions only",
-    "later_development_population": {
-      "dates": 355,
-      "targets": 424
+    "full15": {
+      "scientific_score": null,
+      "status": "active_engineering_resume",
+      "verified_compatible_completed_fits": 51
     },
-    "retained_panel": {
-      "score": 0.2893649296119325,
-      "incumbent_score": 0.27602468695941523,
-      "decision": "retained_as_strongest_later_period_candidate"
+    "groupwise_blend": {
+      "decision": "rejected",
+      "score": 0.27325045742086795
     },
-    "direct_neural_reconstruction": {
-      "score": 0.105102,
-      "decision": "rejected_no_later_period_improvement"
+    "ledger": "reports/frontier_research_ledger.json",
+    "official_submission_status": "staged_not_yet_scored",
+    "online_adaptation": {
+      "decision": "rejected",
+      "score": 0.2807133550080609
     },
-    "three_way_blend": {
-      "score": 0.287436,
-      "retained_panel_score": 0.2893649296119325,
-      "decision": "rejected_below_retained_panel"
+    "online_refit_blend": {
+      "decision": "not_promoted_inconsistent_transfer",
+      "score": 0.2971141398128422
     },
-    "feature_token_transformer": {
-      "status": "engineering_ready_scientific_score_pending"
-    },
-    "official_submission_status": "unverified_no_official_mitsui_leaderboard_result",
-    "private_implementation_published": false
+    "retained_panel_score": 0.2893649296119325,
+    "status": "active",
+    "transformer": {
+      "decision": "rejected",
+      "score": 0.2532312989035328
+    }
   },
-  "evidence_run_ids": [
-    "20260921T231222Z-500",
-    "20260921T234713Z-535",
-    "20260922T000824Z-509",
-    "20260922T005540Z-518"
-  ],
+  "latest_frontier_source_published": true,
   "limitations": [
-    "Leading-solution coverage remains partial.",
-    "No demonstrated final advantage over the historical-mean control on the completed historical assessment.",
-    "Frontier development scores are not official Kaggle leaderboard scores.",
-    "The current Transformer frontier has no scientific score yet.",
-    "This presentation withholds the latest training implementation and configuration.",
-    "Earlier published source and history remain public."
+    "Local development scores are not official Kaggle leaderboard results.",
+    "The active full-15th-place-inspired frontier does not yet have a completed scientific score.",
+    "Public source bundles omit restricted competition data, private predictions, weights, checkpoints, credentials, and AWS secrets.",
+    "The historical assessment is already evaluated and is not reused as a frontier tuning population."
   ],
-  "project_status": "active_private_frontier_research_public_portfolio_complete",
-  "closeout": {
-    "prior_cycle_status": "completed",
-    "owner_directive_at_prior_closeout": "End the historical-assessment cycle and retain the employer-facing portfolio.",
-    "public_portfolio_status": "published",
-    "portfolio_pull_request": 14,
-    "portfolio_merge_commit": "03faf742e8e981b329d1e46acea97a9cf4833ea8",
-    "frontier_research_resumed": true,
-    "private_aws_research": "preserved_separately_not_uploaded",
-    "historical_branches_preserved": true,
-    "old_bulk_publisher_handoffs": "superseded_do_not_rerun",
-    "scope": "The completed historical assessment remains frozen; resumed frontier work is a separate private research program."
+  "metric": "mean daily cross-sectional rank correlation divided by population standard deviation; not annualized",
+  "model_weights_published": false,
+  "official_leaderboard_result": false,
+  "owner": "Alvaro Mendizabal",
+  "production_deployment_claimed": false,
+  "project": "Commodity forecasting",
+  "project_status": "portfolio_complete_frontier_active",
+  "publication_mode": "employer_portfolio_with_reproducible_source_only_frontier_bundles",
+  "research_cycle_status": "historical_assessment_completed_frontier_research_active",
+  "temporal_replication": {
+    "candidate": 0.2893649296119325,
+    "conditional_paired_95_interval": [
+      -0.009060959184478707,
+      0.03575041491078848
+    ],
+    "dates": 355,
+    "decision": "retained_reference_not_formally_promoted",
+    "delta": 0.013340242652517265,
+    "incumbent": 0.27602468695941523,
+    "scope": "retrospective development periods",
+    "targets": 424
   }
 }

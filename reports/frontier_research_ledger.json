@@ -1,0 +1,122 @@
+{
+  "development_reference": {
+    "dates": 535,
+    "score": 0.3097087232124053,
+    "targets": 424
+  },
+  "evaluation_boundary": {
+    "frontier_tuning_last_date_id": 1703,
+    "historical_assessment_first_date_id": 1714,
+    "historical_assessment_last_date_id": 1960,
+    "note": "The historical assessment is a fixed recorded population and is not reused for frontier tuning."
+  },
+  "experiments": [
+    {
+      "best_blend_score": 0.287436,
+      "family": "Direct MLP/RNN reconstruction",
+      "later_score": 0.105102,
+      "reason": "The direct neural family and its frozen three-way blend did not improve the retained panel.",
+      "reference_score": 0.2893649296119325,
+      "status": "rejected"
+    },
+    {
+      "delta": -0.0361336307083997,
+      "epochs": 427,
+      "family": "Feature-token Transformer reconstruction",
+      "fit_stages": 24,
+      "later_score": 0.2532312989035328,
+      "paired_95_interval": [
+        -0.0907205779593596,
+        0.015064728572801826
+      ],
+      "reason": "The fold-0-selected Transformer blend failed later-period transfer.",
+      "reference_score": 0.2893649296119325,
+      "status": "rejected",
+      "study_id": "2dd2a2075aef4f67e4a6d2409309ffb1e94b77b698ccc499e768f410a8ef4b0d"
+    },
+    {
+      "family": "Zero-fit causal online adaptation",
+      "model_fits": 0,
+      "online_selected_score": 0.2807133550080609,
+      "reason": "Causal released-label adaptation did not beat the retained panel on the locked later evaluation.",
+      "reference_score": 0.2893649296119325,
+      "status": "rejected",
+      "study_id": "c5544759429b37c7ee7e7fe8ab212adbfd35602a3606d36ea16a0aedd0ba84bc"
+    },
+    {
+      "blend_score": 0.2971141398128422,
+      "delta": 0.007749210200909684,
+      "family": "Lightweight true online refit",
+      "later_fold_deltas": [
+        0.02358894141274387,
+        -0.009508797203819364
+      ],
+      "model_fits": 206,
+      "online_model_score": 0.11612475725691662,
+      "paired_95_interval": [
+        -0.02344894416450144,
+        0.03658030338212327
+      ],
+      "reason": "The pooled blend improved numerically, but the effect did not transfer consistently and the paired interval crossed zero.",
+      "reference_score": 0.2893649296119325,
+      "status": "rejected_not_promoted",
+      "study_id": "a6aa4dceef8b45db1341b197d92f4787558e1aea901ac51c2a5382c923240a92"
+    },
+    {
+      "delta": -0.016114472191064544,
+      "family": "25th-place-inspired group-wise LightGBM/Ridge reconstruction",
+      "fold0_reference": 0.41818123577310945,
+      "fold0_selected": 0.5570137055020401,
+      "later_fold_deltas": [
+        0.00013928741408078538,
+        -0.0268774306726976
+      ],
+      "later_score": 0.27325045742086795,
+      "model_fits": 2544,
+      "paired_95_interval": [
+        -0.06878544512092166,
+        0.03814998401602151
+      ],
+      "reason": "A very large screening gain failed later transfer, illustrating regime-specific over-selection.",
+      "reference_score": 0.2893649296119325,
+      "status": "rejected",
+      "study_id": "48ecdd1c4b842c3cc50a33b2410f8dcf861ecd5a3068315e54c801019a1cc52f"
+    },
+    {
+      "family": "Full 15th-place-inspired Attention/Residual/AutoEncoder online ensemble",
+      "parent_study_id": "31001155516d7aa224640e6c013594b1bb583010a4660459fbb04a3547d0cee6",
+      "reason": "The first run reached real neural fitting but hit a BatchNorm singleton minibatch at a 1,025-row generation. The repaired runner merges the singleton into the preceding batch and reuses only hash-verified compatible checkpoints.",
+      "scientific_score": null,
+      "status": "active_engineering_resume",
+      "verified_compatible_completed_fits_before_repair": 51
+    }
+  ],
+  "historical_final_private_leaderboard_reference": {
+    "comparability": "Not directly comparable to local development metrics.",
+    "first_place_score": 0.63834,
+    "population": "competition hidden private leaderboard"
+  },
+  "metric": "mean daily cross-sectional rank correlation divided by population standard deviation; not annualized",
+  "official_kaggle_submission": {
+    "claim": "No official MITSUI leaderboard score is claimed.",
+    "local_gateway_validation": "skipped_no_existing_polars_interpreter",
+    "official_schema_validation": "passed",
+    "status": "not_yet_scored",
+    "submission_notebook_staged": true
+  },
+  "owner": "Alvaro Mendizabal",
+  "project": "Commodity forecasting frontier research ledger",
+  "retained_panel": {
+    "dates": 355,
+    "delta": 0.013340242652517265,
+    "incumbent": 0.27602468695941523,
+    "paired_95_interval": [
+      -0.009060959184478707,
+      0.03575041491078848
+    ],
+    "score": 0.2893649296119325,
+    "status": "retained_reference_not_formally_promoted",
+    "targets": 424
+  },
+  "updated": "2026-09-23"
+}

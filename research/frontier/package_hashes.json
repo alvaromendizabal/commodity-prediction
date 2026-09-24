@@ -1,0 +1,9 @@
+{
+  "active_full15_repaired_package_sha256": "17e0733b797864d1e43d7ecec1428a3311a25ce45926df4a7605e33a64677201",
+  "groupwise_tabular_package_sha256": "c1f51463b3be58b79e8671397e1d5cfc883cc12424378e47cf610b9077732875",
+  "online_adaptation_package_sha256": "963db99b65bd3a3c3b520f78e5911a2fce3de0042f5a7972450ab6ce0ea4e633",
+  "online_refit_package_sha256": "071782aed41d403a57411af67bb347b65bd1070b4e5813223964f072da7a7f5a",
+  "transformer_completed_source_package_sha256": "cc284682cad84148abcf33dc2f66314265810d99c78b0e2273be8a7350856ece",
+  "transformer_scientific_study_id": "2dd2a2075aef4f67e4a6d2409309ffb1e94b77b698ccc499e768f410a8ef4b0d",
+  "updated": "2026-09-23"
+}
