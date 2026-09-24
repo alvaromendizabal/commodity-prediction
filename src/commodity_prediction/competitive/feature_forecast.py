@@ -16,6 +16,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -251,7 +252,7 @@ def train_feature_forecaster(
     config: dict,
     space: str,
     log: Callable[[str, dict], None],
-) -> tuple[object, ScaleState, dict]:
+) -> tuple[Any, ScaleState, dict]:
     import torch
     from torch import nn
     from torch.utils.data import DataLoader, TensorDataset
@@ -383,7 +384,7 @@ def train_feature_forecaster(
 
 
 def recursive_predict(
-    model: object,
+    model: Any,
     scale: ScaleState,
     observed_values: np.ndarray,
     prediction_positions: np.ndarray,
