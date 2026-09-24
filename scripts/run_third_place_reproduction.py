@@ -32,6 +32,7 @@ CONFIG_PATH = ROOT / "configs/third_place_reproduction.json"
 ARTIFACT_ROOT = ROOT / "artifacts/third_place_reproduction"
 BASELINE_CACHE = ROOT / "artifacts/baselines/current_market"
 
+
 def utc() -> str:
     return datetime.now(UTC).isoformat()
 
