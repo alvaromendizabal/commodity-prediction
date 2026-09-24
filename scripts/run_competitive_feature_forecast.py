@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Run a bounded competitive-mechanism gate against the canonical current_market baseline."""
 
+# Ruff import sorting differs across the standalone execution context; imports are grouped intentionally.
+# ruff: noqa: I001
+
 from __future__ import annotations
 
 import argparse
