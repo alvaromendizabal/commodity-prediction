@@ -64,4 +64,4 @@ That is an engineering repair, not a scientific result. No final full-ensemble s
 
 ## Scope
 
-This is an employer-facing research repository, not a live trading product. It does not claim a competition win, medal, current official MITSUI leaderboard score, trading profitability, or production deployment.
+This is an employer-facing research repository, **not a release of restricted competition data or fitted private artifacts**, and not a live trading product. It does not claim a competition win, medal, current official MITSUI leaderboard score, trading profitability, or production deployment.

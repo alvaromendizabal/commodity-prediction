@@ -1,80 +1,143 @@
 {
-  "competition_data_published": false,
+  "project": "Commodity forecasting",
+  "owner": "Alvaro Mendizabal",
+  "publication_mode": "employer_presentation_not_replication_kit",
+  "research_cycle_status": "historical_assessment_completed_frontier_research_active",
+  "latest_implementation_published": false,
+  "existing_public_history_removed": false,
+  "official_leaderboard_result": false,
+  "production_deployment_claimed": false,
+  "metric": "mean daily cross-sectional rank correlation divided by population standard deviation; not annualized",
   "development_reference": {
     "dates": 535,
-    "score": 0.3097087232124053,
-    "targets": 424
+    "targets": 424,
+    "score": 0.3097087232124053
   },
-  "final_historical_assessment": {
-    "conditional_paired_95_interval": [
-      -0.13365054618196048,
-      0.0803359478745666
-    ],
-    "dates": 247,
-    "decision": "recorded_without_post_assessment_reselection",
-    "delta": -0.021631850455065743,
-    "evaluated": true,
-    "first_date_id": 1714,
-    "historical_mean_control": 0.21208472708347217,
-    "incumbent": 0.19045287662840643,
-    "last_date_id": 1960,
-    "scope": "documented historical population; not Kaggle hidden evaluation",
-    "targets": 424
-  },
-  "frontier_research": {
-    "full15": {
-      "scientific_score": null,
-      "status": "active_engineering_resume",
-      "verified_compatible_completed_fits": 51
-    },
-    "groupwise_blend": {
-      "decision": "rejected",
-      "score": 0.27325045742086795
-    },
-    "ledger": "reports/frontier_research_ledger.json",
-    "official_submission_status": "staged_not_yet_scored",
-    "online_adaptation": {
-      "decision": "rejected",
-      "score": 0.2807133550080609
-    },
-    "online_refit_blend": {
-      "decision": "not_promoted_inconsistent_transfer",
-      "score": 0.2971141398128422
-    },
-    "retained_panel_score": 0.2893649296119325,
-    "status": "active",
-    "transformer": {
-      "decision": "rejected",
-      "score": 0.2532312989035328
-    }
-  },
-  "latest_frontier_source_published": true,
-  "limitations": [
-    "Local development scores are not official Kaggle leaderboard results.",
-    "The active full-15th-place-inspired frontier does not yet have a completed scientific score.",
-    "Public source bundles omit restricted competition data, private predictions, weights, checkpoints, credentials, and AWS secrets.",
-    "The historical assessment is already evaluated and is not reused as a frontier tuning population."
-  ],
-  "metric": "mean daily cross-sectional rank correlation divided by population standard deviation; not annualized",
-  "model_weights_published": false,
-  "official_leaderboard_result": false,
-  "owner": "Alvaro Mendizabal",
-  "production_deployment_claimed": false,
-  "project": "Commodity forecasting",
-  "project_status": "portfolio_complete_frontier_active",
-  "publication_mode": "employer_portfolio_with_reproducible_source_only_frontier_bundles",
-  "research_cycle_status": "historical_assessment_completed_frontier_research_active",
   "temporal_replication": {
+    "dates": 355,
+    "targets": 424,
+    "incumbent": 0.27602468695941523,
     "candidate": 0.2893649296119325,
+    "delta": 0.013340242652517265,
     "conditional_paired_95_interval": [
       -0.009060959184478707,
       0.03575041491078848
     ],
-    "dates": 355,
-    "decision": "retained_reference_not_formally_promoted",
-    "delta": 0.013340242652517265,
-    "incumbent": 0.27602468695941523,
-    "scope": "retrospective development periods",
-    "targets": 424
+    "decision": "not_promoted_inconclusive",
+    "scope": "retrospective development periods previously used in research"
+  },
+  "final_historical_assessment": {
+    "dates": 247,
+    "targets": 424,
+    "first_date_id": 1714,
+    "last_date_id": 1960,
+    "incumbent": 0.19045287662840643,
+    "historical_mean_control": 0.21208472708347217,
+    "delta": -0.021631850455065743,
+    "conditional_paired_95_interval": [
+      -0.13365054618196048,
+      0.0803359478745666
+    ],
+    "decision": "recorded_without_post_assessment_reselection",
+    "evaluated": true,
+    "excluded_dates": 0,
+    "development_replay_max_error": 0,
+    "development_replay_shape": [
+      175,
+      424
+    ],
+    "scope": "documented reserved historical population; not Kaggle hidden evaluation"
+  },
+  "frontier_research": {
+    "status": "active_private_research",
+    "publication_boundary": "public_source_and_aggregate_evidence_without_restricted_data_or_private_model_artifacts",
+    "later_development_population": {
+      "dates": 355,
+      "targets": 424
+    },
+    "retained_panel": {
+      "score": 0.2893649296119325,
+      "incumbent_score": 0.27602468695941523,
+      "delta": 0.013340242652517265,
+      "conditional_paired_95_interval": [
+        -0.009060959184478707,
+        0.03575041491078848
+      ],
+      "decision": "retained_reference_not_formally_promoted"
+    },
+    "direct_neural_reconstruction": {
+      "score": 0.105102,
+      "three_way_blend_score": 0.287436,
+      "decision": "rejected"
+    },
+    "feature_token_transformer": {
+      "score": 0.2532312989035328,
+      "decision": "rejected_failed_later_transfer",
+      "study_id": "2dd2a2075aef4f67e4a6d2409309ffb1e94b77b698ccc499e768f410a8ef4b0d"
+    },
+    "zero_fit_online_adaptation": {
+      "score": 0.2807133550080609,
+      "decision": "rejected"
+    },
+    "lightweight_online_refit": {
+      "blend_score": 0.2971141398128422,
+      "later_fold_deltas": [
+        0.02358894141274387,
+        -0.009508797203819364
+      ],
+      "conditional_paired_95_interval": [
+        -0.02344894416450144,
+        0.03658030338212327
+      ],
+      "decision": "not_promoted_inconsistent_transfer"
+    },
+    "groupwise_tabular": {
+      "fold0_selected_score": 0.5570137055020401,
+      "later_score": 0.27325045742086795,
+      "later_fold_deltas": [
+        0.00013928741408078538,
+        -0.0268774306726976
+      ],
+      "conditional_paired_95_interval": [
+        -0.06878544512092166,
+        0.03814998401602151
+      ],
+      "decision": "rejected_failed_later_transfer"
+    },
+    "full15_attention_residual_autoencoder": {
+      "status": "active_engineering_resume",
+      "scientific_score": null,
+      "verified_compatible_completed_fits": 51,
+      "repaired_package_sha256": "17e0733b797864d1e43d7ecec1428a3311a25ce45926df4a7605e33a64677201"
+    },
+    "official_submission_status": "staged_not_yet_scored",
+    "private_data_or_model_artifacts_published": false
+  },
+  "evidence_run_ids": [
+    "20260921T231222Z-500",
+    "20260921T234713Z-535",
+    "20260922T000824Z-509",
+    "20260922T005540Z-518"
+  ],
+  "limitations": [
+    "Leading-solution coverage remains partial; the full 15th-place-inspired ensemble is still active.",
+    "No demonstrated final advantage over the historical-mean control on the completed historical assessment.",
+    "Frontier development scores are not official Kaggle leaderboard scores.",
+    "The active full-15th-place-inspired frontier has no completed scientific score yet.",
+    "Public source omits restricted competition data, private predictions, fitted weights/checkpoints, credentials, and AWS operational secrets.",
+    "Earlier published source and history remain public."
+  ],
+  "project_status": "active_private_frontier_research_public_portfolio_complete",
+  "closeout": {
+    "prior_cycle_status": "completed",
+    "owner_directive_at_prior_closeout": "End the historical-assessment cycle and retain the employer-facing portfolio.",
+    "public_portfolio_status": "published",
+    "portfolio_pull_request": 14,
+    "portfolio_merge_commit": "03faf742e8e981b329d1e46acea97a9cf4833ea8",
+    "frontier_research_resumed": true,
+    "private_aws_research": "preserved_separately_not_uploaded",
+    "historical_branches_preserved": true,
+    "old_bulk_publisher_handoffs": "superseded_do_not_rerun",
+    "scope": "The completed historical assessment remains frozen; resumed frontier work is a separate private research program."
   }
 }

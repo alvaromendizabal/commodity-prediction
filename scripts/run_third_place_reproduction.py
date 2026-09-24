@@ -6,25 +6,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
-from pathlib import Path
+import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from pathlib import Path
 
 import boto3
 import numpy as np
 import pandas as pd
 
-ROOT = Path("/home/sagemaker-user/projects/commodity-prediction-current")
-CONFIG_PATH = ROOT / "configs/third_place_reproduction.json"
-ARTIFACT_ROOT = ROOT / "artifacts/third_place_reproduction"
-BASELINE_CACHE = ROOT / "artifacts/baselines/current_market"
-
-sys.path.insert(0, str(ROOT / "src"))
-
-from commodity_prediction.data import load_data, make_folds, reconstruct_targets
-from commodity_prediction.metrics import score, daily_rank_correlations, paired_block_interval
 from commodity_prediction.competitive.third_place_reproduction import (
     build_causal_pair_features,
     choose_stratified_targets,
@@ -33,10 +24,16 @@ from commodity_prediction.competitive.third_place_reproduction import (
     prefix_invariant_feature_check,
     prepare_train_valid,
 )
+from commodity_prediction.data import load_data, make_folds, reconstruct_targets
+from commodity_prediction.metrics import daily_rank_correlations, paired_block_interval, score
 
+ROOT = Path(__file__).resolve().parents[1]
+CONFIG_PATH = ROOT / "configs/third_place_reproduction.json"
+ARTIFACT_ROOT = ROOT / "artifacts/third_place_reproduction"
+BASELINE_CACHE = ROOT / "artifacts/baselines/current_market"
 
 def utc() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def emit(event: str, **payload) -> None:
@@ -49,7 +46,6 @@ def config() -> dict:
 
 
 def current_git() -> tuple[str, str]:
-    import subprocess
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=ROOT, text=True).strip()
     return head, branch

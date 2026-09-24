@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 
 from commodity_prediction.competitive.third_place_reproduction import (
-    build_causal_pair_features,
     build_forensic_source_described_features,
     choose_stratified_targets,
     parse_pair,

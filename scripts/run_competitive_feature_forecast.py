@@ -6,13 +6,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
-import shutil
 import subprocess
 import sys
 import time
 import zipfile
-from dataclasses import asdict, replace
+from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -40,9 +39,7 @@ LOG_PATH = ROOT / "logs/competitive_feature_forecast.jsonl"
 
 
 def now_utc() -> str:
-    import datetime
-
-    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def event(kind: str, payload: dict) -> None:
@@ -236,7 +233,15 @@ def run(mode: str) -> int:
                 "validation_stop": fold.validation_stop,
             }
 
-            def maker(space=space, variant=variant, stage=stage):
+            def maker(
+                space=space,
+                variant=variant,
+                stage=stage,
+                fold=fold,
+                prediction_positions=prediction_positions,
+                truth=truth,
+                baseline_daily=baseline_daily,
+            ):
                 started = time.monotonic()
                 model, scale, training = train_feature_forecaster(asset_values, fold.train_stop, config, space, event)
                 prediction = recursive_predict(model, scale, asset_values, prediction_positions, config, pairs, assets, event)

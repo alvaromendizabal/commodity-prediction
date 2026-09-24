@@ -17,7 +17,7 @@ def main() -> None:
     assert ledger["retained_panel"]["score"] == 0.2893649296119325
     assert ledger["official_kaggle_submission"]["status"] == "not_yet_scored"
     assert ledger["experiments"][-1]["status"] == "active_engineering_resume"
-    assert summary["project_status"] == "portfolio_complete_frontier_active"
+    assert summary["project_status"] == "active_private_frontier_research_public_portfolio_complete"
     assert summary["official_leaderboard_result"] is False
     assert hashes["active_full15_repaired_package_sha256"] == (
         "17e0733b797864d1e43d7ecec1428a3311a25ce45926df4a7605e33a64677201"

@@ -10,16 +10,15 @@ choices are explicit in configs/third_place_reproduction.json.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
-import math
 
 import numpy as np
 import pandas as pd
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.impute import SimpleImputer
 from sklearn.model_selection import TimeSeriesSplit
+from sklearn.preprocessing import StandardScaler
 
 
 def signed_log1p(values: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame:

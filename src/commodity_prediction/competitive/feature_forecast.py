@@ -11,12 +11,11 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-import os
 import random
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 import pandas as pd
