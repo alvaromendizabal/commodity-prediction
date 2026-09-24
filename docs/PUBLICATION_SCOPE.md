@@ -1,42 +1,38 @@
 # Portfolio publication scope
 
-## Current purpose
+## Purpose
 
-This release presents Alvaro Mendizabal's commodity-forecasting work for employer and technical-interview review. It is an evidence-based case study and research portfolio, not a replication kit or a commitment to maintain an open-source training product.
+This repository is Alvaro Mendizabal's employer-facing commodity-forecasting research portfolio. The historical-assessment cycle is complete; frontier research is active.
 
-The original historical-assessment cycle is complete. A separate **private frontier-research program is active** and is summarized publicly only at the level of verified results, engineering decisions, and limitations.
+## Public material
 
-## Included in this release
+The public repository includes:
 
-The public portfolio includes:
+- historical research source, tests, configs, notebooks, and reports;
+- integrated third-place-inspired competitive reconstruction source, protocols, tests, and executed notebooks;
+- frontier experiment protocols and aggregate evidence;
+- an executed no-training frontier evidence notebook;
+- exact study IDs and handoff package SHA-256 identities for newer private AWS runs;
+- publication verification in CI.
 
-- the portfolio narrative and technical case study;
-- selected aggregate evaluation results;
-- presentation figures and a read-only portfolio notebook;
-- a high-level frontier-research update covering independently reconstructed public-method families and their measured decisions.
+## Private / restricted material
 
-The frontier update does not contain the latest implementation or enough detail to reproduce the private system.
+The repository does not redistribute:
 
-## Withheld from this release
+- competition raw data or labels;
+- private feature or prediction matrices;
+- fitted model weights or GPU checkpoints;
+- credentials, tokens, private keys, or secrets;
+- environment copies and private operational logs.
 
-The latest complete feature/model implementation, exact training configurations, model weights, raw and derived data, private per-target prediction matrices, GPU checkpoints, environment copies, credentials, and AWS operational logs are not published.
+Exact numeric reproduction requires authorized access to the competition files and compatible model dependencies.
 
-The prior reproduction-oriented publication plan remains superseded. Private AWS research is not mirrored wholesale to GitHub.
+## Reproducibility boundary
 
-## Existing public material
+Public reproducibility means the project logic, split definitions, causality rules, tests, source for the integrated competitive reconstruction, frontier protocols, promotion gates, package identities, and measured aggregate decisions are inspectable.
 
-Older source, notebooks, configuration files, branches, and commit history were already public before this scope change. They remain public. This update performs no history rewrite, visibility change, repository deletion, or license replacement. Existing licenses and third-party notices remain applicable.
+Private AWS receipts can be reconciled to public package hashes without exposing restricted artifacts.
 
-Historical files can describe prior states such as “research open,” “final set reserved,” or “project closed.” The current status is defined by `reports/portfolio_summary.json` and the frontier update.
+## Claims
 
-## Private and public evidence
-
-The canonical frontier artifacts remain in the private AWS research workspace. Private notebooks, checkpoints, and operational receipts retain the detailed engineering record.
-
-Public completeness means a coherent account of scope, work, results, and limitations. It does **not** mean distributing everything needed to recreate the latest implementation.
-
-## Attribution and claims
-
-Publicly documented leading methods informed selected experiments. Their authors retain credit for those methods. Where source code or exact settings were unavailable, the project records an independent reconstruction rather than claiming code parity.
-
-The project does not claim complete reproduction of all leading systems, an official current leaderboard result, a competition win, live deployment, or trading profitability. Negative and inconclusive experiments remain part of the research record.
+The repository does not claim an official current MITSUI leaderboard score, competition win or medal, live deployment, trading profitability, or code parity with methods whose exact source was not disclosed. Local development scores are labeled as local evidence.

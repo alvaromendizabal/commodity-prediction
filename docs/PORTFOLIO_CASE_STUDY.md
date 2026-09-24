@@ -2,80 +2,66 @@
 
 **Project by Alvaro Mendizabal** · [GitHub](https://github.com/alvaromendizabal)
 
-## The problem
+## Problem
 
-The task was to rank short-horizon returns across 424 commodity-related targets spanning four forecast horizons. It is a noisy forecasting problem in which an apparently strong feature or model can improve one historical period and fail to transfer to another. The objective aggregates daily cross-sectional rank correlations, rewarding both their average and their consistency. Lower pointwise error alone does not establish improvement on that objective.
+The task is to rank short-horizon returns across 424 commodity-related targets spanning four forecast horizons. The hard part is not simply increasing model capacity: the system must respect delayed outcomes, heterogeneous market histories, a rank-based objective, and substantial temporal instability.
 
-This was a research and evaluation project, not a live trading service. The public case study focuses on engineering decisions and recorded evidence; the latest implementation and detailed training recipe are intentionally withheld.
+The local research metric is mean daily cross-sectional rank correlation divided by its population standard deviation.
 
-## Ownership and scope
+## Ownership
 
-The project spans problem framing, data-contract design, prediction-time feature construction, validation, model experiments, result reconciliation, checkpointed AWS execution, and analytical communication. The employer-facing contribution is that integrated workflow and the decisions supported by it, not a claim that the final system beat a competition winner.
+The project covers problem framing, data contracts, point-in-time feature construction, chronological validation, pooled and target-specific models, public-solution reconstruction, GPU execution, checkpoint recovery, uncertainty analysis, and notebook communication.
 
-The latest research ran in an AWS workspace. GitHub serves as a curated evidence layer rather than a mirror of that workspace. Full experiment notebooks, detailed configurations, private matrices, fitted checkpoints, and operational logs are not added by this release. Earlier material already published in the repository remains archival and publicly visible.
+AWS is the private execution workspace; GitHub is the durable source/evidence layer. Restricted competition data, private predictions, fitted weights/checkpoints, and credentials are not committed.
 
-## System design
+## Retained reference
 
-The workflow separates five responsibilities:
+The established 535-date development reference is **0.309709**. A third-place-inspired mixed-horizon panel was frozen and checked on two later development periods:
 
-**Data contracts and information timing.** Input and target identifiers, ordering, numeric validity, and label availability are checked before model fitting. Historical labels are usable only after their forecast-horizon-specific release delay. Chronological validation and an exclusion buffer prevent training outcomes from crossing the assessment boundary.
-
-**Representation and modeling.** The established system combines market information, risk-state representations, and released target history in a pooled nonlinear model. A distinct target-routed, top-solution-inspired stack was tested as a candidate. These are selectively adapted mechanisms; complete recreation of every leading solution is not claimed.
-
-**Experiment control.** Candidate definitions are frozen before evaluation. Comparisons align the same target columns and date IDs. Exploratory screening, retrospective temporal replication, and the final historical assessment are treated as different evidentiary stages.
-
-**Artifact integrity and recovery.** Intermediate stages save predictions and completion receipts. Checksums and source/configuration identities make reuse explicit. A failed later step need not trigger another model fit. Development-prediction replay is a gate before final assessment, not a substitute for that assessment.
-
-**Analytical presentation.** Private executed notebooks retain the detailed evidence. This public presentation exposes the question, comparisons, uncertainty, and decision, while withholding the model-building implementation.
-
-## The most informative debugging result
-
-An original mixed-horizon panel improved the first screening period from 0.403381 to 0.418181. A later expansion to 106 one-day targets instead scored 0.385559. Treating the second study as simply a larger version of the first would have been misleading: their target composition differed.
-
-A saved-prediction reconciliation required zero new model fits. Predictions on all 37 shared one-day targets matched exactly. Removing the original panel's 27 longer-horizon replacements reduced the score to 0.397522; adding the other 69 one-day replacements reduced it again to 0.385559.
-
-That result separated numerical reproducibility from research design. The shared-target implementation was not responsible for the change; the experiment had changed which targets received the candidate predictions. Because the metric is nonlinear, this sequence is order-dependent accounting, not causal feature attribution. It also does not justify selecting the favorable-looking subset after seeing its outcomes.
-
-## Temporal replication
-
-The original panel was therefore frozen and evaluated on two later development periods, keeping all 424 scored targets and the prior candidate definition intact.
-
-| Population | Incumbent | Candidate | Difference |
+| Population | Incumbent | Panel | Difference |
 |---|---:|---:|---:|
-| 180 dates, IDs 1349-1528 | 0.167042 | 0.177350 | +0.010308 |
-| 175 dates, IDs 1529-1703 | 0.390619 | 0.411945 | +0.021326 |
-| Pooled 355 later dates | 0.276025 | 0.289365 | +0.013340 |
+| 180 later dates | 0.167042 | 0.177350 | +0.010308 |
+| 175 later dates | 0.390619 | 0.411945 | +0.021326 |
+| Pooled 355 later dates | 0.276025 | **0.289365** | +0.013340 |
 
-![Temporal replication uncertainty](../reports/figures/portfolio_temporal.svg)
+The pooled paired 95% interval was **[-0.009061, +0.035750]**. The panel remains the frontier reference, while the evidence is described as conditional rather than definitive.
 
-Both period differences were positive, but the pooled conditional paired 95% interval was [-0.009061, +0.035750]. The prespecified gate required a positive lower endpoint as well as improvement in both periods. The candidate was not promoted. This is an inconclusive positive estimate, not proof that the candidate has no predictive value.
+## Why screening is not enough
 
-These periods had been used in earlier project research. The result is retrospective temporal replication, not an untouched final test. The established 535-date development reference of 0.309709 uses a different population and is not directly comparable to the pooled number above.
+A group-wise LightGBM/Ridge reconstruction produced the largest fold-0 screening gain in the frontier: **0.557014** versus **0.418181**.
 
-## Locked historical assessment
+The selection was frozen before the later periods. Its later-fold deltas were **+0.000139** and **-0.026877**, and its pooled score fell to **0.273250**, below the **0.289365** panel. The candidate was rejected instead of being retuned on those later outcomes.
 
-The retained incumbent was reconstructed before final access. Its saved development predictions were replayed exactly across 175 dates and 424 targets. A final fitted model and assessment contract were then locked. The comparison covered all 247 requested historical dates, IDs 1714-1960, with 424 targets and no dates excluded from the primary score.
+That experiment is one of the strongest demonstrations in the repository of why research discipline matters as much as raw modeling complexity.
 
-| Prespecified system | Score |
-|---|---:|
-| Frozen incumbent | 0.190453 |
-| Training-only historical mean | 0.212085 |
-| Difference | -0.021632 |
+## A positive aggregate result that was not promoted
 
-![Final historical comparison](../reports/figures/portfolio_final.svg)
+The lightweight seven-day online-refit system alone was weak, but a frozen 15% blend with the retained panel reached **0.297114**, a pooled improvement of **+0.007749**.
 
-The conditional paired 95% interval for the difference was [-0.133651, +0.080336]. There was no demonstrated advantage over the simple control. The final result was recorded without replacing the selected model or tuning against those outcomes. No final-period model refitting, live deployment, profitability, official leaderboard placement, or win is claimed.
+Its two later-fold deltas were **+0.023589** and **-0.009509**, and the paired interval was **[-0.023449, +0.036580]**. The effect was not consistent enough to replace the retained panel.
 
-The repository documented this interval as reserved. Access outside the available execution evidence cannot be independently excluded, so the public description is deliberately a documented historical assessment rather than a categorical claim of never-observed data.
+## Transformer reconstruction
 
-## What the work establishes
+The feature-token Transformer completed 24 fit stages and 427 epochs on a Studio GPU. The fold-0-selected blend later pooled to **0.253231**, below the **0.289365** panel, so the family was rejected.
 
-The project produced a functioning point-in-time research system, a traceable experiment record, a zero-fit explanation for a misleading expansion, and a completed assessment with an explicit decision. It also exposed an important limitation: greater feature/model complexity did not demonstrate a final advantage over the control.
+The experiment is preserved because it demonstrates released-label timing, shared neural representation learning, deterministic GPU orchestration, and a complete negative result.
 
-The feature study is not presented as proof that every useful representation has been exhausted. The candidate stack is not presented as a faithful reconstruction of undisclosed winner settings. Private engineering reproducibility supports the evidence, but this presentation does not distribute the recipe needed to reproduce the latest system.
+## Active full-15th-place-inspired frontier
 
-## Evidence basis
+The current active branch combines a broad engineered feature bank, top-800 fold-0 selector, Attention/Residual/AutoEncoder networks, ranking-aware hybrid loss, seven-day online refits, and validation/recency weighting.
 
-Published numbers are drawn from the owner's returned execution receipts: the 106-target study (20260921T231222Z-500), saved-prediction reconciliation (20260921T234713Z-535), temporal replication (20260922T000824Z-509), and final historical assessment (20260922T005540Z-518). The aggregate summary in this repository identifies these records without distributing private data or training artifacts.
+A prior execution completed **51 compatible fits** before a 1,025-row generation exposed a singleton BatchNorm minibatch. The repair preserves every row by merging only a one-row final minibatch into the preceding batch and reuses old checkpoints only after parent study/package identity and model/scaler hashes validate.
 
-The scientific closeout is complete for this research cycle. Any subsequent modeling would be a separate research program requiring a new evaluation design; it would not turn this already-evaluated historical population back into an untouched test.
+This is an engineering repair, not a scientific result. The final ensemble score remains pending.
+
+## Historical assessment
+
+A separate recorded historical assessment spans 247 dates, IDs 1714-1960. The frozen incumbent scored **0.190453** versus **0.212085** for a training-only historical-mean control, with a paired 95% interval of **[-0.133651, +0.080336]**.
+
+That population is already evaluated and is not reused to select frontier systems.
+
+## What the portfolio establishes
+
+The project demonstrates an integrated research system: point-in-time features, explicit leakage tests, multiple model families, chronological transfer checks, uncertainty, cloud recovery, artifact identity, and willingness to preserve negative results.
+
+It does **not** claim that local metrics equal the competition leaderboard. No official MITSUI leaderboard score is currently verified for this repository.

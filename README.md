@@ -1,67 +1,69 @@
-# Commodity Forecasting | ML Engineering Case Study
+# Commodity Forecasting | ML Engineering & Research Portfolio
 
 **Alvaro Mendizabal** · [GitHub profile](https://github.com/alvaromendizabal)
 
-End-to-end research on return ranking across **424 commodity-related targets and four forecast horizons**. The work combines point-in-time data engineering, domain-informed representations, controlled model comparisons, restartable AWS execution, independent reconstruction of selected public solution ideas, and a locked historical assessment.
+End-to-end research on return ranking across **424 commodity-related targets and four forecast horizons**. The project combines point-in-time data engineering, horizon-aware label availability, purged temporal validation, domain-informed feature systems, public-solution reconstruction, GPU research, restartable AWS execution, and explicit model-promotion gates.
 
-**Portfolio status: published and employer-facing. Research status: private frontier work resumed.** The completed historical assessment remains frozen; new research is evaluated separately and does not rewrite that result.
+**Portfolio status: complete and employer-facing. Frontier status: active.** The earlier historical-assessment cycle is recorded and frozen; current frontier work is evaluated separately rather than retuned against that population.
 
-**Start here:** [Portfolio notebook](notebooks/27_portfolio_case_study.ipynb) · [Technical case study](docs/PORTFOLIO_CASE_STUDY.md) · [Current frontier update](docs/FRONTIER_RESEARCH_UPDATE.md) · [Verified aggregate results](reports/portfolio_summary.json)
+**Start here:** [Frontier notebook](notebooks/28_frontier_research_ledger.ipynb) · [Technical case study](docs/PORTFOLIO_CASE_STUDY.md) · [Frontier update](docs/FRONTIER_RESEARCH_UPDATE.md) · [Reproducibility guide](docs/FRONTIER_REPRODUCIBILITY.md) · [Research ledger](reports/frontier_research_ledger.json)
 
 ## Engineering highlights
 
 | Area | What I built and evaluated |
 |---|---|
-| Information timing | Data contracts, horizon-aware label availability, chronological partitions, and a reserved assessment boundary |
-| Modeling and validation | Domain-informed pooled nonlinear models plus independently reconstructed public-solution-inspired model families, compared on matched dates and targets |
-| Research diagnosis | A zero-fit saved-prediction reconciliation that isolated why an apparent model expansion lost its screening gain |
-| Reliable execution | Restartable checkpoints, artifact hashes, exact prediction replay, managed SageMaker training, and safe recovery from interrupted or failed jobs |
-| GPU orchestration | Managed GPU training with deterministic job identity, quota-aware instance routing, checkpoint reuse, and failure classification before retry |
-| Analytical communication | Notebook-based comparisons that distinguish exploratory gains, temporal replication, uncertainty, negative results, and promotion decisions |
+| Information timing | Horizon-specific label-release rules, causal feature construction, purged chronological folds, explicit evaluation boundaries |
+| Feature engineering | Market paths, risk state, released-label priors, target-pair routing, short-horizon dynamics, market groups, engineered financial feature banks |
+| Modeling | Pooled nonlinear models, tree stacks, recursive forecasting, MLP/RNN models, feature-token Transformers, online refits, group-wise ensembles, active Attention/Residual/AutoEncoder frontier |
+| Validation | Fold-0-only selection where required, frozen later-period transfer, paired block uncertainty, stop/promotion gates, negative-result retention |
+| Reliability | Resumable checkpoints, source/package identities, raw-input hashes, prediction replay, compatible-checkpoint recovery after engineering repairs |
+| Cloud/GPU | SageMaker and Studio execution, quota/capacity diagnosis, deterministic study identity, direct L40S training, failure classification |
+| Reproducibility | Public protocols, tests, integrated competitive source, executed notebooks, machine-readable results, exact private handoff hashes |
 
-The [case study](docs/PORTFOLIO_CASE_STUDY.md) follows the most informative completed investigation. The [frontier update](docs/FRONTIER_RESEARCH_UPDATE.md) summarizes the newer private research program without publishing the latest implementation or exact training recipe.
+## Current verified evidence
 
-## Verified results
+Different rows can use different historical populations. Numbers should only be compared when their populations are explicitly matched.
 
-Each comparison below uses the same dates and targets for its two systems. Different rows use different populations and are not directly comparable.
+| Evaluation / experiment | Result | Decision |
+|---|---:|---|
+| 535-date development reference | `current_market` **0.309709** | Historical development reference |
+| 355-date later replication | incumbent **0.276025**; retained panel **0.289365** | +0.013340; paired 95% interval **[-0.009061, +0.035750]** |
+| Direct MLP/RNN reconstruction | direct neural **0.105102**; blend **0.287436** | Rejected |
+| Feature-token Transformer | locked blend **0.253231** vs panel **0.289365** | Rejected |
+| Zero-fit online adaptation | selected online system **0.280713** vs panel **0.289365** | Rejected |
+| Lightweight true online refit | blend **0.297114** vs panel **0.289365** | Numeric gain, **not promoted**: later-fold deltas +0.023589 / -0.009509; interval crosses zero |
+| Group-wise LightGBM/Ridge reconstruction | fold-0 **0.557014**; later pooled **0.273250** vs panel **0.289365** | Rejected after failed temporal transfer |
+| Full Attention/Residual/AutoEncoder online ensemble | 51 compatible fits preserved before an engineering-only batching repair | **Active frontier; scientific score pending** |
+| Locked historical assessment, 247 dates | incumbent **0.190453**; training-only mean **0.212085** | No demonstrated advantage over control |
 
-| Evaluation population | Result | Decision |
-|---|---|---|
-| Development reference: 535 dates, 424 targets | Established `current_market` system: **0.309709** | Historical development reference |
-| Later-period replication: 355 dates, 424 targets | Incumbent **0.276025**; frozen panel **0.289365**; difference **+0.013340** | Conditional 95% interval **[-0.009061, +0.035750]**; panel not promoted |
-| Locked historical assessment: 247 dates, 424 targets | Frozen incumbent **0.190453**; training-only mean **0.212085**; difference **-0.021632** | Conditional 95% interval **[-0.133651, +0.080336]**; no demonstrated advantage over the control |
-| Later-period neural reconstruction: 355 dates, 424 targets | Direct neural combination **0.105102**; three-way blend **0.287436** vs frozen panel **0.289365** | Neural family rejected; blend did not improve the retained panel |
+The local metric is mean daily cross-sectional rank correlation divided by its population standard deviation, without annualization.
 
-![Locked historical assessment](reports/figures/portfolio_final.svg)
+These are **local historical evaluation scores, not official Kaggle leaderboard scores or trading returns**. The historical private-leaderboard winner's **0.63834** was measured on a different hidden population and is not directly comparable to the local development numbers above.
 
-The metric is mean daily cross-sectional rank correlation divided by its population standard deviation, without annualization. These are **local historical evaluation scores, not official Kaggle leaderboard results or trading returns**. No competition win or production deployment is claimed.
+## Why negative results are part of the portfolio
 
-## Frontier research
+The group-wise study is a useful example. Its frozen fold-0 blend jumped from **0.418181 to 0.557014**, the largest screening gain in the current frontier. On the two later periods, however, its deltas were approximately flat and negative, and its pooled score fell below the retained panel.
 
-After the original closeout, I reopened the project privately to test materially different model families rather than continue small variations of the same baseline.
+The project rejected that candidate instead of tuning against the later outcomes. The same promotion discipline prevented the Transformer and the numerically positive online-refit blend from replacing the retained panel.
 
-The current research program has:
+The **market-path** study supplies the 0.309709 development reference used throughout the portfolio; later frontier experiments preserve their own matched populations and do not overwrite that reference.
 
-- independently reconstructed and evaluated a target-routed tree/stack family inspired by a top public solution;
-- rejected a recursive sequence-forecast formulation after a negative controlled test;
-- completed a direct MLP/RNN reconstruction with separate loss ablations and two-seed evaluation, then rejected it because it did not improve the retained panel;
-- prepared a feature-token Transformer experiment with point-in-time released-target features, managed GPU execution, deterministic SageMaker job reconciliation, and resumable checkpoints;
-- preserved the original historical assessment as a fixed record rather than retuning against it.
+## Reproducibility
 
-The Transformer frontier is **engineering-ready but has no scientific score yet** in this public update. Infrastructure failures before the first fit are not counted as model results.
+The repository now integrates the third-place-inspired competitive reconstruction source, protocols, tests, and executed notebooks into `main`. It also publishes the current frontier evidence ledger, active-method documentation, testable experiment contracts, and cryptographic identities for the newer private AWS handoff packages.
 
-See [Frontier Research Update](docs/FRONTIER_RESEARCH_UPDATE.md) for the public, non-reproducible summary.
+Exact numeric reproduction additionally requires the authorized competition files and compatible ML/GPU dependencies; those data, private predictions, fitted weights/checkpoints, credentials, and operational secrets are not redistributed.
 
-## Review the portfolio
+See [Frontier reproducibility](docs/FRONTIER_REPRODUCIBILITY.md).
 
-The [portfolio notebook](notebooks/27_portfolio_case_study.ipynb) is a read-only presentation export with inline Plotly evidence and static SVG fallbacks. It presents the problem, engineering decisions, comparisons, and conclusions without distributing the latest executable training system.
+## Active frontier
 
-The **market-path** study supplies the 0.309709 development reference. Earlier source, notebooks, and configuration files remain historical records; their original “research open,” “final set reserved,” or “project closed” statements describe prior stages, not the current frontier status.
+The current active branch independently reconstructs the public 15th-place combination of a broad engineered feature bank, fold-0 top-800 selection, Attention/Residual/AutoEncoder networks, ranking-aware hybrid loss, seven-day online refits, and validation/recency weighting.
 
-## Public portfolio, private research
+A prior execution completed **51 compatible neural fits** before a 1,025-row training generation exposed a singleton BatchNorm minibatch. The repaired runner preserves every row by merging only a one-row final minibatch into the preceding batch and reuses old checkpoints only after parent study/package identity and model/scaler hashes validate.
 
-This repository is an employer-facing presentation, **not a release of the latest training system or a replication kit**. The newest complete implementation, exact training configurations, model weights, private prediction matrices, GPU checkpoint state, environments, credentials, and AWS operational records remain private.
+That is an engineering repair, not a scientific result. No final full-ensemble score is claimed until the evaluation completes.
 
-Earlier public source and history remain public; this update does not change repository visibility, rewrite history, or replace existing licenses and attribution. Public solution ideas are attributed and independently reimplemented where tested; complete reproduction of undisclosed winning systems is not claimed.
+## Scope
 
-The objective of the private frontier work is measurable improvement, not publishing a copy of someone else’s solution. Promotion requires matched-population evidence and survives later-period checks before it can replace a retained model.
+This is an employer-facing research repository, **not a release of restricted competition data or fitted private artifacts**, and not a live trading product. It does not claim a competition win, medal, current official MITSUI leaderboard score, trading profitability, or production deployment.

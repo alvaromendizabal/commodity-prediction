@@ -1,58 +1,59 @@
 # Frontier Research Update
 
 **Owner:** Alvaro Mendizabal  
-**Purpose:** employer-facing summary of the current private research frontier  
-**Publication boundary:** results and engineering decisions only; latest training code, exact hyperparameters, model weights, checkpoints, private prediction matrices, and AWS logs are withheld
+**Portfolio status:** complete  
+**Frontier status:** active  
+**Evidence date:** 2026-09-23
 
-## Why the project was reopened
+## Objective
 
-The first research cycle produced a complete historical assessment and a curated portfolio. After closeout, the project was reopened privately to test materially different model families documented in high-performing public competition writeups.
+The frontier program tests materially different modeling mechanisms rather than repeatedly tuning one baseline. Public-method ideas are independently reimplemented, source-described behavior is separated from local reconstruction choices, and candidates are evaluated on matched chronological populations.
 
-The goal is not to copy public repositories. The workflow independently reconstructs the mechanisms that are documented, records where source details are unavailable, compares each candidate on the same dates and targets as the retained system, and blends components only when measured complementarity justifies it.
+The already-recorded historical assessment remains frozen and is not reused for frontier selection.
 
-The previously evaluated historical assessment remains frozen. New research cannot turn that population back into an untouched test.
+## Current frontier
 
-## Current verified frontier
+| Research family | Verified evidence | Decision |
+|---|---:|---|
+| Retained mixed-horizon panel | **0.289365** on 355 later dates vs incumbent **0.276025** | Retained reference; original paired interval crossed zero |
+| Direct MLP/RNN | direct neural **0.105102**; three-way blend **0.287436** | Rejected |
+| Feature-token Transformer | locked blend **0.253231** | Rejected |
+| Zero-fit causal online adaptation | selected online system **0.280713** | Rejected |
+| Lightweight true online refit | frozen blend **0.297114** | Not promoted: later-fold deltas +0.023589 / -0.009509; CI **[-0.023449, +0.036580]** |
+| Group-wise LightGBM/Ridge | fold-0 **0.557014**; later **0.273250** | Rejected after failed later transfer |
+| Full Attention/Residual/AutoEncoder online ensemble | 51 compatible fits preserved before engineering repair | Active; scientific score pending |
 
-| Research family | Public-method idea tested | Verified project result | Decision |
-|---|---|---:|---|
-| Retained mixed-horizon stack | Target-routed constituent features with tree ensembles and stacking | **0.289365** on 355 later development dates vs incumbent **0.276025** | Strongest retained later-period candidate; uncertainty still crossed zero |
-| Expanded one-day stack | Broader application of the same target-stack idea | **0.385559** vs **0.403381** incumbent on its 180-date matched population | Rejected |
-| Recursive sequence forecast | Forecast underlying series recursively, then derive target returns | Substantially below the incumbent in the controlled screening experiment | Rejected |
-| Direct MLP/RNN reconstruction | Joint raw-input feed-forward and short-sequence models with ranking-aware loss ablation | Neural combination **0.105102** across the 355 later dates | Rejected |
-| Three-way complementarity blend | Incumbent + retained panel + direct neural reconstruction | **0.287436** vs retained panel **0.289365** | Rejected; diversity did not translate into improvement |
-| Feature-token Transformer | Joint feature tokens plus point-in-time released-target history | **Scientific score pending** | Current private frontier |
+## Research controls added by the frontier
 
-Scores above come from matched local development populations, not the Kaggle hidden leaderboard. Different rows should not be numerically ranked against one another when their evaluation populations differ.
+- explicit horizon-specific released-label timing;
+- zero-fit prediction reconciliation before new compute;
+- direct Studio GPU execution and resumable fit-level checkpoints;
+- deterministic study/package identities and raw-input hashes;
+- exact date-ID alignment rather than positional repair;
+- fold-0-only selection where required;
+- frozen later-period transfer tests;
+- paired block uncertainty;
+- explicit stop and promotion gates;
+- compatibility rules for reusing checkpoints after engineering-only repairs;
+- notebook gates that require executed Plotly evidence and static fallbacks;
+- failure manifests that distinguish pre-fit, scientific, and presentation failures.
 
-## Engineering work behind the frontier
+## Transfer failure as evidence
 
-The newer work adds several production-style research controls beyond the original modeling study:
+The group-wise reconstruction had the strongest screen result: **0.557014** versus **0.418181** on fold 0. Once frozen, it failed to transfer and pooled to **0.273250**, below the retained **0.289365** panel.
 
-- **Exact data and prediction replay.** Saved predictions are keyed by explicit date identities; positional repair is prohibited.
-- **Independent source lineage.** Public methods are reconstructed in project-owned code with source-described behavior separated from local reconstruction choices.
-- **Checkpointed experiments.** Completed stages are reused rather than retrained after notebook, terminal, or managed-job interruption.
-- **Managed GPU execution.** Transformer training uses deterministic SageMaker job identities, private S3 checkpoints, and network-isolated training containers.
-- **Job reconciliation.** A rerun reuses a compatible in-progress or completed job, advances past terminal failed attempts, and prevents duplicate managed jobs.
-- **Capacity-aware routing.** GPU selection can advance across approved G6e training instance classes only for genuine pre-allocation capacity failures; code/model failures do not trigger more expensive retries.
-- **Failure classification.** Infrastructure and schema failures before the first fit are reported separately from scientific model outcomes.
-- **Promotion discipline.** A new model must improve matched later-period evaluations rather than win only on the screen used to choose it.
+That negative result is intentionally preserved. The project does not treat model complexity or a screen-only gain as evidence of generalization.
 
-## What has not been claimed
+## Active full-15 branch
 
-This project does **not** claim:
+The active system combines a broad engineered financial feature bank, fold-0 top-800 selector, Attention/Residual/AutoEncoder networks, ranking-aware hybrid loss, seven-day online refits, and validation/recency weighting.
 
-- an official Kaggle MITSUI leaderboard score;
-- a competition win or medal;
-- complete reconstruction of first- or second-place private systems;
-- that every useful feature family has been exhausted;
-- that a model is better because it is more complex;
-- live trading profitability or production deployment.
+Its first real run completed 51 compatible fits before an engineering edge case produced a one-row BatchNorm minibatch. The repair changes only batching for the singleton case, preserves every training row, uses a new study lineage, and imports old fits only when parent identity and hashes validate.
 
-The current Transformer experiment is not represented as a successful model until it actually completes fitting and produces matched-period evidence.
+No scientific score is claimed yet.
 
-## Employer-facing takeaway
+## Submission status
 
-This project demonstrates more than model fitting. It shows the ability to design a leakage-aware research system, reproduce external ideas without conflating attribution with implementation, diagnose misleading gains, preserve negative results, manage cloud training safely, and make promotion decisions from matched evidence rather than intuition.
+An official-file schema audit for the late-submission notebook passed. The local gateway smoke test was skipped because the project interpreter did not already contain Polars; no package was installed just to force that check.
 
-The public repository stays concise. The complete frontier implementation and operational state remain in the private AWS research workspace.
+There is still **no verified official MITSUI leaderboard result for this repository**. Local development scores are not presented as hidden-leaderboard equivalents.

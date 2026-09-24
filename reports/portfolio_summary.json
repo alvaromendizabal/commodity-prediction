@@ -2,7 +2,7 @@
   "project": "Commodity forecasting",
   "owner": "Alvaro Mendizabal",
   "publication_mode": "employer_presentation_not_replication_kit",
-  "research_cycle_status": "historical_assessment_completed_frontier_research_resumed_privately",
+  "research_cycle_status": "historical_assessment_completed_frontier_research_active",
   "latest_implementation_published": false,
   "existing_public_history_removed": false,
   "official_leaderboard_result": false,
@@ -50,7 +50,7 @@
   },
   "frontier_research": {
     "status": "active_private_research",
-    "publication_boundary": "aggregate evidence and engineering decisions only",
+    "publication_boundary": "public_source_and_aggregate_evidence_without_restricted_data_or_private_model_artifacts",
     "later_development_population": {
       "dates": 355,
       "targets": 424
@@ -58,22 +58,60 @@
     "retained_panel": {
       "score": 0.2893649296119325,
       "incumbent_score": 0.27602468695941523,
-      "decision": "retained_as_strongest_later_period_candidate"
+      "delta": 0.013340242652517265,
+      "conditional_paired_95_interval": [
+        -0.009060959184478707,
+        0.03575041491078848
+      ],
+      "decision": "retained_reference_not_formally_promoted"
     },
     "direct_neural_reconstruction": {
       "score": 0.105102,
-      "decision": "rejected_no_later_period_improvement"
-    },
-    "three_way_blend": {
-      "score": 0.287436,
-      "retained_panel_score": 0.2893649296119325,
-      "decision": "rejected_below_retained_panel"
+      "three_way_blend_score": 0.287436,
+      "decision": "rejected"
     },
     "feature_token_transformer": {
-      "status": "engineering_ready_scientific_score_pending"
+      "score": 0.2532312989035328,
+      "decision": "rejected_failed_later_transfer",
+      "study_id": "2dd2a2075aef4f67e4a6d2409309ffb1e94b77b698ccc499e768f410a8ef4b0d"
     },
-    "official_submission_status": "unverified_no_official_mitsui_leaderboard_result",
-    "private_implementation_published": false
+    "zero_fit_online_adaptation": {
+      "score": 0.2807133550080609,
+      "decision": "rejected"
+    },
+    "lightweight_online_refit": {
+      "blend_score": 0.2971141398128422,
+      "later_fold_deltas": [
+        0.02358894141274387,
+        -0.009508797203819364
+      ],
+      "conditional_paired_95_interval": [
+        -0.02344894416450144,
+        0.03658030338212327
+      ],
+      "decision": "not_promoted_inconsistent_transfer"
+    },
+    "groupwise_tabular": {
+      "fold0_selected_score": 0.5570137055020401,
+      "later_score": 0.27325045742086795,
+      "later_fold_deltas": [
+        0.00013928741408078538,
+        -0.0268774306726976
+      ],
+      "conditional_paired_95_interval": [
+        -0.06878544512092166,
+        0.03814998401602151
+      ],
+      "decision": "rejected_failed_later_transfer"
+    },
+    "full15_attention_residual_autoencoder": {
+      "status": "active_engineering_resume",
+      "scientific_score": null,
+      "verified_compatible_completed_fits": 51,
+      "repaired_package_sha256": "17e0733b797864d1e43d7ecec1428a3311a25ce45926df4a7605e33a64677201"
+    },
+    "official_submission_status": "staged_not_yet_scored",
+    "private_data_or_model_artifacts_published": false
   },
   "evidence_run_ids": [
     "20260921T231222Z-500",
@@ -82,11 +120,11 @@
     "20260922T005540Z-518"
   ],
   "limitations": [
-    "Leading-solution coverage remains partial.",
+    "Leading-solution coverage remains partial; the full 15th-place-inspired ensemble is still active.",
     "No demonstrated final advantage over the historical-mean control on the completed historical assessment.",
     "Frontier development scores are not official Kaggle leaderboard scores.",
-    "The current Transformer frontier has no scientific score yet.",
-    "This presentation withholds the latest training implementation and configuration.",
+    "The active full-15th-place-inspired frontier has no completed scientific score yet.",
+    "Public source omits restricted competition data, private predictions, fitted weights/checkpoints, credentials, and AWS operational secrets.",
     "Earlier published source and history remain public."
   ],
   "project_status": "active_private_frontier_research_public_portfolio_complete",
