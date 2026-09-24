@@ -50,11 +50,13 @@ def test_stratified_target_selection_is_deterministic() -> None:
     for lag in [1, 2, 3, 4]:
         for kind in ["single", "pair"]:
             for _ in range(3):
-                rows.append({
-                    "target": f"target_{k}",
-                    "lag": lag,
-                    "pair": "A" if kind == "single" else "A - B",
-                })
+                rows.append(
+                    {
+                        "target": f"target_{k}",
+                        "lag": lag,
+                        "pair": "A" if kind == "single" else "A - B",
+                    }
+                )
                 k += 1
     pairs = pd.DataFrame(rows)
     a = choose_stratified_targets(pairs, 8)

@@ -63,7 +63,14 @@ def git(command: list[str]) -> str:
 def config_for_mode(config: dict, mode: str) -> dict:
     out = dict(config)
     if mode == "smoke":
-        out.update({"hidden_dim": 64, "max_epochs": 3, "early_stopping_patience": 2, "forecast_spaces": ["log"]})
+        out.update(
+            {
+                "hidden_dim": 64,
+                "max_epochs": 3,
+                "early_stopping_patience": 2,
+                "forecast_spaces": ["log"],
+            }
+        )
     return out
 
 
@@ -74,7 +81,15 @@ def run_id(config: dict, mode: str) -> str:
 
 
 def baseline_local_path(lineage: str, fold: int) -> Path:
-    return ROOT / "artifacts" / "competitive_feature_forecast" / "baseline_cache" / lineage / f"fold_{fold}" / "predictions.parquet"
+    return (
+        ROOT
+        / "artifacts"
+        / "competitive_feature_forecast"
+        / "baseline_cache"
+        / lineage
+        / f"fold_{fold}"
+        / "predictions.parquet"
+    )
 
 
 def ensure_baseline(config: dict, fold: int) -> Path:
@@ -90,7 +105,9 @@ def ensure_baseline(config: dict, fold: int) -> Path:
 
         boto3.client("s3", region_name="us-west-2").download_file(bucket, key, str(path))
     except Exception as exc:
-        raise RuntimeError(f"Could not retrieve canonical baseline s3://{bucket}/{key}: {exc}") from exc
+        raise RuntimeError(
+            f"Could not retrieve canonical baseline s3://{bucket}/{key}: {exc}"
+        ) from exc
     return path
 
 
@@ -118,17 +135,29 @@ def save_prediction(stage: Path, prediction: pd.DataFrame, result: dict, payload
 
 def load_or_make_prediction(stage: Path, payload: dict, maker) -> tuple[pd.DataFrame, dict, bool]:
     if verify_manifest(stage, payload):
-        return pd.read_parquet(stage / "predictions.parquet"), json.loads((stage / "result.json").read_text()), True
+        return (
+            pd.read_parquet(stage / "predictions.parquet"),
+            json.loads((stage / "result.json").read_text()),
+            True,
+        )
     prediction, result = maker()
     save_prediction(stage, prediction, result, payload)
     return prediction, result, False
 
 
-def evaluate_variant(name: str, truth: pd.DataFrame, prediction: pd.DataFrame, reference_daily: np.ndarray | None, config: dict) -> dict:
+def evaluate_variant(
+    name: str,
+    truth: pd.DataFrame,
+    prediction: pd.DataFrame,
+    reference_daily: np.ndarray | None,
+    config: dict,
+) -> dict:
     result = {"variant": name, **score_prediction(truth, prediction)}
     if reference_daily is not None:
         candidate = np.asarray(result["daily_rank_correlations"], dtype=float)
-        result["delta_vs_current_market"] = float(result["official_metric"] - (reference_daily.mean() / reference_daily.std(ddof=0)))
+        result["delta_vs_current_market"] = float(
+            result["official_metric"] - (reference_daily.mean() / reference_daily.std(ddof=0))
+        )
         result["paired_block_95_interval"] = paired_block_interval(
             reference_daily,
             candidate,
@@ -141,7 +170,12 @@ def evaluate_variant(name: str, truth: pd.DataFrame, prediction: pd.DataFrame, r
 
 def preflight() -> int:
     failures = []
-    for relative in ["data/raw/train.csv", "data/raw/train_labels.csv", "data/raw/target_pairs.csv", "configs/research.json"]:
+    for relative in [
+        "data/raw/train.csv",
+        "data/raw/train_labels.csv",
+        "data/raw/target_pairs.csv",
+        "configs/research.json",
+    ]:
         if not (ROOT / relative).exists():
             failures.append(f"missing {relative}")
     try:
@@ -168,15 +202,16 @@ def preflight() -> int:
 
 def run(mode: str) -> int:
     if preflight() != 0:
-        raise RuntimeError(
-            "Preflight failed; refusing to start competitive feature-forecast run"
-        )
+        raise RuntimeError("Preflight failed; refusing to start competitive feature-forecast run")
     base_config = json.loads(CONFIG_PATH.read_text())
     config = config_for_mode(base_config, mode)
     rid = run_id(config, mode)
     directory = ROOT / "artifacts" / "competitive_feature_forecast" / rid
     directory.mkdir(parents=True, exist_ok=True)
-    event("run_start", {"run_id": rid, "mode": mode, "git_head": git(["rev-parse", "HEAD"]), "config": config})
+    event(
+        "run_start",
+        {"run_id": rid, "mode": mode, "git_head": git(["rev-parse", "HEAD"]), "config": config},
+    )
 
     x, y, pairs = load_data(ROOT)
     parent_config = json.loads((ROOT / "configs/research.json").read_text())
@@ -207,8 +242,17 @@ def run(mode: str) -> int:
         baseline = load_baseline(config, fold.number, truth)
         baseline_result = evaluate_variant("current_market", truth, baseline, None, config)
         baseline_daily = np.asarray(baseline_result["daily_rank_correlations"], dtype=float)
-        baseline_payload = {"fold": fold.number, "variant": "current_market", "baseline_lineage": config["baseline_s3_lineage"]}
-        save_prediction(prediction_stage(directory, fold.number, "current_market"), baseline, baseline_result, baseline_payload)
+        baseline_payload = {
+            "fold": fold.number,
+            "variant": "current_market",
+            "baseline_lineage": config["baseline_s3_lineage"],
+        }
+        save_prediction(
+            prediction_stage(directory, fold.number, "current_market"),
+            baseline,
+            baseline_result,
+            baseline_payload,
+        )
         fold_results = [baseline_result]
         predictions = {"current_market": baseline}
 
@@ -216,11 +260,18 @@ def run(mode: str) -> int:
         cheap = {
             "mean_rank_prior": mean_rank_prior(train_y, truth.index),
             "regularized_kelly_rank_prior": regularized_kelly_rank_prior(train_y, truth.index),
-            "released_mean_5": released_label_signal(y, pairs, prediction_positions, int(config["released_mean_window"])),
+            "released_mean_5": released_label_signal(
+                y, pairs, prediction_positions, int(config["released_mean_window"])
+            ),
         }
         for name, prediction in cheap.items():
             result = evaluate_variant(name, truth, prediction, baseline_daily, config)
-            save_prediction(prediction_stage(directory, fold.number, name), prediction, result, {"fold": fold.number, "variant": name, "run_id": rid})
+            save_prediction(
+                prediction_stage(directory, fold.number, name),
+                prediction,
+                result,
+                {"fold": fold.number, "variant": name, "run_id": rid},
+            )
             fold_results.append(result)
             predictions[name] = prediction
 
@@ -246,8 +297,12 @@ def run(mode: str) -> int:
                 baseline_daily=baseline_daily,
             ):
                 started = time.monotonic()
-                model, scale, training = train_feature_forecaster(asset_values, fold.train_stop, config, space, event)
-                prediction = recursive_predict(model, scale, asset_values, prediction_positions, config, pairs, assets, event)
+                model, scale, training = train_feature_forecaster(
+                    asset_values, fold.train_stop, config, space, event
+                )
+                prediction = recursive_predict(
+                    model, scale, asset_values, prediction_positions, config, pairs, assets, event
+                )
                 prediction.index = truth.index
                 result = evaluate_variant(variant, truth, prediction, baseline_daily, config)
                 result["training"] = training
@@ -257,34 +312,76 @@ def run(mode: str) -> int:
                     import torch
 
                     torch.save(model.state_dict(), stage / "model.pt")
-                    np.savez_compressed(stage / "scale.npz", means=scale.means, scales=scale.scales, positive_floor=scale.positive_floor, space=np.asarray([scale.space]))
-                    (stage / "training.json").write_text(json.dumps(training, indent=2, sort_keys=True) + "\n")
+                    np.savez_compressed(
+                        stage / "scale.npz",
+                        means=scale.means,
+                        scales=scale.scales,
+                        positive_floor=scale.positive_floor,
+                        space=np.asarray([scale.space]),
+                    )
+                    (stage / "training.json").write_text(
+                        json.dumps(training, indent=2, sort_keys=True) + "\n"
+                    )
                 except Exception as exc:
-                    event("checkpoint_warning", {"variant": variant, "fold": fold.number, "error": repr(exc)})
+                    event(
+                        "checkpoint_warning",
+                        {"variant": variant, "fold": fold.number, "error": repr(exc)},
+                    )
                 return prediction, result
 
             prediction, result, reused = load_or_make_prediction(stage, payload, maker)
-            event("stage_complete", {"fold": fold.number, "variant": variant, "reused": reused, "metric": result["official_metric"]})
+            event(
+                "stage_complete",
+                {
+                    "fold": fold.number,
+                    "variant": variant,
+                    "reused": reused,
+                    "metric": result["official_metric"],
+                },
+            )
             fold_results.append(result)
             predictions[variant] = prediction
 
-            correction = blend(prediction, cheap["released_mean_5"], float(config["label_correction_alpha"]))
+            correction = blend(
+                prediction, cheap["released_mean_5"], float(config["label_correction_alpha"])
+            )
             correction_name = f"{variant}_released_correction"
-            correction_result = evaluate_variant(correction_name, truth, correction, baseline_daily, config)
-            save_prediction(prediction_stage(directory, fold.number, correction_name), correction, correction_result, {"fold": fold.number, "variant": correction_name, "run_id": rid})
+            correction_result = evaluate_variant(
+                correction_name, truth, correction, baseline_daily, config
+            )
+            save_prediction(
+                prediction_stage(directory, fold.number, correction_name),
+                correction,
+                correction_result,
+                {"fold": fold.number, "variant": correction_name, "run_id": rid},
+            )
             fold_results.append(correction_result)
             predictions[correction_name] = correction
 
             ensemble = blend(correction, baseline, float(config["fixed_ensemble_weight"]))
             ensemble_name = f"current_market_plus_{correction_name}"
-            ensemble_result = evaluate_variant(ensemble_name, truth, ensemble, baseline_daily, config)
-            save_prediction(prediction_stage(directory, fold.number, ensemble_name), ensemble, ensemble_result, {"fold": fold.number, "variant": ensemble_name, "run_id": rid})
+            ensemble_result = evaluate_variant(
+                ensemble_name, truth, ensemble, baseline_daily, config
+            )
+            save_prediction(
+                prediction_stage(directory, fold.number, ensemble_name),
+                ensemble,
+                ensemble_result,
+                {"fold": fold.number, "variant": ensemble_name, "run_id": rid},
+            )
             fold_results.append(ensemble_result)
             predictions[ensemble_name] = ensemble
 
         kelly_blend = blend(cheap["regularized_kelly_rank_prior"], baseline, 0.25)
-        kelly_blend_result = evaluate_variant("current_market_plus_kelly_prior", truth, kelly_blend, baseline_daily, config)
-        save_prediction(prediction_stage(directory, fold.number, "current_market_plus_kelly_prior"), kelly_blend, kelly_blend_result, {"fold": fold.number, "variant": "current_market_plus_kelly_prior", "run_id": rid})
+        kelly_blend_result = evaluate_variant(
+            "current_market_plus_kelly_prior", truth, kelly_blend, baseline_daily, config
+        )
+        save_prediction(
+            prediction_stage(directory, fold.number, "current_market_plus_kelly_prior"),
+            kelly_blend,
+            kelly_blend_result,
+            {"fold": fold.number, "variant": "current_market_plus_kelly_prior", "run_id": rid},
+        )
         fold_results.append(kelly_blend_result)
         predictions["current_market_plus_kelly_prior"] = kelly_blend
 
@@ -292,7 +389,13 @@ def run(mode: str) -> int:
             all_fold_results.append({"fold": fold.number, **result})
         for name, prediction in predictions.items():
             all_predictions.setdefault(name, []).append(prediction)
-        event("fold_complete", {"fold": fold.number, "scores": {r["variant"]: r["official_metric"] for r in fold_results}})
+        event(
+            "fold_complete",
+            {
+                "fold": fold.number,
+                "scores": {r["variant"]: r["official_metric"] for r in fold_results},
+            },
+        )
 
     pooled_truth = pd.concat(all_truth)
     pooled = []
@@ -315,12 +418,28 @@ def run(mode: str) -> int:
         "fold_results": all_fold_results,
         "pooled_results": pooled,
         "best_pooled": pooled[0] if pooled else None,
-        "canonical_reference": {"name": "current_market", "expected_535_date_metric": 0.3097087232124053},
+        "canonical_reference": {
+            "name": "current_market",
+            "expected_535_date_metric": 0.3097087232124053,
+        },
     }
     (directory / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
-    (directory / "DONE.json").write_text(json.dumps({"status": "DONE", "utc": now_utc(), "run_id": rid}, indent=2) + "\n")
+    (directory / "DONE.json").write_text(
+        json.dumps({"status": "DONE", "utc": now_utc(), "run_id": rid}, indent=2) + "\n"
+    )
     latest = ROOT / "artifacts" / "competitive_feature_forecast" / "LATEST.json"
-    latest.write_text(json.dumps({"run_id": rid, "mode": mode, "directory": str(directory.relative_to(ROOT)), "summary": str((directory / "summary.json").relative_to(ROOT))}, indent=2) + "\n")
+    latest.write_text(
+        json.dumps(
+            {
+                "run_id": rid,
+                "mode": mode,
+                "directory": str(directory.relative_to(ROOT)),
+                "summary": str((directory / "summary.json").relative_to(ROOT)),
+            },
+            indent=2,
+        )
+        + "\n"
+    )
     event("run_complete", {"run_id": rid, "mode": mode, "best": summary["best_pooled"]})
     print(f"RESULT_DIR={directory}")
     return 0

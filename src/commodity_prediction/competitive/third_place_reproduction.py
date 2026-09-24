@@ -128,9 +128,7 @@ class Prepared:
     valid: np.ndarray
 
 
-def prepare_train_valid(
-    train: pd.DataFrame, valid: pd.DataFrame
-) -> Prepared:
+def prepare_train_valid(train: pd.DataFrame, valid: pd.DataFrame) -> Prepared:
     """Median imputation + standardization, fit on training only."""
     imputer = SimpleImputer(strategy="median")
     scaler = StandardScaler()

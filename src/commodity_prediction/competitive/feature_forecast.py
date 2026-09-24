@@ -85,7 +85,9 @@ def fit_scale(values: np.ndarray, space: str) -> ScaleState:
     return ScaleState(means=means, scales=scales, positive_floor=floor, space=space)
 
 
-def make_windows(z: np.ndarray, window: int, target_start: int, target_stop: int) -> tuple[np.ndarray, np.ndarray]:
+def make_windows(
+    z: np.ndarray, window: int, target_start: int, target_stop: int
+) -> tuple[np.ndarray, np.ndarray]:
     if window < 2 or target_start < window or target_stop <= target_start:
         raise ValueError("Invalid sequence window bounds")
     xs = np.stack([z[t - window : t] for t in range(target_start, target_stop)]).astype(np.float32)
@@ -93,7 +95,9 @@ def make_windows(z: np.ndarray, window: int, target_start: int, target_stop: int
     return xs, ys
 
 
-def targets_from_forecast_path(path: np.ndarray, pairs: pd.DataFrame, assets: list[str]) -> np.ndarray:
+def targets_from_forecast_path(
+    path: np.ndarray, pairs: pd.DataFrame, assets: list[str]
+) -> np.ndarray:
     """Convert predicted d+1..d+5 asset prices to the official target definitions."""
     if path.ndim != 2 or path.shape[0] < 5:
         raise ValueError("Forecast path must contain at least five future rows")
@@ -132,7 +136,9 @@ def released_label_signal(
     for j, row in enumerate(pairs.itertuples(index=False)):
         delay = int(row.lag) + 1
         values = y.iloc[:, j].to_numpy(dtype=float)
-        historical_mean = float(np.nanmean(values[: max(1, int(prediction_positions[0]) - delay + 1)]))
+        historical_mean = float(
+            np.nanmean(values[: max(1, int(prediction_positions[0]) - delay + 1)])
+        )
         if not np.isfinite(historical_mean):
             historical_mean = 0.0
         for i, pos in enumerate(prediction_positions):
@@ -225,7 +231,10 @@ def verify_manifest(directory: Path, expected_payload: dict) -> bool:
         data = json.loads(manifest_path.read_text())
         if data.get("payload") != expected_payload:
             return False
-        return all((directory / name).exists() and sha256(directory / name) == digest for name, digest in data["files"].items())
+        return all(
+            (directory / name).exists() and sha256(directory / name) == digest
+            for name, digest in data["files"].items()
+        )
     except (OSError, ValueError, KeyError, json.JSONDecodeError):
         return False
 
@@ -250,7 +259,9 @@ def train_feature_forecaster(
     seed = int(config["seed"])
     set_deterministic_seed(seed)
     window = int(config["window_days"])
-    inner_stop = max(window + 25, int(train_stop * (1.0 - float(config["inner_validation_fraction"]))))
+    inner_stop = max(
+        window + 25, int(train_stop * (1.0 - float(config["inner_validation_fraction"])))
+    )
     if inner_stop >= train_stop - 10:
         inner_stop = train_stop - 10
     inner_scale = fit_scale(values[:inner_stop], space)
@@ -276,7 +287,12 @@ def train_feature_forecaster(
 
     device = torch.device(_device_name())
 
-    def fit_once(xa: np.ndarray, ya: np.ndarray, epochs: int, validation: tuple[np.ndarray, np.ndarray] | None) -> tuple[nn.Module, int, list[dict]]:
+    def fit_once(
+        xa: np.ndarray,
+        ya: np.ndarray,
+        epochs: int,
+        validation: tuple[np.ndarray, np.ndarray] | None,
+    ) -> tuple[nn.Module, int, list[dict]]:
         set_deterministic_seed(seed)
         model = Forecaster(xa.shape[-1]).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=float(config["learning_rate"]))
@@ -319,12 +335,22 @@ def train_feature_forecaster(
                 if valid_loss < best_loss - 1e-8:
                     best_loss = valid_loss
                     best_epoch = epoch
-                    best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+                    best_state = {
+                        k: v.detach().cpu().clone() for k, v in model.state_dict().items()
+                    }
                     stale = 0
                 else:
                     stale += 1
             history.append({"epoch": epoch, "train_loss": train_loss, "valid_loss": valid_loss})
-            log("epoch", {"space": space, "epoch": epoch, "train_loss": train_loss, "valid_loss": valid_loss})
+            log(
+                "epoch",
+                {
+                    "space": space,
+                    "epoch": epoch,
+                    "train_loss": train_loss,
+                    "valid_loss": valid_loss,
+                },
+            )
             if validation is not None and stale >= int(config["early_stopping_patience"]):
                 break
         if best_state is not None:

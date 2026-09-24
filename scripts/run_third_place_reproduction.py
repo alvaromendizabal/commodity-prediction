@@ -47,7 +47,9 @@ def config() -> dict:
 
 def current_git() -> tuple[str, str]:
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-    branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=ROOT, text=True).strip()
+    branch = subprocess.check_output(
+        ["git", "branch", "--show-current"], cwd=ROOT, text=True
+    ).strip()
     return head, branch
 
 
@@ -56,11 +58,13 @@ def preflight() -> int:
     versions = {}
     try:
         import lightgbm
+
         versions["lightgbm"] = lightgbm.__version__
     except Exception:
         failures.append("LightGBM is not installed")
     try:
         import xgboost
+
         versions["xgboost"] = xgboost.__version__
     except Exception:
         failures.append("XGBoost is not installed")
@@ -68,17 +72,22 @@ def preflight() -> int:
     try:
         x, y, pairs = load_data(ROOT)
         cfg = config()
-        folds, _ = make_folds(len(x), {
-            "holdout_dates": 252,
-            "validation_dates": 180,
-            "n_folds": 3,
-            "purge_dates": 5,
-            "min_train_dates": 600,
-        })
+        folds, _ = make_folds(
+            len(x),
+            {
+                "holdout_dates": 252,
+                "validation_dates": 180,
+                "n_folds": 3,
+                "purge_dates": 5,
+                "min_train_dates": 600,
+            },
+        )
         fold = folds[cfg["fold_number"]]
         sample_pair = pairs.iloc[0]["pair"]
         if not prefix_invariant_feature_check(
-            x, sample_pair, min(700, fold.train_stop),
+            x,
+            sample_pair,
+            min(700, fold.train_stop),
             positive_lags=cfg["positive_lags"],
             rolling_windows=cfg["rolling_windows"],
         ):
@@ -87,18 +96,21 @@ def preflight() -> int:
         mask = reconstructed.notna() & y.notna()
         vals = (reconstructed - y).where(mask).stack().abs()
         max_err = float(vals.max()) if len(vals) else float("nan")
-        reconstruction_quantiles = {
-            "p50": float(vals.quantile(0.50)),
-            "p95": float(vals.quantile(0.95)),
-            "p99": float(vals.quantile(0.99)),
-            "p999": float(vals.quantile(0.999)),
-            "max": max_err,
-        } if len(vals) else None
+        reconstruction_quantiles = (
+            {
+                "p50": float(vals.quantile(0.50)),
+                "p95": float(vals.quantile(0.95)),
+                "p99": float(vals.quantile(0.99)),
+                "p999": float(vals.quantile(0.999)),
+                "max": max_err,
+            }
+            if len(vals)
+            else None
+        )
         tolerance = float(cfg["target_reconstruction_tolerance"])
         if not np.isfinite(max_err) or max_err > tolerance:
             failures.append(
-                "Target reconstruction mismatch: "
-                f"max_abs_error={max_err}, tolerance={tolerance}"
+                f"Target reconstruction mismatch: max_abs_error={max_err}, tolerance={tolerance}"
             )
     except Exception as exc:
         failures.append(f"Data/feature preflight failed: {type(exc).__name__}: {exc}")
@@ -149,16 +161,19 @@ def load_baseline(cfg: dict, fold_number: int) -> pd.DataFrame:
 
 
 def target_payload(target: str, pair: str, cfg: dict, fold_number: int) -> str:
-    body = json.dumps({
-        "target": target,
-        "pair": pair,
-        "positive_lags": cfg["positive_lags"],
-        "rolling_windows": cfg["rolling_windows"],
-        "oof_splits": cfg["oof_splits"],
-        "oof_gap": cfg["oof_gap"],
-        "seed": cfg["seed"],
-        "fold": fold_number,
-    }, sort_keys=True).encode()
+    body = json.dumps(
+        {
+            "target": target,
+            "pair": pair,
+            "positive_lags": cfg["positive_lags"],
+            "rolling_windows": cfg["rolling_windows"],
+            "oof_splits": cfg["oof_splits"],
+            "oof_gap": cfg["oof_gap"],
+            "seed": cfg["seed"],
+            "fold": fold_number,
+        },
+        sort_keys=True,
+    ).encode()
     return hashlib.sha256(body).hexdigest()[:16]
 
 
@@ -182,14 +197,15 @@ def run_target(
         return result
 
     features = build_causal_pair_features(
-        x, pair,
+        x,
+        pair,
         positive_lags=cfg["positive_lags"],
         rolling_windows=cfg["rolling_windows"],
     )
-    x_train = features.iloc[:fold.train_stop]
-    x_valid = features.iloc[fold.validation_start:fold.validation_stop]
-    y_train = y[target].iloc[:fold.train_stop]
-    y_valid = y[target].iloc[fold.validation_start:fold.validation_stop]
+    x_train = features.iloc[: fold.train_stop]
+    x_valid = features.iloc[fold.validation_start : fold.validation_stop]
+    y_train = y[target].iloc[: fold.train_stop]
+    y_valid = y[target].iloc[fold.validation_start : fold.validation_stop]
 
     mask = y_train.notna()
     prepared = prepare_train_valid(x_train.loc[mask], x_valid)
@@ -210,14 +226,16 @@ def run_target(
         gap=cfg["oof_gap"],
     )
 
-    pred = pd.DataFrame({
-        "date_id": x_valid.index,
-        "truth": y_valid.to_numpy(dtype=float),
-        "source_stack": source_pred,
-        "oof_stack": oof_pred,
-        **{f"source_{k}": v for k, v in source_parts.items() if k != "stack"},
-        **{f"oof_{k}": v for k, v in oof_parts.items() if k != "stack_oof"},
-    })
+    pred = pd.DataFrame(
+        {
+            "date_id": x_valid.index,
+            "truth": y_valid.to_numpy(dtype=float),
+            "source_stack": source_pred,
+            "oof_stack": oof_pred,
+            **{f"source_{k}": v for k, v in source_parts.items() if k != "stack"},
+            **{f"oof_{k}": v for k, v in oof_parts.items() if k != "stack_oof"},
+        }
+    )
     pred.to_parquet(pred_path, index=False)
 
     observed = np.isfinite(pred["truth"])
@@ -230,10 +248,14 @@ def run_target(
         "valid_rows": int(len(x_valid)),
         "source_stack_pearson": float(
             np.corrcoef(pred.loc[observed, "truth"], pred.loc[observed, "source_stack"])[0, 1]
-        ) if observed.sum() > 2 else None,
+        )
+        if observed.sum() > 2
+        else None,
         "oof_stack_pearson": float(
             np.corrcoef(pred.loc[observed, "truth"], pred.loc[observed, "oof_stack"])[0, 1]
-        ) if observed.sum() > 2 else None,
+        )
+        if observed.sum() > 2
+        else None,
         "payload": target_payload(target, pair, cfg, fold.number),
         "completed_utc": utc(),
     }
@@ -254,10 +276,9 @@ def assemble_variant(
         p = pd.read_parquet(run_dir / "targets" / target / "predictions.parquet")
         p = p.set_index("date_id")
         idx = out.index.intersection(p.index)
-        out.loc[idx, target] = (
-            (1.0 - weight) * out.loc[idx, target].to_numpy(dtype=float)
-            + weight * p.loc[idx, column].to_numpy(dtype=float)
-        )
+        out.loc[idx, target] = (1.0 - weight) * out.loc[idx, target].to_numpy(
+            dtype=float
+        ) + weight * p.loc[idx, column].to_numpy(dtype=float)
     return out
 
 
@@ -267,13 +288,16 @@ def run(mode: str) -> int:
 
     cfg = config()
     x, y, pairs = load_data(ROOT)
-    folds, development_stop = make_folds(len(x), {
-        "holdout_dates": 252,
-        "validation_dates": 180,
-        "n_folds": 3,
-        "purge_dates": 5,
-        "min_train_dates": 600,
-    })
+    folds, development_stop = make_folds(
+        len(x),
+        {
+            "holdout_dates": 252,
+            "validation_dates": 180,
+            "n_folds": 3,
+            "purge_dates": 5,
+            "min_train_dates": 600,
+        },
+    )
     fold = folds[cfg["fold_number"]]
 
     n = {
@@ -284,18 +308,29 @@ def run(mode: str) -> int:
     selected = choose_stratified_targets(pairs, n)
 
     head, branch = current_git()
-    run_payload = json.dumps({
-        "head": head, "mode": mode, "fold": fold.number, "selected": selected,
-        "config": cfg,
-    }, sort_keys=True).encode()
+    run_payload = json.dumps(
+        {
+            "head": head,
+            "mode": mode,
+            "fold": fold.number,
+            "selected": selected,
+            "config": cfg,
+        },
+        sort_keys=True,
+    ).encode()
     run_id = hashlib.sha256(run_payload).hexdigest()[:16]
     run_dir = ARTIFACT_ROOT / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "selected_targets.json").write_text(json.dumps(selected, indent=2) + "\n")
 
     emit(
-        "run_start", run_id=run_id, mode=mode, fold=fold.number,
-        selected_targets=len(selected), git_head=head, git_branch=branch,
+        "run_start",
+        run_id=run_id,
+        mode=mode,
+        fold=fold.number,
+        selected_targets=len(selected),
+        git_head=head,
+        git_branch=branch,
         development_stop=development_stop,
         reserved_final_origins_evaluated=False,
     )
@@ -306,12 +341,14 @@ def run(mode: str) -> int:
         run_target(target, pair_map[target], x, y, fold, cfg, run_dir)
         if i == 1 or i % 4 == 0 or i == len(selected):
             emit(
-                "progress", completed=i, total=len(selected),
+                "progress",
+                completed=i,
+                total=len(selected),
                 elapsed_seconds=round(time.time() - started, 2),
             )
 
     expected = [f"target_{i}" for i in range(424)]
-    y_valid = y.iloc[fold.validation_start:fold.validation_stop][expected]
+    y_valid = y.iloc[fold.validation_start : fold.validation_stop][expected]
     baseline = load_baseline(cfg, fold.number)
     if not baseline.index.equals(y_valid.index):
         if len(baseline) == len(y_valid) and isinstance(baseline.index, pd.RangeIndex):
@@ -342,7 +379,8 @@ def run(mode: str) -> int:
         if name == "current_market":
             continue
         intervals[name] = paired_block_interval(
-            ref, np.asarray(corr, dtype=float),
+            ref,
+            np.asarray(corr, dtype=float),
             repetitions=cfg["bootstrap_repetitions"],
             block=cfg["bootstrap_block_dates"],
             seed=cfg["seed"],
@@ -380,12 +418,18 @@ def run(mode: str) -> int:
         "completed_utc": utc(),
     }
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
-    (run_dir / "DONE.json").write_text(json.dumps({
-        "run_id": run_id,
-        "status": "complete",
-        "reserved_final_origins_evaluated": False,
-        "completed_utc": utc(),
-    }, indent=2) + "\n")
+    (run_dir / "DONE.json").write_text(
+        json.dumps(
+            {
+                "run_id": run_id,
+                "status": "complete",
+                "reserved_final_origins_evaluated": False,
+                "completed_utc": utc(),
+            },
+            indent=2,
+        )
+        + "\n"
+    )
 
     emit("run_complete", run_id=run_id, best=best_name, scores=scores)
     print(f"RESULT_DIR={run_dir}")
@@ -395,6 +439,7 @@ def run(mode: str) -> int:
 def package_return() -> int:
     out = ROOT / "third_place_reproduction_return.zip"
     import zipfile
+
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         for p in sorted(ARTIFACT_ROOT.rglob("*")):
             if p.is_file():

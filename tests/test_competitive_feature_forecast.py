@@ -36,7 +36,9 @@ def test_target_conversion_matches_known_formula() -> None:
 
 
 def test_released_signal_respects_horizon_delay() -> None:
-    y = pd.DataFrame({"target_0": np.arange(12, dtype=float), "target_1": np.arange(100, 112, dtype=float)})
+    y = pd.DataFrame(
+        {"target_0": np.arange(12, dtype=float), "target_1": np.arange(100, 112, dtype=float)}
+    )
     pairs = pd.DataFrame({"target": ["target_0", "target_1"], "lag": [1, 4], "pair": ["A", "B"]})
     pred_positions = np.array([10])
     got = released_label_signal(y, pairs, pred_positions, trailing=2)
