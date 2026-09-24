@@ -46,6 +46,8 @@ The group-wise study is a useful example. Its frozen fold-0 blend jumped from **
 
 The project rejected that candidate instead of tuning against the later outcomes. The same promotion discipline prevented the Transformer and the numerically positive online-refit blend from replacing the retained panel.
 
+The **market-path** study supplies the 0.309709 development reference used throughout the portfolio; later frontier experiments preserve their own matched populations and do not overwrite that reference.
+
 ## Reproducibility
 
 The repository now integrates the third-place-inspired competitive reconstruction source, protocols, tests, and executed notebooks into `main`. It also publishes the current frontier evidence ledger, active-method documentation, testable experiment contracts, and cryptographic identities for the newer private AWS handoff packages.
