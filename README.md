@@ -34,6 +34,8 @@ The point of this breadth was not model-count accumulation. Each major branch ha
 
 ## Verified evidence
 
+The historical **market-path** study supplies the **0.309709** development reference and remains part of the archived public evidence.
+
 Different rows below use different historical populations and should not be numerically ranked against one another.
 
 | Evaluation population | Recorded result | Research decision |
