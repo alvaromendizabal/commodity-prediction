@@ -4,6 +4,7 @@
 This intentionally uses only the Python standard library so reviewers can validate
 public evidence before installing the full ML environment.
 """
+
 from __future__ import annotations
 
 import json
@@ -61,7 +62,12 @@ def main() -> None:
 
     assert notebook["nbformat"] == 4
     cell_ids = {cell.get("id") for cell in notebook.get("cells", [])}
-    assert {"closeout-title", "research-scale", "validation-evolution", "final-takeaway"} <= cell_ids
+    assert {
+        "closeout-title",
+        "research-scale",
+        "validation-evolution",
+        "final-takeaway",
+    } <= cell_ids
 
     print("PORTFOLIO_VERIFY=PASS")
     print(f"targets={summary['target_contract']['targets']}")
