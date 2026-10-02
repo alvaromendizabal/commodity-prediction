@@ -4,7 +4,9 @@
   "publication_mode": "completed_employer_facing_case_study",
   "project_status": "complete",
   "research_cycle_status": "completed_and_frozen",
+  "latest_implementation_published": false,
   "latest_private_implementation_published": false,
+  "existing_public_history_removed": false,
   "raw_competition_data_published": false,
   "production_deployment_claimed": false,
   "target_contract": {
@@ -43,6 +45,8 @@
       0.0803359478745666
     ],
     "decision": "recorded_without_post_assessment_reselection",
+    "evaluated": true,
+    "excluded_dates": 0,
     "development_replay_max_error": 0,
     "development_replay_shape": [
       175,
