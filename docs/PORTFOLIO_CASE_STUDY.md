@@ -1,44 +1,60 @@
 # Commodity forecasting: an engineering and research case study
 
-**Project by Alvaro Mendizabal** · [GitHub](https://github.com/alvaromendizabal)
+**Project by Alvaro Mendizabal**  [GitHub](https://github.com/alvaromendizabal)
 
 ## The problem
 
-The task was to rank short-horizon returns across 424 commodity-related targets spanning four forecast horizons. It is a noisy forecasting problem in which an apparently strong feature or model can improve one historical period and fail to transfer to another. The objective aggregates daily cross-sectional rank correlations, rewarding both their average and their consistency. Lower pointwise error alone does not establish improvement on that objective.
+The task was to rank short-horizon returns across 424 commodity-related targets spanning four forecast horizons. It is a noisy temporal prediction problem in which apparently strong features or models can improve one historical regime and fail to transfer to another. The objective aggregates daily cross-sectional rank correlations, rewarding both average signal and stability over time.
 
-This was a research and evaluation project, not a live trading service. The public case study focuses on engineering decisions and recorded evidence; the latest implementation and detailed training recipe are intentionally withheld.
+The project became an end-to-end ML research system rather than a single modeling notebook. It covers point-in-time data contracts, delayed-target availability, feature/model experimentation, temporal validation, AWS execution, checkpoint recovery, uncertainty-aware promotion, and analytical communication.
 
 ## Ownership and scope
 
-The project spans problem framing, data-contract design, prediction-time feature construction, validation, model experiments, result reconciliation, checkpointed AWS execution, and analytical communication. The employer-facing contribution is that integrated workflow and the decisions supported by it, not a claim that the final system beat a competition winner.
+I owned the research loop from problem framing through closeout:
 
-The latest research ran in an AWS workspace. GitHub serves as a curated evidence layer rather than a mirror of that workspace. Full experiment notebooks, detailed configurations, private matrices, fitted checkpoints, and operational logs are not added by this release. Earlier material already published in the repository remains archival and publicly visible.
+- data-contract and target-timing design;
+- feature and representation research;
+- model implementation and clean-room reconstruction of documented public ideas;
+- chronological validation and matched-population comparison;
+- SageMaker execution, checkpointing, failure diagnosis, and resumability;
+- uncertainty analysis and promotion gates;
+- notebook/report generation and public/private publication boundaries.
+
+GitHub is the curated public evidence layer. The private AWS workspace retains detailed execution artifacts, fitted checkpoints, prediction matrices, and operational logs that are not appropriate to publish wholesale.
 
 ## System design
 
-The workflow separates five responsibilities:
+### Point-in-time data contracts
 
-**Data contracts and information timing.** Input and target identifiers, ordering, numeric validity, and label availability are checked before model fitting. Historical labels are usable only after their forecast-horizon-specific release delay. Chronological validation and an exclusion buffer prevent training outcomes from crossing the assessment boundary.
+Every substantial experiment begins by checking target identity/order, numeric validity, historical availability, and release timing. Labels are usable only after their horizon-specific delay. Learned preprocessing is fit inside the relevant training partition.
 
-**Representation and modeling.** The established system combines market information, risk-state representations, and released target history in a pooled nonlinear model. A distinct target-routed, top-solution-inspired stack was tested as a candidate. These are selectively adapted mechanisms; complete recreation of every leading solution is not claimed.
+### Model and representation research
 
-**Experiment control.** Candidate definitions are frozen before evaluation. Comparisons align the same target columns and date IDs. Exploratory screening, retrospective temporal replication, and the final historical assessment are treated as different evidentiary stages.
+The project tested a broad set of materially different families rather than repeating small hyperparameter changes: mixed-horizon tree ensembles, direct RNN/MLP systems, recursive feature forecasting, Transformers, online adaptation, group-wise trees, joint multi-output models, graph representations, market-phase features, rank/covariance systems, lag-specific experts, and cross-target state-space methods.
 
-**Artifact integrity and recovery.** Intermediate stages save predictions and completion receipts. Checksums and source/configuration identities make reuse explicit. A failed later step need not trigger another model fit. Development-prediction replay is a gate before final assessment, not a substitute for that assessment.
+### Experiment control
 
-**Analytical presentation.** Private executed notebooks retain the detailed evidence. This public presentation exposes the question, comparisons, uncertainty, and decision, while withholding the model-building implementation.
+Candidates are locked before the evaluation stage they are meant to test. Comparisons use matching date/target populations. Screening, later temporal replication, historical assessment, competition-sized 73-day windows, and post-competition replay are treated as distinct evidence stages.
 
-## The most informative debugging result
+### Artifact integrity and recovery
 
-An original mixed-horizon panel improved the first screening period from 0.403381 to 0.418181. A later expansion to 106 one-day targets instead scored 0.385559. Treating the second study as simply a larger version of the first would have been misleading: their target composition differed.
+Run IDs, hashes, checkpoints, process audits, and return bundles make reuse explicit. Expensive completed work is not silently retrained after a later failure. Implementation failures are separated from scientifically valid negative experiments.
+
+### Analytical presentation
+
+Executed notebooks and Plotly outputs retain the evidence trail. The public release exposes aggregate numbers, decisions, and methodology while withholding private model-building details.
+
+## A zero-fit debugging result that changed the research direction
+
+An original mixed-horizon panel improved the first screening period from 0.403381 to 0.418181. A later expansion to 106 one-day targets instead scored 0.385559. Treating the second study as simply a larger version of the first would have been misleading because the target composition differed.
 
 A saved-prediction reconciliation required zero new model fits. Predictions on all 37 shared one-day targets matched exactly. Removing the original panel's 27 longer-horizon replacements reduced the score to 0.397522; adding the other 69 one-day replacements reduced it again to 0.385559.
 
-That result separated numerical reproducibility from research design. The shared-target implementation was not responsible for the change; the experiment had changed which targets received the candidate predictions. Because the metric is nonlinear, this sequence is order-dependent accounting, not causal feature attribution. It also does not justify selecting the favorable-looking subset after seeing its outcomes.
+That isolated the real issue: the implementation had not silently changed on shared targets; the experiment had changed which targets received candidate predictions. Because the metric is nonlinear, this accounting is order-dependent and does not justify cherry-picking a favorable subset after observing outcomes.
 
 ## Temporal replication
 
-The original panel was therefore frozen and evaluated on two later development periods, keeping all 424 scored targets and the prior candidate definition intact.
+The original panel was frozen and evaluated on two later development periods, keeping all 424 scored targets and the prior candidate definition intact.
 
 | Population | Incumbent | Candidate | Difference |
 |---|---:|---:|---:|
@@ -48,13 +64,15 @@ The original panel was therefore frozen and evaluated on two later development p
 
 ![Temporal replication uncertainty](../reports/figures/portfolio_temporal.svg)
 
-Both period differences were positive, but the pooled conditional paired 95% interval was [-0.009061, +0.035750]. The prespecified gate required a positive lower endpoint as well as improvement in both periods. The candidate was not promoted. This is an inconclusive positive estimate, not proof that the candidate has no predictive value.
+Both period differences were positive, but the pooled conditional paired 95% interval was [-0.009061, +0.035750]. The predeclared gate required a positive lower endpoint as well as improvement in both periods, so the candidate was not promoted.
 
-These periods had been used in earlier project research. The result is retrospective temporal replication, not an untouched final test. The established 535-date development reference of 0.309709 uses a different population and is not directly comparable to the pooled number above.
+These periods had been used in earlier project research. This is retrospective chronological replication, not an untouched final test. The separate 535-date development reference of 0.309709 uses a different population and should not be numerically ranked against the pooled score above.
 
 ## Locked historical assessment
 
-The retained incumbent was reconstructed before final access. Its saved development predictions were replayed exactly across 175 dates and 424 targets. A final fitted model and assessment contract were then locked. The comparison covered all 247 requested historical dates, IDs 1714-1960, with 424 targets and no dates excluded from the primary score.
+Before assessment, the incumbent reconstruction exactly replayed archived development predictions over 175 dates and 424 targets. The final model and assessment contract were then fixed.
+
+The comparison covered all 247 requested dates, IDs 1714-1960, with 424 targets and no dates excluded from the primary score.
 
 | Prespecified system | Score |
 |---|---:|
@@ -64,18 +82,77 @@ The retained incumbent was reconstructed before final access. Its saved developm
 
 ![Final historical comparison](../reports/figures/portfolio_final.svg)
 
-The conditional paired 95% interval for the difference was [-0.133651, +0.080336]. There was no demonstrated advantage over the simple control. The final result was recorded without replacing the selected model or tuning against those outcomes. No final-period model refitting, live deployment, profitability, official leaderboard placement, or win is claimed.
+The conditional paired 95% interval was [-0.133651, +0.080336]. There was no demonstrated advantage over the simple control. The outcome was recorded without replacing the selected model or retuning against those outcomes.
 
-The repository documented this interval as reserved. Access outside the available execution evidence cannot be independently excluded, so the public description is deliberately a documented historical assessment rather than a categorical claim of never-observed data.
+## Later research: breadth without cherry-picking
 
-## What the work establishes
+A second research phase deliberately moved beyond the original architecture. Major studies included:
 
-The project produced a functioning point-in-time research system, a traceable experiment record, a zero-fit explanation for a misleading expansion, and a completed assessment with an explicit decision. It also exposed an important limitation: greater feature/model complexity did not demonstrate a final advantage over the control.
+- 24 feature-token Transformer fits;
+- 206 causal online-refit fits;
+- 2,544 group-wise LightGBM/Ridge fits;
+- attention/residual/autoencoder online ensembles;
+- stable-correlation and target-clustering representations;
+- regularized covariance/rank ordering;
+- joint multi-target CatBoost;
+- heterogeneous RF/XGBoost/CatBoost/DNN ensembles;
+- market graph and sequential-market-phase representations;
+- A/B swap augmentation and ordinal classification;
+- online strategy weighting and signed cluster experts;
+- recursive and direct-five feature-state LSTMs;
+- lag-group-specific experts;
+- lag-table state-space transitions and analog retrieval.
 
-The feature study is not presented as proof that every useful representation has been exhausted. The candidate stack is not presented as a faithful reconstruction of undisclosed winner settings. Private engineering reproducibility supports the evidence, but this presentation does not distribute the recipe needed to reproduce the latest system.
+Most of these directions were rejected because they failed a later-period or stability gate. That is an important project result rather than wasted work: the experiment record shows how quickly attractive local gains can disappear under regime shift.
 
-## Evidence basis
+## Competition-sized 73-day evaluation
 
-Published numbers are drawn from the owner's returned execution receipts: the 106-target study (20260921T231222Z-500), saved-prediction reconciliation (20260921T234713Z-535), temporal replication (20260922T000824Z-509), and final historical assessment (20260922T005540Z-518). The aggregate summary in this repository identifies these records without distributing private data or training artifacts.
+Later research adopted 73-day windows to create a harder short-regime test. A small regularized-covariance correction became the first later-stage component to improve three consecutive 73-day windows with a positive paired interval. More complex adaptive systems then had to beat that promoted anchor consistently rather than merely improve an easier baseline.
 
-The scientific closeout is complete for this research cycle. Any subsequent modeling would be a separate research program requiring a new evaluation design; it would not turn this already-evaluated historical population back into an untouched test.
+The 73-day protocol exposed a repeated pattern: large selection-window gains could coexist with losses on the next regime. This motivated one final validation upgrade instead of more tuning.
+
+## Final post-competition delayed-label replay
+
+The last research milestone reconstructed the official delayed-label information flow over the final 134 test dates. Candidate choice was locked from training history; the replay exposed labels only when the evaluation interface would have released them; terminal-period outcomes were used for scoring only after predictions were fixed.
+
+The replay showed material distribution shift between historical selection windows and the final period. The correct response was not to adapt further to those already-observed outcomes. The project therefore closed with the final replay preserved as evidence rather than turning the final period into another training loop.
+
+This is the most important scientific conclusion in the project: **the evaluation system must be engineered as carefully as the model.**
+
+## Engineering accomplishments
+
+Beyond model fitting, the project built and exercised:
+
+- deterministic AWS/SageMaker run identities;
+- hash-verified handoffs;
+- self-tests and smoke tests before compute-heavy stages;
+- resumable checkpoints and exact reuse of completed stages;
+- process-conflict guards that prevented accidental duplicate workloads;
+- CPU/GPU routing and resource-aware execution;
+- structured logs plus CPU/GPU/RAM/disk/cost telemetry;
+- success/failure return bundles;
+- executed notebooks with persisted Plotly outputs;
+- explicit distinction between implementation failures and negative scientific results.
+
+## What this work establishes
+
+The project demonstrates the ability to build an ML research system that can:
+
+- detect leakage and information-timing errors;
+- reconcile apparently contradictory experiments;
+- reproduce external ideas without copying code blindly;
+- scale controlled experiments in AWS;
+- stop weak directions early;
+- preserve negative evidence;
+- strengthen validation after optimistic results fail to transfer;
+- and ultimately reject its own conclusions when a more faithful test disagrees.
+
+That combination of modeling breadth, engineering ownership, and scientific discipline is the core portfolio result.
+
+## Evidence basis and reproducibility
+
+Published historical numbers are drawn from recorded execution receipts including the original 106-target study, saved-prediction reconciliation, temporal replication, and locked historical assessment. Later aggregate research decisions are summarized in `reports/final_research_ledger.json` and `reports/portfolio_summary.json`.
+
+Run `python scripts/verify_portfolio.py` to validate the public closeout artifacts. See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for the public/private evidence boundary.
+
+The research cycle is complete. New forecasting work would require a newly defined dataset and evaluation contract rather than continued adaptation to this completed record.
