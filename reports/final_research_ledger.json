@@ -1,0 +1,26 @@
+{
+  "project": "Commodity forecasting",
+  "status": "complete",
+  "families": [
+    {"family": "mixed_horizon_target_routed_trees", "outcome": "retained_reference", "capability": "target-routed tree ensemble with mixed horizons"},
+    {"family": "direct_mlp_rnn", "outcome": "rejected", "capability": "joint feed-forward and short-sequence neural models"},
+    {"family": "recursive_feature_forecasting", "outcome": "rejected", "capability": "recursive underlying-state forecasting"},
+    {"family": "feature_token_transformer", "outcome": "rejected", "capability": "feature tokens plus released-target context"},
+    {"family": "zero_fit_online_adaptation", "outcome": "rejected", "capability": "causal recency/performance adaptation without refitting"},
+    {"family": "lightweight_online_refit", "outcome": "rejected", "capability": "periodic causal online neural refitting"},
+    {"family": "groupwise_tree_ridge", "outcome": "rejected", "capability": "group-aware LightGBM/Ridge modeling"},
+    {"family": "attention_residual_autoencoder", "outcome": "rejected", "capability": "attention/residual/autoencoder online ensemble"},
+    {"family": "stable_cluster_longformat", "outcome": "rejected", "capability": "target stability, clustering, long-format ranking"},
+    {"family": "regularized_covariance", "outcome": "promoted_component", "capability": "cross-target mean-rank and covariance ordering"},
+    {"family": "joint_multioutput_catboost", "outcome": "rejected", "capability": "joint multi-target tree learning"},
+    {"family": "heterogeneous_tree_dnn", "outcome": "rejected", "capability": "RF/XGBoost/CatBoost/DNN diversity and cross-market features"},
+    {"family": "graph_and_market_phase", "outcome": "rejected", "capability": "market graph plus sequential information availability"},
+    {"family": "pair_swap_rank_classification", "outcome": "rejected", "capability": "A/B symmetry augmentation and ordinal rank learning"},
+    {"family": "private73_stability_retrieval", "outcome": "promoted_component", "capability": "competition-sized windows, persistence, analogs and covariance"},
+    {"family": "causal_online_meta_cluster", "outcome": "rejected", "capability": "daily strategy weighting and signed cluster experts"},
+    {"family": "feature_state_lstm", "outcome": "rejected", "capability": "recursive and direct multi-horizon feature-state forecasting"},
+    {"family": "lag_group_experts", "outcome": "rejected", "capability": "lag-1/2/3/4 LightGBM/CatBoost/Ridge routing"},
+    {"family": "lag_table_state_space", "outcome": "rejected", "capability": "multi-output state transitions, PCA dynamics and analog retrieval"},
+    {"family": "exact_delayed_label_replay", "outcome": "closeout_evaluation", "capability": "training-only lock and causal replay of the final delayed-label interface"}
+  ]
+}
