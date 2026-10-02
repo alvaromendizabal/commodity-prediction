@@ -70,6 +70,6 @@ See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the data boundary, no
 
 ## Publication boundary
 
-This repository is a curated technical case study, not a dump of the private AWS workspace. Public artifacts include the research narrative, aggregate results, reproducibility checks, presentation notebooks, and selected historical source already in the repository. Private data, credentials, fitted weights, prediction matrices, operational logs, and the newest complete training orchestration remain private.
+This repository is a curated technical case study, not a release of the complete private training system and not a dump of the private AWS workspace. Public artifacts include the research narrative, aggregate results, reproducibility checks, presentation notebooks, and selected historical source already in the repository. Private data, credentials, fitted weights, prediction matrices, operational logs, and the newest complete training orchestration remain private.
 
 That boundary keeps the work reviewable and technically credible without distributing restricted competition data or every implementation detail.
