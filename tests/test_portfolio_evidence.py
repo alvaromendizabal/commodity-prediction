@@ -99,6 +99,16 @@ def test_duplicate_family_fails(evidence):
         verifier.verify(evidence)
 
 
+def test_committed_family_output_must_include_every_record(evidence):
+    def mutation(data):
+        cell = next(cell for cell in data["cells"] if cell.get("id") == "family-ledger")
+        cell["outputs"] = [{"output_type": "stream", "name": "stdout", "text": "counts only"}]
+
+    change(evidence, "notebooks/28_final_research_closeout.ipynb", mutation)
+    with pytest.raises(ValueError, match="saved family ledger output is incomplete"):
+        verifier.verify(evidence)
+
+
 def test_checks_remain_active_under_python_optimization(evidence):
     change(
         evidence,

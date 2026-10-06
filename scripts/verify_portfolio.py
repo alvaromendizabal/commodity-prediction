@@ -111,6 +111,16 @@ def verify(root: Path = ROOT) -> dict[str, int]:
     sources = "\n".join("".join(cell["source"]) for cell in code_cells)
     require("portfolio_summary.json" in sources, "summary input missing from notebook")
     require("final_research_ledger.json" in sources, "ledger input missing from notebook")
+    family_output = "".join(
+        "".join(output.get("text", ""))
+        for cell in code_cells
+        if cell.get("id") == "family-ledger"
+        for output in cell["outputs"]
+    )
+    require(
+        all(row["family"] in family_output for row in families),
+        "saved family ledger output is incomplete",
+    )
     return {
         "targets": 424,
         "forecast_horizons": 4,
