@@ -1,5 +1,7 @@
 # Competitive benchmark and feature research audit
 
+> Historical research snapshot from September 2026. Its open-work items and reserved-period statements describe that stage; the [final closeout](FINAL_RESEARCH_CLOSEOUT.md) and [current summary](../reports/portfolio_summary.json) define the completed project state.
+
 Verified on 2026-09-10. Feature engineering remains open. The historical final private leaderboard is now verified: **anonemaus, 0.63834, first of 1,126 teams**. Our **0.309186** uses 535 different development dates. Subtracting the two would not estimate an out-of-sample performance gap; a probability that we would have won is not supported.
 
 ## Organizer benchmark and leading methods

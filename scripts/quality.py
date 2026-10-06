@@ -8,8 +8,8 @@ from pathlib import Path
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
     for arguments in [
-        ["ruff", "check", "src", "tests", "scripts"],
-        ["ruff", "format", "--check", "src", "tests", "scripts"],
+        ["ruff", "check", "src", "tests", "scripts", "examples"],
+        ["ruff", "format", "--check", "src", "tests", "scripts", "examples"],
         ["mypy", "src"],
         ["pytest", "-q"],
     ]:

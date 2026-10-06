@@ -11,6 +11,10 @@ jobs:
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
+      - name: Verify final closeout and synthetic release timing
+        run: |
+          python3 scripts/verify_portfolio.py
+          python3 examples/delayed_label_demo.py
       - name: Check presentation evidence and disclosure boundaries
         run: |
           python3 - <<'PY'

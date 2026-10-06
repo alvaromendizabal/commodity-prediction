@@ -1,77 +1,63 @@
-# Commodity Forecasting | End-to-End ML Research Case Study
+# Commodity Forecasting
 
-**Alvaro Mendizabal**  [GitHub profile](https://github.com/alvaromendizabal)
+**Point-in-time machine learning across 424 targets and four forecast horizons.**
+Built by [Alvaro Mendizabal](https://github.com/alvaromendizabal).
 
-A completed machine-learning research program for ranking short-horizon returns across **424 commodity-related targets and four forecast horizons**. The project combines point-in-time data engineering, temporal validation, clean-room reconstruction of strong public modeling ideas, restartable AWS execution, controlled ablations, uncertainty-aware promotion gates, and a final post-competition replay built from the official delayed-label interface.
+[![Quality](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/quality.yml/badge.svg)](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/quality.yml)
+[![Portfolio evidence](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/portfolio.yml/badge.svg)](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/portfolio.yml)
 
-**Status: complete and employer-facing.** The research record is frozen. Public artifacts emphasize reproducible evidence, engineering decisions, and scientific conclusions; private competition data, fitted checkpoints, prediction matrices, and the latest full training implementation remain withheld.
+This completed research project asks whether commodity return rankings survive a change in market regime. I owned the data contracts, feature and model research, temporal evaluation, resumable AWS execution, and evidence review. The central result: **a promising development improvement did not establish reliable advantage on a stricter historical assessment.** The repository preserves that result and the engineering used to discover it.
 
-**Start here:** [Final closeout notebook](notebooks/28_final_research_closeout.ipynb)  [Technical case study](docs/PORTFOLIO_CASE_STUDY.md)  [Final research closeout](docs/FINAL_RESEARCH_CLOSEOUT.md)  [Reproducibility](docs/REPRODUCIBILITY.md)  [Machine-readable summary](reports/portfolio_summary.json)
+**Review in five minutes:** [Technical case study](docs/PORTFOLIO_CASE_STUDY.md) · [Executed closeout notebook](notebooks/28_final_research_closeout.ipynb) · [Reviewer guide](docs/REVIEWER_GUIDE.md)
 
-## Why this project stands out
+## Results and decisions
 
-| Area | What I built |
-|---|---|
-| **Point-in-time ML** | Horizon-aware target availability, chronological splits, delayed-label controls, leakage checks, and matched-population comparisons across 424 targets |
-| **Research breadth** | Controlled studies spanning tree ensembles, RNN/MLP systems, recursive forecasting, feature-token Transformers, online adaptation, multi-output learning, graph representations, market-phase features, covariance/rank systems, lag-group experts, and state-space models |
-| **Cloud ML engineering** | Restartable AWS/SageMaker execution with hashes, checkpoints, resumable state, resource telemetry, cost telemetry, process-conflict protection, and deterministic return bundles |
-| **Scientific discipline** | Explicit promotion/kill gates, paired uncertainty intervals, zero-fit reconciliation, negative-result preservation, and increasingly strict temporal tests when earlier validation proved optimistic |
-| **Evaluation engineering** | Reconstructed the official delayed-label information flow and built a post-competition causal replay over the final 134 test dates, including a separately reported 73-day terminal period |
-| **Communication** | Executed notebooks, Plotly diagnostics, machine-readable summaries, experiment ledgers, and a public/private publication boundary designed for technical review |
+Scores below are **mean daily cross-sectional rank correlation divided by its population standard deviation**, without annualization. Compare models within a row; the rows use different dates.
 
-## Research scale
-
-The public closeout records a substantial experimental program rather than a single notebook submission:
-
-- **424 targets** across **4 horizons**;
-- **535-date** development reference plus **355-date** temporal replication and a **247-date** locked historical assessment;
-- large controlled sweeps including **2,544 group-wise fits**, **206 online-refit fits**, and **24 Transformer fits** in major study branches;
-- a later frontier program with **12 bounded top-level milestones** after the prior public update;
-- multiple independently reconstructed public-method families evaluated under the same point-in-time discipline;
-- an audited project minimum of **19 successful intended top-level executions** across the full research history.
-
-The point of this breadth was not model-count accumulation. Each major branch had an explicit hypothesis, bounded compute, a kill condition, and a recorded decision.
-
-## Verified evidence
-
-The historical **market-path** study supplies the **0.309709** development reference and remains part of the archived public evidence.
-
-Different rows below use different historical populations and should not be numerically ranked against one another.
-
-| Evaluation population | Recorded result | Research decision |
+| Evaluation | Matched results | Decision |
 |---|---|---|
-| Development reference: 535 dates, 424 targets | Established `current_market` system: **0.309709** | Historical development reference |
-| Later temporal replication: 355 dates, 424 targets | Incumbent **0.276025**; frozen panel **0.289365**; delta **+0.013340** | Positive estimate, but conditional paired 95% interval crossed zero |
-| Locked historical assessment: 247 dates, 424 targets | Frozen incumbent **0.190453**; training-only mean **0.212085** | No demonstrated advantage over the simple control; result frozen without reselection |
-| Competition-sized replay development | A regularized covariance correction improved the retained panel on three consecutive 73-day windows | Promoted as a useful stability component for subsequent research |
-| Final post-competition replay | Training-only model lock followed by causal delayed-label replay on all **134** final test dates, with a separate **73-day** terminal segment | Exposed material regime shift and closed the research cycle without post-period retuning |
+| Historical market-path development, 535 dates | Reference **0.309709** | Archived development reference |
+| Later chronological replication, 355 dates | Candidate **0.289365** vs. incumbent **0.276025**; delta **+0.013340** | Not promoted: paired 95% interval **[−0.009061, +0.035750]** crosses zero |
+| Locked historical assessment, 247 dates | Incumbent **0.190453** vs. training-only mean **0.212085** | No demonstrated advantage; recorded without reselection |
+| Post-competition delayed-label replay, 134 dates | Training-only selection; separate 73-day terminal segment | Material regime shift recorded; no final-period retuning |
 
-The metric throughout is **mean daily cross-sectional rank correlation divided by its population standard deviation**, without annualization. This repository does not present local or post-competition replay results as an official competition placement.
+![Candidate improvement and uncertainty across later temporal periods](reports/figures/portfolio_temporal.svg)
 
-## What I learned
+The 355-date replication is retrospective development evidence, not an untouched test. The public replay summary exposes timing and coverage metadata rather than final numeric scores or private predictions. These results do not establish an official competition placement, trading return, or production deployment.
 
-The strongest lesson was not that a particular architecture always wins. It was that **validation quality dominated model complexity**.
+## Engineering decisions worth reviewing
 
-Several sophisticated systems produced compelling gains on one historical regime and failed when moved forward in time. Rather than keep optimizing those gains, the project progressively tightened the test design: matched populations, later chronological replication, locked assessments, competition-sized 73-day windows, and finally an exact causal replay using the official delayed-label structure.
+| Problem | Decision and evidence |
+|---|---|
+| Labels become available at different times | Horizon-aware release contracts and chronological preprocessing; [synthetic delayed-label example](examples/README.md) |
+| A larger candidate panel appeared to regress | Reconciled saved predictions with **zero new fits**; all **37 shared targets** matched exactly. Target composition explained the difference. [Case study](docs/PORTFOLIO_CASE_STUDY.md#a-zero-fit-debugging-result-that-changed-the-research-direction) |
+| Attractive local gains failed later | Froze candidate definitions, used matched populations and paired uncertainty, then increased temporal rigor. [Assessment evidence](notebooks/27_portfolio_case_study.ipynb) |
+| Interrupted cloud work could waste completed training | Checkpoints, artifact hashes, process-conflict guards, and success/failure return bundles preserved expensive work. [Closeout](docs/FINAL_RESEARCH_CLOSEOUT.md#engineering-accomplishments) |
 
-That process turned model failure into useful evidence. The final research record demonstrates the ability to build an ML system that can **reject its own optimistic conclusions** and preserve the evidence needed to explain why.
+The [research ledger](reports/final_research_ledger.json) records **20 families**, including tree ensembles, neural sequence models, Transformers, graph features, covariance methods, and online adaptation. Major branches include **2,544 group-wise fits**, **206 online-refit fits**, and **24 Transformer fits**. These are study-specific counts, not independent production models. [Public method references](docs/competitive-research.md) distinguish author claims from this project's reconstructions.
 
-## Reproducibility
+## Run the public examples
 
-The employer-facing release is reproducible at the evidence layer without publishing restricted data or the latest private training recipe.
+From the repository root, Python 3.12 and a CPU are sufficient; neither command downloads data or models:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e '.[dev]'
-python scripts/verify_portfolio.py
+python3 scripts/verify_portfolio.py
+python3 examples/delayed_label_demo.py
 ```
 
-See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the data boundary, notebook checks, and what is intentionally not distributed.
+The first checks the published aggregate record and saved closeout notebook. The second demonstrates release-time boundaries and rejects future-label access on authored synthetic data. Neither recreates the private forecasting scores.
 
-## Publication boundary
+For the exact committed dependency set and full public test suite:
 
-This repository is a curated technical case study, not a release of the complete private training system and not a dump of the private AWS workspace. Public artifacts include the research narrative, aggregate results, reproducibility checks, presentation notebooks, and selected historical source already in the repository. Private data, credentials, fitted weights, prediction matrices, operational logs, and the newest complete training orchestration remain private.
+```bash
+uv sync --frozen --extra dev
+uv run --frozen --extra dev python scripts/quality.py
+```
 
-That boundary keeps the work reviewable and technically credible without distributing restricted competition data or every implementation detail.
+[Reproducibility guide](docs/REPRODUCIBILITY.md) covers notebook execution, evidence checks, and historical research dependencies. The existing executed notebooks remain available for review without rerunning cloud studies.
+
+## Scope and limitations
+
+The research cycle is **complete and frozen**. A new forecasting claim needs a new evaluation contract and unseen data. The later short-window covariance result is a recorded research decision; the public aggregate verifier does not independently reproduce its private prediction-level statistics.
+
+This is **not a release** of the complete private training system. Public material includes selected historical source, tests, aggregate findings, notebooks, and synthetic examples. Restricted competition data, fitted weights, prediction matrices, credentials, cloud logs, and the latest private training orchestration remain excluded. Previously public source and attribution remain intact. See [publication scope](docs/PUBLICATION_SCOPE.md).
