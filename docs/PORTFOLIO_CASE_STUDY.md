@@ -2,6 +2,8 @@
 
 **Project by Alvaro Mendizabal**  [GitHub](https://github.com/alvaromendizabal)
 
+**Recorded outcome:** a positive later-development estimate failed the uncertainty gate; the locked historical assessment did not demonstrate an advantage over a training-only mean. The contribution is a tested research workflow and a transparent evaluation record. [Five-minute reviewer path](REVIEWER_GUIDE.md) · [Run public checks](REPRODUCIBILITY.md)
+
 ## The problem
 
 The task was to rank short-horizon returns across 424 commodity-related targets spanning four forecast horizons. It is a noisy temporal prediction problem in which apparently strong features or models can improve one historical regime and fail to transfer to another. The objective aggregates daily cross-sectional rank correlations, rewarding both average signal and stability over time.

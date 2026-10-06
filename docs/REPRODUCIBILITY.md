@@ -1,89 +1,62 @@
 # Reproducibility guide
 
-This closeout release is designed to be reproducible at the **public evidence layer** while respecting the boundary around restricted data and private research artifacts.
+The public release supports three distinct tasks: checking published aggregates, exercising a synthetic timing contract, and running the public source tests. Reproducing the private trained system requires artifacts that are intentionally withheld.
 
-## 1. Environment
+## Quick checks: no installation or cloud account
 
-Requirements:
-
-- Python 3.12
-- Git
-- a standard CPU environment is sufficient for the public closeout checks
-
-From the repository root:
+Use Python 3.12 from the repository root:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e '.[dev]'
+python3 scripts/verify_portfolio.py
+python3 examples/delayed_label_demo.py
 ```
 
-The pinned dependency ranges live in `pyproject.toml`.
+Both commands use the standard library, run on a CPU, and make no network requests. Expected success markers are `PORTFOLIO_VERIFY=PASS` and the synthetic example's `future_access` value of `rejected`. The [example documentation](../examples/README.md) describes its fictional inputs and timing convention.
 
-## 2. Verify the public research record
+The portfolio verifier checks:
 
-Run:
+- the frozen 424-target / four-horizon contract;
+- finite aggregate metrics and arithmetic for the two matched comparisons;
+- recorded uncertainty and promotion decisions;
+- 134 replay dates, a 73-day terminal segment, and training-only selection;
+- the expected research families and publication boundary;
+- saved closeout notebook execution counts and absence of error outputs.
+
+A pass establishes **internal consistency of the committed public record**. It does not reconstruct scores from private predictions, verify withheld AWS receipts, or establish official competition performance.
+
+## Locked environment and source checks
+
+The repository targets Python 3.12. Install `uv`, then use the committed `uv.lock`:
 
 ```bash
-python scripts/verify_portfolio.py
+uv sync --frozen --extra dev
+uv run --frozen --extra dev python scripts/quality.py
+uv run --frozen python scripts/verify_portfolio.py
 ```
 
-The verifier checks that:
+`pyproject.toml` declares compatible dependency ranges; `uv.lock` fixes the exact resolved dependency set. The quality command runs lint, formatting checks, typing, and public tests. CI additionally checks the historical source/result lineages and the public portfolio evidence.
 
-- the project is marked complete;
-- the 424-target / four-horizon contract is preserved;
-- published deltas equal the underlying published scores;
-- the final replay metadata has 134 scored dates and a 73-date terminal segment;
-- the final experiment ledger contains the expected research families;
-- the final closeout notebook is valid notebook JSON and references the public summary artifacts.
+## Notebook review and execution
 
-The verifier uses only Python's standard library.
+The existing notebooks retain saved outputs. The [final closeout notebook](../notebooks/28_final_research_closeout.ipynb) reads only:
 
-## 3. Execute the final closeout notebook
+- `reports/portfolio_summary.json`;
+- `reports/final_research_ledger.json`.
 
-Launch Jupyter and open:
-
-`notebooks/28_final_research_closeout.ipynb`
-
-The notebook reads only the two committed aggregate JSON files:
-
-- `reports/portfolio_summary.json`
-- `reports/final_research_ledger.json`
-
-It does not require competition data, model weights, or private predictions.
-
-## 4. Public tests
-
-When working on source code rather than the presentation layer, run:
+Its five code cells are aggregate analyses and do not fit models. This command executes a copy and verifies that its outputs persist after save/reopen:
 
 ```bash
-pytest
-ruff check .
-mypy
+uv run --frozen python scripts/execute_public_closeout.py
 ```
 
-The project configuration for those tools is in `pyproject.toml`.
+A local Jupyter kernel requires local socket access; a restricted execution sandbox may block its startup. The Quality workflow executes this single aggregate notebook on GitHub Actions and saves a downloadable notebook artifact. The generated local copy is ignored by Git. This verifies computational execution and saved output data; it does not claim a browser visual-render check. Earlier notebooks have their own historical data and checkpoint requirements: [manual reproduction](MANUAL_REPRODUCTION.md). Reviewing their saved outputs does not require launching the studies again.
 
-## 5. What is intentionally not reproducible from GitHub alone
+## Evidence and privacy boundary
 
-The repository does not include:
+| Publicly repeatable | Requires private artifacts |
+|---|---|
+| Aggregate arithmetic, notebook summary tables, and ledger counts | Recomputing rank scores and paired intervals from full predictions |
+| Synthetic delayed-label boundary and failure tests | Replaying the exact final competition stream |
+| Tests for selected published historical source | Refitting the newest complete private model system |
 
-- raw competition data;
-- private target/prediction matrices;
-- current fitted model weights;
-- private AWS checkpoints;
-- credentials or tokens;
-- operational logs from the private SageMaker workspace;
-- the newest complete private orchestration package.
-
-Those omissions are deliberate. They prevent redistribution of restricted data and keep the repository focused on reviewable engineering evidence rather than serving as a turnkey competition replication kit.
-
-## 6. Evidence provenance
-
-Public metrics are derived from recorded execution receipts and aggregate closeout artifacts. Major historical evidence IDs are retained in `reports/portfolio_summary.json`. The final research ledger records the later model-family decisions without distributing underlying private predictions.
-
-The public record is therefore reproducible in two layers:
-
-1. **code-level reproducibility** for the published package and tests;
-2. **evidence-level reproducibility** for the closeout narrative, tables, and figures.
+Raw competition data, target/prediction matrices, fitted weights, private checkpoints, credentials, operational logs, and the newest orchestration package are excluded. The aggregate summaries retain historical evidence IDs as references, not as public raw receipts. See [publication scope](PUBLICATION_SCOPE.md).

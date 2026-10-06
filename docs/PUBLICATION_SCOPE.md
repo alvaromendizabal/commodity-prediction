@@ -14,6 +14,7 @@ The public portfolio includes:
 - a final closeout notebook with executable aggregate-analysis cells;
 - aggregate evaluation results and a machine-readable experiment ledger;
 - a reproducibility guide and portfolio-verification script;
+- an authored synthetic delayed-label example with failure-path tests;
 - selected historical source, notebooks, and figures already published in the repository;
 - a final research closeout describing the validation evolution, modeling breadth, engineering decisions, and limitations.
 
