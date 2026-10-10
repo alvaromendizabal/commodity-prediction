@@ -1,6 +1,12 @@
-# Reviewer guide
+# Commodity forecasting · Engineering review
 
-This is a completed forecasting research case study by Alvaro Mendizabal. It demonstrates point-in-time evaluation, controlled model comparisons, cloud experiment recovery, and the judgment to retain a negative result.
+**Alvaro Mendizabal · Time-series ML · Point-in-time evaluation · AWS research engineering**
+
+I built the research workflow from data contracts and feature/model experiments to
+chronological evaluation, recoverable cloud execution and analytical reporting. This
+completed case study demonstrates point-in-time correctness, controlled model
+comparisons and the judgment to retain a negative result when stricter evidence
+disagreed with a promising development score.
 
 ## Three-minute interactive review
 
@@ -19,7 +25,7 @@ Open [Forecast Lab](https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site) and 
 | What did exploratory analysis reveal? | [Executed EDA](../notebooks/01_eda.ipynb) and [feature research](../notebooks/02_feature_research.ipynb) |
 | How were contradictory experiments reconciled? | [Saved-prediction reconciliation](PORTFOLIO_CASE_STUDY.md#a-zero-fit-debugging-result-that-changed-the-research-direction): identical shared predictions, different target composition |
 | Why reject an apparently improved candidate? | [Portfolio notebook](../notebooks/27_portfolio_case_study.ipynb): conditional paired interval crossed zero |
-| Which methods were tested? | [Twenty-family ledger](../reports/final_research_ledger.json) and [public-source audit](competitive-research.md) |
+| Which methods were tested? | [Twenty-family ledger](../reports/final_research_ledger.json) and [method references](competitive-research.md) |
 | How is correctness checked? | [Quality workflow](../.github/workflows/quality.yml), [portfolio workflow](../.github/workflows/portfolio.yml), and [test suite](../tests) |
 | What is deliberately withheld? | [Publication boundary](PUBLICATION_SCOPE.md) |
 
@@ -31,7 +37,7 @@ Open [Forecast Lab](https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site) and 
 - The final 134-date replay is post-competition research. Public metadata verifies its recorded scope; it does not supply private predictions or a reproducible official placement.
 - The aggregate verifier establishes internal consistency of committed evidence. It cannot authenticate withheld raw receipts or independently regenerate forecasting performance.
 
-## Ownership and discussion
+## Engineering contributions and discussion
 
 I owned the research loop, data contracts, implementation, AWS execution and recovery, evaluation, and communication. Publicly documented methods are credited alongside my implementations and controlled experiments. The repository does not claim live deployment or business revenue.
 
