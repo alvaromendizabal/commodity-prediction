@@ -16,13 +16,19 @@ I owned the research loop from problem framing through closeout:
 
 - data-contract and target-timing design;
 - feature and representation research;
-- model implementation and clean-room reconstruction of documented public ideas;
+- model implementation, integration and controlled evaluation of documented methods;
 - chronological validation and matched-population comparison;
 - SageMaker execution, checkpointing, failure diagnosis, and resumability;
 - uncertainty analysis and promotion gates;
 - notebook/report generation and public/private publication boundaries.
 
 GitHub is the curated public evidence layer. The private AWS workspace retains detailed execution artifacts, fitted checkpoints, prediction matrices, and operational logs that are not appropriate to publish wholesale.
+
+## Interactive point-in-time demonstration
+
+I built the [Forecast Lab](../public-demo/index.html) to expose the information boundary at each prediction. It fits ridge models on six fictional series and lets a reviewer change horizon, publication delay and training window. Its eligibility ledger shows which labels were available at each origin; normalization uses only that origin's training rows.
+
+The browser evaluates predictions forward in time against released-label mean and zero controls. Its RMSE, MAE and correlation are computed from the synthetic run, independently of the historical cross-sectional research scores. [Run and test the demo](REPRODUCIBILITY.md).
 
 ## System design
 
