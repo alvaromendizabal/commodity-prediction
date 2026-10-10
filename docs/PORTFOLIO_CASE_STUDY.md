@@ -26,7 +26,7 @@ GitHub is the curated public evidence layer. The private AWS workspace retains d
 
 ## Interactive point-in-time demonstration
 
-I built the [Forecast Lab](../public-demo/index.html) to expose the information boundary at each prediction. It fits ridge models on six fictional series and lets a reviewer change horizon, publication delay and training window. Its eligibility ledger shows which labels were available at each origin; normalization uses only that origin's training rows.
+I built the [Forecasting Lab](https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site) to expose the information boundary at each prediction. It fits ridge models on six fictional series and lets a reviewer change horizon, publication delay and training window. Its eligibility ledger shows which labels were available at each origin; normalization uses only that origin's training rows.
 
 The browser evaluates predictions forward in time against released-label mean and zero controls. Its RMSE, MAE and correlation are computed from the synthetic run, independently of the historical cross-sectional research scores. [Run and test the demo](REPRODUCIBILITY.md).
 
@@ -148,7 +148,7 @@ The project demonstrates the ability to build an ML research system that can:
 
 - detect leakage and information-timing errors;
 - reconcile apparently contradictory experiments;
-- reproduce external ideas without copying code blindly;
+- translate modeling hypotheses into controlled experiments;
 - scale controlled experiments in AWS;
 - stop weak directions early;
 - preserve negative evidence;
