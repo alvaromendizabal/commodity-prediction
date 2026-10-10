@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#132c36" />
+    <meta
+      name="description"
+      content="Fit and inspect a chronological forecast in your browser. An authored synthetic demonstration of delayed labels, train-only preprocessing, and forward evaluation."
+    />
+    <link
+      rel="canonical"
+      href="https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site"
+    />
+    <title>Forecasting lab · Alvaro Mendizabal</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="engine.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#lab">Skip to the forecasting lab</a>
+    <header class="page header">
+      <a
+        class="brand"
+        href="https://github.com/alvaromendizabal/commodity-prediction"
+        ><svg viewBox="0 0 38 38" aria-hidden="true">
+          <rect x="1" y="1" width="36" height="36" rx="9" fill="#132c36" />
+          <path
+            d="m8 26 7-8 6 4 9-12"
+            fill="none"
+            stroke="#e4be73"
+            stroke-width="2"
+          />
+          <path d="M8 30h23" stroke="#789494" /></svg
+        ><span
+          >FORECASTING LAB<span class="brand-sub"
+            >A public engineering sandbox</span
+          ></span
+        ></a
+      >
+      <nav aria-label="Project links">
+        <a href="#method">The timing contract</a
+        ><a href="https://github.com/alvaromendizabal/commodity-prediction"
+          >View source <span aria-hidden="true">↗</span></a
+        >
+      </nav>
+    </header>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <p class="eyebrow"><i></i> Models you can inspect</p>
+          <h1>Forecast forward.<br /><span>Keep the past honest.</span></h1>
+          <p class="lede">
+            A forecast can only learn from what was available at the time. Fit a
+            small model, delay the labels, and inspect exactly where its
+            training history ends.
+          </p>
+        </div>
+        <aside class="scope">
+          <span class="scope-tag">SYNTHETIC_ONLY</span>
+          <h2>Fictional signals.<br />Real fits. Visible boundaries.</h2>
+          <p>
+            Six authored series, generated locally. No market data, private
+            models, or financial performance claims.
+          </p>
+          <div>
+            <span>Browser only</span><span>No setup</span
+            ><span>No data upload</span>
+          </div>
+        </aside>
+      </section>
+      <section
+        class="lab"
+        id="lab"
+        aria-label="Interactive point-in-time forecasting lab"
+      >
+        <div class="lab-heading">
+          <div>
+            <span class="section-index">01</span>
+            <h2>Set the experiment</h2>
+          </div>
+          <span class="local-label"><i></i> Runs on your device</span>
+        </div>
+        <form id="experiment-form" class="controls">
+          <div class="field">
+            <label for="scenario">Authored sequence</label
+            ><select id="scenario">
+              <option value="steady">Cycles + persistence</option>
+              <option value="shift">A later level shift</option>
+              <option value="noisy">More observation noise</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="horizon">Forecast horizon</label
+            ><select id="horizon">
+              <option value="1">1 observation</option>
+              <option value="5" selected>5 observations</option>
+              <option value="10">10 observations</option>
+              <option value="20">20 observations</option>
+            </select>
+          </div>
+          <div class="field delay-field">
+            <label for="delay"
+              >Publication delay
+              <output id="delay-value" for="delay">3 days</output></label
+            ><input id="delay" type="range" min="0" max="20" value="3" /><span
+              >After the target window closes</span
+            >
+          </div>
+          <div class="field">
+            <label for="window">Training window</label
+            ><select id="window">
+              <option value="40">40 origins</option>
+              <option value="80" selected>80 origins</option>
+              <option value="120">120 origins</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="alpha">Ridge penalty</label
+            ><select id="alpha">
+              <option value="0.1">0.1 · light</option>
+              <option value="5" selected>5 · moderate</option>
+              <option value="25">25 · stronger</option>
+            </select>
+          </div>
+          <button id="run-button" class="button primary" type="submit">
+            Fit &amp; evaluate <span aria-hidden="true">→</span>
+          </button>
+        </form>
+        <p id="run-status" class="run-status" role="status" aria-live="polite">
+          Preparing the synthetic panel…
+        </p>
+        <div id="error-message" class="error" role="alert" hidden></div>
+        <div id="results" hidden>
+          <div class="chart-layout">
+            <div class="chart-column">
+              <div class="plot-header">
+                <div>
+                  <p class="eyebrow">A forward evaluation</p>
+                  <h3 id="plot-title">Alloy A</h3>
+                </div>
+                <div class="plot-select">
+                  <label for="series">Inspect series</label
+                  ><select id="series" aria-label="Series to inspect"></select>
+                </div>
+              </div>
+              <div class="plot-shell">
+                <div class="plot-topline">
+                  <span id="plot-model">Regularized lag model</span
+                  ><span>ARBITRARY SIGNAL UNITS</span>
+                </div>
+                <canvas
+                  id="forecast-canvas"
+                  tabindex="0"
+                  role="img"
+                  aria-describedby="plot-help"
+                  aria-label="Synthetic forecast chart"
+                ></canvas>
+                <div class="plot-legend">
+                  <span><i class="legend-observed"></i>Observed signal</span
+                  ><span><i class="legend-prediction"></i>Forecast</span
+                  ><span
+                    ><i class="legend-target"></i>Realized target mean</span
+                  >
+                </div>
+              </div>
+              <div class="origin-control">
+                <div>
+                  <label for="origin">Inspect forecast origin</label
+                  ><strong id="origin-value">Day 120</strong>
+                </div>
+                <input
+                  id="origin"
+                  type="range"
+                  min="80"
+                  max="219"
+                  value="120"
+                />
+                <div class="range-labels">
+                  <span>Day 80</span
+                  ><span>Move through time · arrow keys work too</span
+                  ><span id="origin-end">Day 219</span>
+                </div>
+              </div>
+              <p class="plot-help" id="plot-help">
+                This retrospective plot shows realized values for inspection.
+                Every forecast was fitted separately with only its eligible
+                history. Focus the chart and use ← / → to move the cutoff.
+              </p>
+            </div>
+            <aside class="boundary" aria-labelledby="boundary-title">
+              <p class="eyebrow">Point-in-time inspection</p>
+              <h3 id="boundary-title">What could it know?</h3>
+              <span id="boundary-check" class="verified"
+                >Release boundary verified</span
+              >
+              <div class="boundary-rule">
+                <span>Eligible label origin</span
+                ><strong id="boundary-equation">s + 5 + 3 ≤ 120</strong
+                ><small
+                  >Target window + publication delay must end by the forecast
+                  origin.</small
+                >
+              </div>
+              <dl id="boundary-facts"></dl>
+              <div class="boundary-strip" aria-hidden="true">
+                <span id="eligible-strip"></span
+                ><span id="withheld-strip"></span>
+              </div>
+              <div class="boundary-legend">
+                <span><i></i>Eligible training origins</span
+                ><span><i></i>Labels still withheld</span>
+              </div>
+              <div class="snapshot-values">
+                <div>
+                  <span>Forecast</span
+                  ><strong id="snapshot-prediction">—</strong>
+                </div>
+                <div>
+                  <span>Realized target</span
+                  ><strong id="snapshot-actual">—</strong>
+                </div>
+              </div>
+              <p class="small-note">
+                The realized target is shown for retrospective review. It is
+                excluded from this fit.
+              </p>
+              <button
+                class="button guard-button"
+                id="guard-button"
+                type="button"
+              >
+                Try reading a future label <span aria-hidden="true">↗</span>
+              </button>
+              <p id="guard-result" role="status" aria-live="polite">
+                The same release guard protects every training snapshot.
+              </p>
+            </aside>
+          </div>
+          <div class="ledger-section">
+            <div class="ledger-heading">
+              <div>
+                <p class="eyebrow">Inspect the actual cutoff</p>
+                <h3>Label availability ledger</h3>
+              </div>
+              <p id="ledger-scope">
+                The final released origins and the first withheld origins for
+                the selected series.
+              </p>
+            </div>
+            <div class="table-scroll">
+              <table class="ledger-table">
+                <caption class="sr-only">
+                  Training label availability at the selected forecast origin
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Label origin</th>
+                    <th scope="col">Target ends</th>
+                    <th scope="col">Published</th>
+                    <th scope="col">Snapshot access</th>
+                    <th scope="col">Label mean</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-body"></tbody>
+              </table>
+            </div>
+            <p id="ledger-note" class="small-note"></p>
+          </div>
+        </div>
+      </section>
+      <section
+        id="score-section"
+        class="score-section"
+        aria-labelledby="scores-title"
+        hidden
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Same origins. Same six series.</p>
+            <h2 id="scores-title">Compare the forecasts.</h2>
+          </div>
+          <p>
+            Descriptive errors on this authored panel. Lower RMSE and MAE are
+            better. Changing controls creates a new synthetic experiment.
+          </p>
+        </div>
+        <div id="metric-cards" class="metrics"></div>
+        <div class="comparison-top">
+          <span id="evaluation-scope"></span
+          ><button class="button" id="export-button" type="button">
+            Export data + result <span aria-hidden="true">↓</span>
+          </button>
+        </div>
+        <div class="table-scroll comparison-wrap">
+          <table class="comparison">
+            <caption class="sr-only">
+              Candidate models on identical forward evaluation origins
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Forecast candidate</th>
+                <th scope="col">RMSE ↓</th>
+                <th scope="col">MAE ↓</th>
+                <th scope="col">Correlation</th>
+                <th scope="col">Forecasts</th>
+              </tr>
+            </thead>
+            <tbody id="comparison-body"></tbody>
+          </table>
+        </div>
+        <p class="score-caveat">
+          Overlapping horizons are not independent samples. Correlation is
+          descriptive, not a trading metric; it is undefined for the constant
+          zero forecast. No model is automatically selected from these scores.
+        </p>
+        <details class="receipt">
+          <summary>Inspect the fit recipe and current-origin receipt</summary>
+          <pre id="receipt-json"></pre>
+        </details>
+      </section>
+      <section id="method" class="method">
+        <div>
+          <p class="eyebrow">The timing contract</p>
+          <h2>Availability is part<br />of the model.</h2>
+          <p>
+            The smallest useful forecasting system needs more than a fitted
+            line. This example makes three implementation choices visible and
+            testable.
+          </p>
+          <a
+            class="button"
+            href="https://github.com/alvaromendizabal/commodity-prediction/tree/main/public-demo"
+            >Read the public engine <span aria-hidden="true">↗</span></a
+          >
+        </div>
+        <ol>
+          <li>
+            <span>01</span>
+            <div>
+              <h3>Build features from completed observations</h3>
+              <p>
+                Lagged values, trailing means, a known calendar cycle, and
+                series indicators form a transparent ten-feature model.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span>02</span>
+            <div>
+              <h3>Fit preprocessing inside each snapshot</h3>
+              <p>
+                Feature means and scales come only from eligible training rows.
+                Ridge regularization stabilizes the small linear system.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span>03</span>
+            <div>
+              <h3>Move forward, then evaluate</h3>
+              <p>
+                Each origin gets a fresh fit. Its realized target is used for
+                scoring afterward, while the training receipt records the exact
+                release boundary.
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+    </main>
+    <footer class="page footer">
+      <div>
+        <strong>Alvaro Mendizabal</strong
+        ><span>Time series · Evaluation design · ML engineering</span>
+      </div>
+      <p>
+        Authored synthetic data. Browser-local computation.<br />No private
+        research artifacts or financial performance claims.
+      </p>
+      <a href="https://github.com/alvaromendizabal/commodity-prediction"
+        >Project on GitHub ↗</a
+      >
+    </footer>
+  </body>
+</html>

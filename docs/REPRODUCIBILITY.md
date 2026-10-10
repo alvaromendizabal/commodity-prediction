@@ -2,6 +2,21 @@
 
 The public release supports three distinct tasks: checking published aggregates, exercising a synthetic timing contract, and running the public source tests. Reproducing the private trained system requires artifacts that are intentionally withheld.
 
+## Run the point-in-time Forecast Lab
+
+[Open the public demo](https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site) without installation. To run the same source locally, open `public-demo/index.html` from a checkout, or serve the checkout with `python -m http.server 8000` and visit `http://localhost:8000/public-demo/`.
+
+Choose a 1/5/10/20-step horizon, a publication delay and a training window. The browser refits ridge models on six fictional series, using only labels released by the start of each origin. Scaling is fitted on those training rows. Inspect the eligible-label ledger and compare forward predictions with released-label mean and zero controls using matched RMSE, MAE and correlation.
+
+Export includes generated data, configuration and predictions. It contains no market feed or private recipe. These synthetic metrics are not the historical cross-sectional rank-correlation score.
+
+```bash
+node tools/test_public_demo.mjs
+```
+
+No package installation, backend or credentials are needed for the browser. Python checks below verify separate historical aggregates and the smaller timing example.
+
+
 ## Quick checks: no installation or cloud account
 
 Use Python 3.12 from the repository root:

@@ -4,15 +4,19 @@
 **Status:** complete  
 **Scope:** employer-facing research and ML-engineering record
 
+## Public demo release
+
+The [Forecast Lab](https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site) adds a live CPU forecasting workflow over authored synthetic series: forward-only ridge fitting, release-time eligibility, matched baselines and inspectable exports. It makes the research's timing contracts interactive. It changes none of the historical results below and makes no trading-profitability claim. [Run and verify](REPRODUCIBILITY.md).
+
 ## Executive summary
 
-This project developed a point-in-time forecasting research system for 424 commodity-related targets across four forecast horizons. What began as a modeling study grew into a broader ML-engineering program covering temporal data contracts, model-family reconstruction, cloud execution, experiment recovery, uncertainty-aware promotion, and increasingly strict evaluation design.
+This project developed a point-in-time forecasting research system for 424 commodity-related targets across four forecast horizons. What began as a modeling study grew into a broader ML-engineering program covering temporal data contracts, model-family integration and evaluation, cloud execution, experiment recovery, uncertainty-aware promotion, and increasingly strict evaluation design.
 
 The final result is valuable because the project did not stop at the first attractive validation gain. Multiple apparently promising systems were tested on later regimes, many were rejected, and the validation design was strengthened whenever evidence showed that an earlier screen was too optimistic. The completed record therefore demonstrates both modeling breadth and scientific judgment.
 
 ## Research program
 
-Major families independently reconstructed, adapted, or stress-tested during the project included:
+Major families I implemented, integrated or stress-tested during the project included:
 
 1. target-routed tree ensembles and mixed-horizon panels;
 2. direct MLP/RNN systems and short-sequence models;
@@ -82,7 +86,7 @@ This body of work demonstrates the ability to:
 
 - own an ML problem end to end;
 - translate an evaluation rule into point-in-time data contracts;
-- independently reconstruct external modeling ideas rather than copy them;
+- translate documented methods into tested implementations and controlled experiments;
 - design controlled ablations and matched comparisons;
 - debug apparent model regressions without unnecessary retraining;
 - manage GPU and CPU experimentation in AWS;

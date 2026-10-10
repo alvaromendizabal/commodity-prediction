@@ -2,7 +2,9 @@
 
 This is a completed forecasting research case study by Alvaro Mendizabal. It demonstrates point-in-time evaluation, controlled model comparisons, cloud experiment recovery, and the judgment to retain a negative result.
 
-## Five-minute review
+## Three-minute interactive review
+
+Open [Forecast Lab](https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site) and change the horizon, publication delay or training window to inspect the live computation. [Launch and test instructions](REPRODUCIBILITY.md). Then follow the historical evidence path below.
 
 1. Read the [README result table](../README.md#results-and-decisions). Each comparison has an explicit evaluation population.
 2. Open the [case study](PORTFOLIO_CASE_STUDY.md), especially the zero-fit reconciliation and the locked historical assessment. These connect an engineering decision to a measured outcome.
@@ -31,6 +33,6 @@ This is a completed forecasting research case study by Alvaro Mendizabal. It dem
 
 ## Ownership and discussion
 
-I owned the research loop, data contracts, implementation, AWS execution and recovery, evaluation, and communication. Publicly documented methods are credited separately from my reconstructions and adaptations. The repository does not claim live deployment or business revenue.
+I owned the research loop, data contracts, implementation, AWS execution and recovery, evaluation, and communication. Publicly documented methods are credited alongside my implementations and controlled experiments. The repository does not claim live deployment or business revenue.
 
 Useful interview topics are release timing, matched-population debugging, uncertainty-based promotion, expensive-work recovery, and why a simpler control won on a stricter evaluation. Historical documents remain available as dated research records; the current project status is defined in the [final closeout](FINAL_RESEARCH_CLOSEOUT.md).
