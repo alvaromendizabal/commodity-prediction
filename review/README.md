@@ -67,3 +67,12 @@ python3 -S review/run.py --check-page
 ```
 
 After an intentional configuration or template change, regenerate the static brief with `python3 -S review/run.py --render`, inspect it, then run the checks above. The kit needs no JavaScript or network access to render its HTML. It uses semantic headings, keyboard-visible links, a skip link, responsive layouts, and print styling.
+
+## Source-bound replay
+
+The optional Node path also exercises the [export replay contract](../docs/DEMO_REPLAY.md).
+Review receipts now fingerprint the complete public demo and tool source inventory,
+including added and removed files. They bind command arguments, captured logs and
+the rendered brief. A clean checkout records its exact commit with immutable source
+links; uncommitted work is identified explicitly. These are consistency checks, not
+an independent authentication of historical research scores.

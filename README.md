@@ -29,6 +29,17 @@ The six signal series are authored synthetic data. RMSE, MAE and correlation are
 node tools/test_public_demo.mjs
 ```
 
+## Replay an exported result
+
+The browser export is now an executable review artifact. Recompute it with the actual public engine and verify its predictions, decisions, and source identity:
+
+```bash
+node tools/replay_public_demo.mjs --output /tmp/forecast-replay
+node tools/replay_public_demo.mjs --output /tmp/forecast-replay --check
+```
+
+The default command generates an authored reference run. Add `--input your-export.json` to verify your own browser download. Each bundle contains the export, a source/runtime receipt and a SHA-256 manifest. [Replay contract and failure tests](docs/DEMO_REPLAY.md).
+
 ## Results and decisions
 
 Historical scores below are mean daily cross-sectional rank correlation divided by its population standard deviation, without annualization. Compare models within each row; the dates differ between rows.

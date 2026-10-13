@@ -1,3 +1,4 @@
+import { replay } from "./replay_public_demo.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -416,6 +417,7 @@ const payload = JSON.parse(await env.downloads[0].text());
 assert.equal(payload.result.config.horizon, 20);
 assert.equal(payload.result.predictions.length, 840);
 assert.equal(payload.data.scenario, "shift");
+assert.equal(replay(payload).forecast_rows, 840);
 console.log(
   `PASS exported JSON bytes match the final run\n${count + 1} public demo tests passed.`,
 );

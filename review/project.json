@@ -54,6 +54,15 @@
       "implementation": "scripts/verify_portfolio.py",
       "tests": "tests/test_portfolio_evidence.py",
       "evidence": "reports/final_research_ledger.json"
+    },
+    {
+      "audience": "ML engineering",
+      "title": "Turn an exported result into a replayable artifact.",
+      "decision": "Regenerate the synthetic environment, recompute the output with the actual public engine, and reject stale source or altered evidence.",
+      "boundary": "The receipt verifies local computational consistency, not historical private-model performance.",
+      "implementation": "tools/replay_public_demo.mjs",
+      "tests": "tools/test_replay_public_demo.mjs",
+      "evidence": "docs/DEMO_REPLAY.md"
     }
   ],
   "commands": [
@@ -74,6 +83,12 @@
       "runtime": "node",
       "entry": "tools/test_public_demo.mjs",
       "args": []
+    },
+    {
+      "id": "forecast-export-replay",
+      "runtime": "node",
+      "entry": "tools/test_replay_public_demo.mjs",
+      "args": []
     }
   ],
   "read_more": [
@@ -92,5 +107,27 @@
   ],
   "schema_version": 1,
   "repository": "alvaromendizabal/commodity-prediction",
-  "reviewed_base_commit": "87d093b62a531c0766b0e1103d848b0cecb6e6d4"
+  "reviewed_base_commit": "87d093b62a531c0766b0e1103d848b0cecb6e6d4",
+  "source_files": [
+    "tools/replay_bundle.mjs",
+    "tools/replay_public_demo.mjs",
+    "tools/test_replay_public_demo.mjs"
+  ],
+  "source_scopes": [
+    {
+      "directory": "public-demo",
+      "suffixes": [
+        ".js",
+        ".html",
+        ".css"
+      ]
+    },
+    {
+      "directory": "tools",
+      "suffixes": [
+        ".py",
+        ".mjs"
+      ]
+    }
+  ]
 }
