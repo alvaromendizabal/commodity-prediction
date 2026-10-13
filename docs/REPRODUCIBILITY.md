@@ -75,3 +75,11 @@ A local Jupyter kernel requires local socket access; a restricted execution sand
 | Tests for selected published historical source | Refitting the newest complete private model system |
 
 Raw competition data, target/prediction matrices, fitted weights, private checkpoints, credentials, operational logs, and the newest orchestration package are excluded. The aggregate summaries retain historical evidence IDs as references, not as public raw receipts. See [publication scope](PUBLICATION_SCOPE.md).
+
+## Recompute a browser export
+
+The [public replay contract](DEMO_REPLAY.md) adds a dependency-free Node command that
+regenerates the synthetic environment and verifies every exported computation against
+the actual browser engine. It writes a source/runtime receipt and content manifest,
+rejects altered results, and re-executes verification under `--check`. CI exercises
+this path on Node 22 and Node 24.19.0; no private research is launched.
