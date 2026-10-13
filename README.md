@@ -1,5 +1,7 @@
 # Commodity Forecasting
 
+> **Inspect the engineering:** [Source-linked review brief](review/README.md) · [Run the verified public checks](review/README.md#one-command-an-inspectable-result) · [Review-kit CI](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/employer-review.yml)
+
 **Alvaro Mendizabal · Time-series ML · Point-in-time evaluation · AWS research engineering**
 
 [![Quality](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/quality.yml/badge.svg)](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/quality.yml)

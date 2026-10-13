@@ -1,0 +1,96 @@
+{
+  "title": "Forecast only with information that has arrived.",
+  "discipline": "Time-series ML / point-in-time data / experiment design",
+  "summary": "A commodity-forecasting research system built around delayed-label availability, chronological evaluation, controlled feature studies, and recoverable execution. The strongest lesson is knowing when a promising development result does not transfer.",
+  "signals": [
+    {
+      "value": "20 families",
+      "label": "Documented research-method ledger"
+    },
+    {
+      "value": "37 targets",
+      "label": "Shared-target prediction parity audit"
+    },
+    {
+      "value": "247 dates",
+      "label": "Locked historical assessment population"
+    }
+  ],
+  "scope": "The public commands recompute aggregate evidence and execute a synthetic delayed-label access contract. Optional browser tests exercise an online ridge demonstration using released labels only. These checks do not establish trading profitability.",
+  "private_boundary": "Restricted market data, private prediction matrices, fitted research weights, current feature recipes, full orchestration, and operational cloud state remain excluded. Historical source credits and results are retained.",
+  "cards": [
+    {
+      "audience": "Data science",
+      "title": "Treat publication time as part of the feature contract.",
+      "decision": "Reject labels whose release time lies after the forecast origin instead of relying only on observation dates.",
+      "boundary": "The authored timing fixture is not an official data-release simulator.",
+      "implementation": "examples/delayed_label_demo.py",
+      "tests": "tests/test_delayed_label_demo.py",
+      "evidence": "docs/PORTFOLIO_CASE_STUDY.md"
+    },
+    {
+      "audience": "ML engineering",
+      "title": "Preserve checkpoint identity across interruptions.",
+      "decision": "Bind persistent research state to input and configuration identities rather than assuming a file is reusable because it exists.",
+      "boundary": "The latest private training state is not included.",
+      "implementation": "src/commodity_prediction/studies/storage.py",
+      "tests": "tests/test_study_storage.py",
+      "evidence": "reports/execution_recovery.json"
+    },
+    {
+      "audience": "Data science",
+      "title": "Compare models on the same target population.",
+      "decision": "Use target-composition and prediction-parity checks before interpreting an apparent metric regression.",
+      "boundary": "Matching a shared subset does not establish equality on different target universes.",
+      "implementation": "src/commodity_prediction/studies/evaluation.py",
+      "tests": "tests/test_feature_study.py",
+      "evidence": "reports/portfolio_summary.json"
+    },
+    {
+      "audience": "Data science",
+      "title": "Publish a defensible negative conclusion.",
+      "decision": "Retain the locked assessment where the incumbent did not demonstrate an advantage over a training-only mean.",
+      "boundary": "The consumed assessment is not reopened as a fresh selection set.",
+      "implementation": "scripts/verify_portfolio.py",
+      "tests": "tests/test_portfolio_evidence.py",
+      "evidence": "reports/final_research_ledger.json"
+    }
+  ],
+  "commands": [
+    {
+      "id": "forecast-evidence",
+      "runtime": "python",
+      "entry": "scripts/verify_portfolio.py",
+      "args": []
+    },
+    {
+      "id": "label-timing",
+      "runtime": "python",
+      "entry": "examples/delayed_label_demo.py",
+      "args": []
+    },
+    {
+      "id": "forecast-lab",
+      "runtime": "node",
+      "entry": "tools/test_public_demo.mjs",
+      "args": []
+    }
+  ],
+  "read_more": [
+    {
+      "path": "docs/PORTFOLIO_CASE_STUDY.md",
+      "label": "Case study"
+    },
+    {
+      "path": "docs/REPRODUCIBILITY.md",
+      "label": "Reproduction guide"
+    },
+    {
+      "path": "docs/PUBLICATION_SCOPE.md",
+      "label": "Publication scope"
+    }
+  ],
+  "schema_version": 1,
+  "repository": "alvaromendizabal/commodity-prediction",
+  "reviewed_base_commit": "87d093b62a531c0766b0e1103d848b0cecb6e6d4"
+}
