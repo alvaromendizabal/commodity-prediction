@@ -39,6 +39,15 @@
     },
     {
       "audience": "Data science",
+      "title": "Inspect where pooled accuracy breaks down.",
+      "decision": "Recompute errors by series and chronological half, retaining sample counts, bias and matched baseline errors.",
+      "boundary": "These are descriptive diagnostics on authored synthetic observations, with dependent target horizons.",
+      "implementation": "public-demo/engine.js",
+      "tests": "tools/test_public_demo.mjs",
+      "evidence": "docs/ERROR_ANALYSIS.md"
+    },
+    {
+      "audience": "Data science",
       "title": "Compare models on the same target population.",
       "decision": "Use target-composition and prediction-parity checks before interpreting an apparent metric regression.",
       "boundary": "Matching a shared subset does not establish equality on different target universes.",
@@ -103,11 +112,15 @@
     {
       "path": "docs/PUBLICATION_SCOPE.md",
       "label": "Publication scope"
+    },
+    {
+      "path": "docs/REPOSITORY_GUIDE.md",
+      "label": "Repository map"
     }
   ],
   "schema_version": 1,
   "repository": "alvaromendizabal/commodity-prediction",
-  "reviewed_base_commit": "87d093b62a531c0766b0e1103d848b0cecb6e6d4",
+  "reviewed_base_commit": "60f06ce2973cb668bb0d6ba7f6ea42dcd0600389",
   "source_files": [
     "tools/replay_bundle.mjs",
     "tools/replay_public_demo.mjs",

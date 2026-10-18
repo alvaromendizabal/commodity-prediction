@@ -262,6 +262,31 @@
         row.appendChild(el("td", String(result.metrics[key].count)));
         body.appendChild(row);
       }
+      for (const [id, slices] of [
+        ["slice-body", result.diagnostics.by_series],
+        ["period-body", result.diagnostics.by_period],
+      ]) {
+        const target = $(id);
+        target.replaceChildren();
+        for (const slice of slices) {
+          const row = el("tr");
+          const name = slice.series_id
+            ? data.series.find((item) => item.id === slice.series_id).name
+            : `${slice.label} · ${slice.first_origin ?? "—"}–${slice.last_origin ?? "—"}`;
+          const label = el("th", name);
+          label.setAttribute("scope", "row");
+          row.appendChild(label);
+          for (const value of [
+            slice.count,
+            format(slice.metrics[state.model].rmse),
+            format(slice.metrics.mean.rmse),
+            format(slice.metrics[state.model].bias),
+          ]) row.appendChild(el("td", String(value)));
+          target.appendChild(row);
+        }
+      }
+      $("slice-scope").textContent =
+        `${result.models[state.model]} versus the released-label mean on each identical slice. Bias = prediction minus realized target; positive values indicate overprediction.`;
     }
     function renderOrigin() {
       if (!result) return;

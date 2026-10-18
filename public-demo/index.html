@@ -319,6 +319,28 @@
           <a href="https://github.com/alvaromendizabal/commodity-prediction/blob/main/docs/DEMO_REPLAY.md">replay every fit and prediction locally</a>
           with the same public engine. No dependencies or account required.
         </p>
+        <div class="diagnostic-heading">
+          <p class="eyebrow">Error analysis</p>
+          <h3>Where does the forecast break down?</h3>
+          <p id="slice-scope" class="chart-note"></p>
+        </div>
+        <div class="diagnostic-grid">
+          <div class="table-scroll comparison-wrap" tabindex="0" role="region" aria-label="Forecast errors by series">
+            <table class="comparison">
+              <caption>Each fictional series, evaluated separately</caption>
+              <thead><tr><th scope="col">Series</th><th scope="col">Forecasts</th><th scope="col">Selected RMSE</th><th scope="col">Mean RMSE</th><th scope="col">Bias</th></tr></thead>
+              <tbody id="slice-body"></tbody>
+            </table>
+          </div>
+          <div class="table-scroll comparison-wrap" tabindex="0" role="region" aria-label="Forecast errors over time">
+            <table class="comparison">
+              <caption>Chronological halves of this evaluation</caption>
+              <thead><tr><th scope="col">Period</th><th scope="col">Forecasts</th><th scope="col">Selected RMSE</th><th scope="col">Mean RMSE</th><th scope="col">Bias</th></tr></thead>
+              <tbody id="period-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="chart-note">Slice errors come from the actual forecasts above. They do not retune the model. Overlapping target windows remain dependent; these tables describe this synthetic run.</p>
         <details class="receipt">
           <summary>Inspect the fit recipe and current-origin receipt</summary>
           <pre id="receipt-json"></pre>

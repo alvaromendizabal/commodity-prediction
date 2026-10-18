@@ -163,6 +163,40 @@ test("invalid, missing, and insufficient training inputs fail explicitly", () =>
   empty.series = [];
   assert.throws(() => E.evaluate(empty, config), /six-series/);
 });
+test("slice errors reconcile to pooled errors by counts, not by averaging RMSE", () => {
+  for (const slices of [result.diagnostics.by_series, result.diagnostics.by_period]) {
+    assert.equal(slices.reduce((n, row) => n + row.count, 0), result.predictions.length);
+    for (const model of Object.keys(result.models)) {
+      const mse = slices.reduce((sum, row) => sum + row.metrics[model].rmse ** 2 * row.count, 0) / result.predictions.length;
+      assert(Math.abs(Math.sqrt(mse) - result.metrics[model].rmse) < 1e-12);
+      const bias = slices.reduce((sum, row) => sum + row.metrics[model].bias * row.count, 0) / result.predictions.length;
+      assert(Math.abs(bias - result.metrics[model].bias) < 1e-12);
+    }
+  }
+});
+test("descriptive slices expose concentration and drift on a hand-computed panel", () => {
+  const rows = [
+    { series_id: "A", origin: 1, actual: 0, ridge: 0, mean: 1, zero: 0 },
+    { series_id: "B", origin: 1, actual: 0, ridge: 2, mean: 1, zero: 0 },
+    { series_id: "A", origin: 2, actual: 0, ridge: 4, mean: 1, zero: 0 },
+    { series_id: "B", origin: 2, actual: 0, ridge: 0, mean: 1, zero: 0 },
+  ];
+  const summary = E.diagnose(rows);
+  assert.equal(summary.by_series[0].metrics.ridge.rmse, Math.sqrt(8));
+  assert.equal(summary.by_series[0].metrics.ridge.bias, 2);
+  assert.equal(summary.by_period[0].metrics.ridge.rmse, Math.sqrt(2));
+  assert.equal(summary.by_period[1].metrics.ridge.rmse, Math.sqrt(8));
+  assert.deepEqual(E.diagnose([...rows].reverse()), summary);
+});
+test("small slices and invalid rows cannot become optimistic diagnostic scores", () => {
+  const row = { series_id: "A", origin: 1, actual: 0, ridge: 2, mean: 1, zero: 0 };
+  assert.equal(E.diagnose([row]).by_period[1].metrics.ridge.rmse, null);
+  assert.equal(E.diagnose([row]).by_period[1].count, 0);
+  assert.throws(() => E.diagnose([]), /require/);
+  assert.throws(() => E.diagnose([row, row]), /unique/);
+  assert.throws(() => E.diagnose([{ ...row, actual: NaN }]), /finite/);
+  assert.throws(() => E.diagnose([{ ...row, ridge: "2" }]), /finite/);
+});
 class Element {
   constructor(tag = "div") {
     this.tagName = tag.toUpperCase();
@@ -302,6 +336,9 @@ test("production UI initializes real fits, chart, ledger, and candidate metrics"
   assert.equal(el("score-section").hidden, false);
   assert.equal(el("metric-cards").children.length, 4);
   assert.equal(el("comparison-body").children.length, 3);
+  assert.equal(el("slice-body").children.length, 6);
+  assert.equal(el("period-body").children.length, 2);
+  assert.match(el("slice-scope").textContent, /prediction minus realized target/);
   assert.equal(el("series").children.length, 6);
   assert.match(el("boundary-equation").textContent, /s \+ 5 \+ 3 ≤ 120/);
   assert.match(el("ledger-body").textContent, /Not exposed/);

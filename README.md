@@ -1,7 +1,5 @@
 # Commodity Forecasting
 
-> **Inspect the engineering:** [Source-linked review brief](review/README.md) · [Run the verified public checks](review/README.md#one-command-an-inspectable-result) · [Review-kit CI](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/employer-review.yml)
-
 **Alvaro Mendizabal · Time-series ML · Point-in-time evaluation · AWS research engineering**
 
 [![Quality](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/quality.yml/badge.svg)](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/quality.yml)
@@ -11,7 +9,27 @@
 
 I built a forecasting research system across **424 targets and four horizons**, including release-time data contracts, feature/model experiments, chronological evaluation and recoverable AWS execution. Its central finding was consequential: an attractive development improvement did not establish reliable advantage on a stricter historical assessment.
 
-**Start here:** [Forecast Lab demo](https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site) · [Case study](docs/PORTFOLIO_CASE_STUDY.md) · [Three-minute review](docs/REVIEWER_GUIDE.md) · [Run locally](docs/REPRODUCIBILITY.md)
+**[Open Forecast Lab](https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site)** · [Read the case study](docs/PORTFOLIO_CASE_STUDY.md) · [Run the public review](review/README.md#one-command-an-inspectable-result) · [Find the code](docs/REPOSITORY_GUIDE.md)
+
+## Review the system
+
+| Inspect | Working implementation | Evidence |
+|---|---|---|
+| Information available at prediction time | [Release guard and rolling fits](public-demo/engine.js) | [Future-perturbation and boundary tests](tools/test_public_demo.mjs) |
+| Model behavior across series and time | [Error diagnostics](docs/ERROR_ANALYSIS.md) | Counts, matched RMSE and signed bias recomputed from each forecast |
+| Reproduction from an exported run | [Replay engine](tools/replay_public_demo.mjs) | [Source, artifact and tamper checks](tools/test_replay_public_demo.mjs) |
+| Research decisions and recovery | [Evaluation](src/commodity_prediction/studies/evaluation.py) · [Checkpoint storage](src/commodity_prediction/studies/storage.py) | [Frozen closeout ledger](reports/final_research_ledger.json) |
+
+```mermaid
+flowchart TD
+  A["Observations and label release times"] --> B["Snapshot at forecast origin"]
+  B --> C["Training-only scaling and ridge fit"]
+  C --> D["Forward predictions"]
+  D --> E["Matched errors by series and time"]
+  B --> F["Availability receipt"]
+  D --> G["Export and independent replay"]
+  F --> G
+```
 
 ## Try the point-in-time Forecast Lab
 
@@ -21,7 +39,7 @@ I built a forecasting research system across **424 targets and four horizons**, 
 python -m http.server 8000
 ```
 
-Visit `http://localhost:8000/public-demo/`. Change the forecast horizon, label-publication delay and training window. The browser refits a ridge model at each forecast origin using only labels already released, with training-only feature scaling. Compare it with released-label mean and zero baselines, inspect the eligibility ledger and export the run.
+Visit `http://localhost:8000/public-demo/`. Change the forecast horizon, label-publication delay and training window. The browser refits a ridge model at each forecast origin using only labels already released, with training-only feature scaling. Compare it with released-label mean and zero baselines, inspect the eligibility ledger, and examine errors for each series and chronological half. Export the complete run for independent replay.
 
 The six signal series are authored synthetic data. RMSE, MAE and correlation are computed from the current demonstration; they are distinct from the historical research metric. No market feed, model download, account or private forecasting recipe is used.
 

@@ -785,6 +785,12 @@ canvas {
   color: var(--muted);
   margin: 15px 0;
 }
+.diagnostic-heading { margin: 34px 0 16px; }
+.diagnostic-heading h3 { font: 1.8rem/1.25 Georgia, serif; margin: 10px 0; }
+.diagnostic-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+.diagnostic-grid table { min-width: 560px; }
+.diagnostic-grid tbody th { font-weight: 500; }
+.diagnostic-grid .comparison-wrap { margin: 0; }
 .receipt {
   font-size: 12px;
   color: var(--muted);
