@@ -7,43 +7,45 @@ permissions:
   contents: read
 jobs:
   presentation:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - name: Verify final closeout and synthetic release timing
         run: |
-          python3 scripts/verify_portfolio.py
-          python3 examples/delayed_label_demo.py
-      - name: Check presentation evidence and disclosure boundaries
+          python3 -S scripts/verify_portfolio.py
+          python3 -S examples/delayed_label_demo.py
+      - name: Check final evidence, genuine execution and disclosure boundaries
         run: |
-          python3 - <<'PY'
+          python3 -S - <<'PY'
           import json
           import math
-          import pathlib
+          from pathlib import Path
           import xml.etree.ElementTree as ET
-          root = pathlib.Path('.')
-          report = json.loads((root/'reports/portfolio_summary.json').read_text())
+          root = Path('.')
+          def require(condition, message):
+              if not condition:
+                  raise ValueError(message)
+          report = json.loads((root / 'reports/portfolio_summary.json').read_text())
           final = report['final_historical_assessment']
-          assert final['evaluated'] is True
-          assert (final['dates'], final['targets'], final['excluded_dates']) == (247,424,0)
-          assert math.isclose(final['incumbent']-final['historical_mean_control'], final['delta'], rel_tol=0, abs_tol=1e-14)
-          assert final['conditional_paired_95_interval'][0] < 0 < final['conditional_paired_95_interval'][1]
-          assert report['latest_implementation_published'] is False
-          assert report['existing_public_history_removed'] is False
-          for name in ['portfolio_final.svg','portfolio_temporal.svg']:
-              tree = ET.parse(root/'reports/figures'/name)
-              assert tree.getroot().attrib['width'] == '900'
-          nb = json.loads((root/'notebooks/27_portfolio_case_study.ipynb').read_text())
-          assert nb['metadata']['presentation_only'] is True
-          assert not any(c['cell_type']=='code' and ''.join(c.get('source',[])).strip() for c in nb['cells'])
-          figures = [o for c in nb['cells'] for o in c.get('outputs',[]) if 'application/vnd.plotly.v1+json' in o.get('data',{})]
-          assert len(figures)==2
-          assert all('image/svg+xml' in o['data'] for o in figures)
-          readme = (root/'README.md').read_text()
-          assert '0.190453' in readme and '0.212085' in readme
-          assert 'not a release' in readme
-          print('PASS: presentation evidence, matched metrics, two inline figures, and source-withholding boundary')
+          require(final['evaluated'] is True, 'Historical assessment is not complete')
+          require((final['dates'], final['targets'], final['excluded_dates']) == (247, 424, 0), 'Assessment population changed')
+          require(math.isclose(final['incumbent'] - final['historical_mean_control'], final['delta'], rel_tol=0, abs_tol=1e-14), 'Incorrect comparison arithmetic')
+          require(final['conditional_paired_95_interval'][0] < 0 < final['conditional_paired_95_interval'][1], 'Inconclusive interval was altered')
+          require(report['latest_implementation_published'] is False, 'Private implementation boundary changed')
+          require(report['existing_public_history_removed'] is False, 'Original historical record changed')
+          for name in ('portfolio_final.svg', 'portfolio_temporal.svg'):
+              require(ET.parse(root / 'reports/figures' / name).getroot().attrib['width'] == '900', 'Invalid final figure')
+          notebook = json.loads((root / 'notebooks/28_final_research_closeout.ipynb').read_text())
+          code = [cell for cell in notebook['cells'] if cell['cell_type'] == 'code']
+          require([cell['execution_count'] for cell in code] == [1, 2, 3, 4, 5], 'Canonical review has not been executed in order')
+          require(all(cell['outputs'] for cell in code), 'Missing actual notebook output')
+          require(not any(output.get('output_type') == 'error' for cell in code for output in cell['outputs']), 'Notebook contains an execution error')
+          require(not (root / 'notebooks/27_portfolio_case_study.ipynb').exists(), 'Retired presentation notebook returned')
+          readme = (root / 'README.md').read_text()
+          require('0.190453' in readme and '0.212085' in readme, 'Negative assessment must remain visible')
+          require('not execute the private tree ensemble' in readme, 'Public example must not impersonate private inference')
+          print('PASS: original assessment, final figures, executed review and private-model boundary')
           PY
