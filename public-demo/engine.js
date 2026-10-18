@@ -282,6 +282,8 @@
     };
   }
   function score(rows, key) {
+    if (!rows.length)
+      return { rmse: null, mae: null, correlation: null, bias: null, count: 0 };
     const actual = rows.map((r) => r.actual),
       predicted = rows.map((r) => r[key]),
       ma = mean(actual),
@@ -303,7 +305,45 @@
       rmse: Math.sqrt(sq / rows.length),
       mae: abs / rows.length,
       correlation: va > 0 && vp > 0 ? cov / Math.sqrt(va * vp) : null,
+      bias: mp - ma,
       count: rows.length,
+    };
+  }
+  function diagnose(predictions) {
+    if (!Array.isArray(predictions) || !predictions.length)
+      throw new Error("Diagnostics require evaluated predictions.");
+    const seen = new Set();
+    for (const row of predictions) {
+      const identity = `${row.series_id}:${row.origin}`;
+      if (
+        typeof row.series_id !== "string" || !row.series_id ||
+        !Number.isInteger(row.origin) || seen.has(identity) ||
+        ["actual", ...Object.keys(MODELS)].some(
+          (key) => typeof row[key] !== "number" || !Number.isFinite(row[key]),
+        )
+      ) throw new Error("Diagnostic rows must be finite, unique series/origin observations.");
+      seen.add(identity);
+    }
+    const origins = [...new Set(predictions.map((row) => row.origin))].sort((a, b) => a - b);
+    const summarize = (rows, label) => ({
+      label,
+      count: rows.length,
+      first_origin: rows.length ? Math.min(...rows.map((row) => row.origin)) : null,
+      last_origin: rows.length ? Math.max(...rows.map((row) => row.origin)) : null,
+      metrics: Object.fromEntries(Object.keys(MODELS).map((key) => [key, score(rows, key)])),
+    });
+    const midpoint = origins[Math.ceil(origins.length / 2) - 1];
+    return {
+      scope: "DESCRIPTIVE_SYNTHETIC_ERROR_SLICES",
+      split_rule: "Split sorted evaluation origins into two chronological halves; the first receives an extra origin when the count is odd.",
+      by_series: [...new Set(predictions.map((row) => row.series_id))].sort().map(
+        (id) => ({ series_id: id, ...summarize(predictions.filter((row) => row.series_id === id), id) }),
+      ),
+      by_period: [
+        summarize(predictions.filter((row) => row.origin <= midpoint), "Earlier origins"),
+        summarize(predictions.filter((row) => row.origin > midpoint), "Later origins"),
+      ],
+      interpretation: "RMSE is recomputed from individual forecast errors in every slice. Bias is prediction minus realized target. Slices are descriptive, contain overlapping horizons, and are not used to select a model or tune the run.",
     };
   }
   function evaluate(data, config = {}) {
@@ -340,6 +380,7 @@
       predictions,
       receipts,
       metrics,
+      diagnostics: diagnose(predictions),
       features: FEATURES,
       models: MODELS,
       timing_rule:
@@ -384,6 +425,7 @@
     evaluate,
     eligibility,
     score,
+    diagnose,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = API;
   root.CommodityEngine = API;
