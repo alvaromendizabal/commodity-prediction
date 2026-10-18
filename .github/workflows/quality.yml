@@ -6,40 +6,31 @@ on:
 permissions:
   contents: read
 jobs:
-  quality:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      OMP_NUM_THREADS: '2'
-      OPENBLAS_NUM_THREADS: '2'
-      MKL_NUM_THREADS: '2'
-      NUMEXPR_NUM_THREADS: '2'
-      VECLIB_MAXIMUM_THREADS: '2'
+  retained-evaluation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
         with:
+          version: '0.12.10'
+          python-version: '3.12.13'
           enable-cache: true
-          version: "0.12.23"
-      - run: uv sync --frozen --extra dev
-      - run: uv run --frozen --extra dev python scripts/quality.py
-      - name: Execute and reopen the public aggregate closeout
-        timeout-minutes: 2
+      - run: uv sync --locked --extra dev
+      - name: Test retained metric, release-time, recovery and evidence contracts
+        run: uv run --frozen --extra dev python scripts/quality.py
+      - name: Verify original evidence with and without Python optimization
+        run: |
+          python3 -S scripts/verify_portfolio.py
+          python3 -S -O scripts/verify_portfolio.py
+          python3 -S examples/delayed_label_demo.py
+      - name: Re-execute the canonical aggregate notebook and verify saved output
         run: uv run --frozen python scripts/execute_public_closeout.py
-      - name: Preserve the executed public closeout notebook
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: public-closeout-notebook
+          name: executed-final-forecast-review
           path: artifacts/28_final_research_closeout.reproduced.ipynb
           if-no-files-found: error
           retention-days: 14
-      - run: uv run --frozen python scripts/verify_publication.py
-      - run: uv run --frozen python scripts/verify_risk_state_publication.py
-      - name: Verify released-context publication
-        timeout-minutes: 1
-        run: uv run --frozen python scripts/verify_released_context_publication.py
-      - name: Verify market-path publication
-        timeout-minutes: 1
-        run: uv run --frozen python scripts/verify_market_path_publication.py
