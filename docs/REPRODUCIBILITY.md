@@ -64,7 +64,7 @@ Its five code cells are aggregate analyses and do not fit models. This command e
 uv run --frozen python scripts/execute_public_closeout.py
 ```
 
-A local Jupyter kernel requires local socket access; a restricted execution sandbox may block its startup. The Quality workflow executes this single aggregate notebook on GitHub Actions and saves a downloadable notebook artifact. The generated local copy is ignored by Git. This verifies computational execution and saved output data; it does not claim a browser visual-render check. Earlier notebooks have their own historical data and checkpoint requirements: [manual reproduction](MANUAL_REPRODUCTION.md). Reviewing their saved outputs does not require launching the studies again.
+A local Jupyter kernel requires local socket access; a restricted execution sandbox may block its startup. The Quality workflow executes this single aggregate notebook on GitHub Actions and saves a downloadable notebook artifact. The generated local copy is ignored by Git. This verifies computational execution and saved output data; it does not claim a browser visual-render check. The superseded notebook gallery is not part of the maintained release.
 
 ## Evidence and privacy boundary
 

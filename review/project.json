@@ -4,8 +4,8 @@
   "summary": "A commodity-forecasting research system built around delayed-label availability, chronological evaluation, controlled feature studies, and recoverable execution. The strongest lesson is knowing when a promising development result does not transfer.",
   "signals": [
     {
-      "value": "20 families",
-      "label": "Documented research-method ledger"
+      "value": "424 targets",
+      "label": "Four-horizon evaluation contract"
     },
     {
       "value": "37 targets",
@@ -33,8 +33,8 @@
       "title": "Preserve checkpoint identity across interruptions.",
       "decision": "Bind persistent research state to input and configuration identities rather than assuming a file is reusable because it exists.",
       "boundary": "The latest private training state is not included.",
-      "implementation": "src/commodity_prediction/studies/storage.py",
-      "tests": "tests/test_study_storage.py",
+      "implementation": "src/commodity_prediction/runtime.py",
+      "tests": "tests/test_forecast_contracts.py",
       "evidence": "reports/execution_recovery.json"
     },
     {
@@ -52,7 +52,7 @@
       "decision": "Use target-composition and prediction-parity checks before interpreting an apparent metric regression.",
       "boundary": "Matching a shared subset does not establish equality on different target universes.",
       "implementation": "src/commodity_prediction/studies/evaluation.py",
-      "tests": "tests/test_feature_study.py",
+      "tests": "tests/test_forecast_contracts.py",
       "evidence": "reports/portfolio_summary.json"
     },
     {
@@ -140,6 +140,18 @@
       "suffixes": [
         ".py",
         ".mjs"
+      ]
+    },
+    {
+      "directory": "src",
+      "suffixes": [
+        ".py"
+      ]
+    },
+    {
+      "directory": "tests",
+      "suffixes": [
+        ".py"
       ]
     }
   ]
