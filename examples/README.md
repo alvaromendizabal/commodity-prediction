@@ -37,7 +37,7 @@ features, private data, model checkpoints, or submission recipe. The guard
 illustrates a data contract, not protection against a caller inspecting memory.
 
 For the actual public research workflow and its limits, see
-[manual reproduction](../docs/MANUAL_REPRODUCTION.md) and
+[public reproduction](../docs/REPRODUCIBILITY.md) and
 [publication scope](../docs/PUBLICATION_SCOPE.md). The example's tests cover the
 exact release boundary and verify that changing future label values cannot alter
 the current snapshot.
