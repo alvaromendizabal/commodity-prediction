@@ -25,6 +25,6 @@ node tools/test_public_demo.mjs
 node tools/test_replay_public_demo.mjs
 ```
 
-The six series are fictional, and the errors use arbitrary signal units. Overlapping forecast targets are dependent. These are descriptive diagnostics, with no confidence-interval, market-profitability or model-selection claim. They explain how to inspect a forecasting system; the [historical research findings](FINAL_RESEARCH_CLOSEOUT.md) retain their original evaluation scopes.
+The six series are fictional, and the errors use arbitrary signal units. Overlapping forecast targets are dependent. These are descriptive diagnostics, with no confidence-interval, market-profitability or model-selection claim. They explain how to inspect a forecasting system; the historical research findings retain their original evaluation scopes.
 
 [Computation](../public-demo/engine.js) · [Actual UI](../public-demo/app.js) · [Regression tests](../tools/test_public_demo.mjs)

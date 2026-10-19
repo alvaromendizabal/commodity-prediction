@@ -1,103 +1,64 @@
-# Commodity Forecasting
+# Commodity Forecasting · Point-in-time evaluation
 
-**Alvaro Mendizabal · Time-series ML · Point-in-time evaluation · AWS research engineering**
+**Alvaro Mendizabal · Time-series ML · Delayed-label systems · Statistical evaluation**
+
+![Point-in-time forecasting, availability controls and interactive comparison](docs/assets/public-demo-hero.svg)
 
 [![Quality](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/quality.yml/badge.svg)](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/quality.yml)
-[![Portfolio evidence](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/portfolio.yml/badge.svg)](https://github.com/alvaromendizabal/commodity-prediction/actions/workflows/portfolio.yml)
 
-![Point-in-time forecasting: predict forward, keep time honest](docs/assets/public-demo-hero.svg)
+I built a forecasting evaluation system for **424 targets across four horizons**, with training-only selection, exact label-release accounting, paired temporal comparisons and reproducible diagnostics. The final research reference uses target-routed trees with retained covariance and persistence/retrieval components. Private fitting and routing specifications are not distributed.
 
-I built a forecasting research system across **424 targets and four horizons**, including release-time data contracts, feature/model experiments, chronological evaluation and recoverable AWS execution. Its central finding was consequential: an attractive development improvement did not establish reliable advantage on a stricter historical assessment.
+[**Open Forecasting Lab ↗**](https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site) · [Case study](docs/PORTFOLIO_CASE_STUDY.md) · [Reproduce the public checks](docs/REPRODUCIBILITY.md)
 
-**[Open Forecast Lab](https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site)** · [Read the case study](docs/PORTFOLIO_CASE_STUDY.md) · [Run the public review](review/README.md#one-command-an-inspectable-result) · [Find the code](docs/REPOSITORY_GUIDE.md)
+## The result is a decision, not a performance claim
 
-## Review the system
-
-| Inspect | Working implementation | Evidence |
+| Population | Recorded comparison | Decision |
 |---|---|---|
-| Information available at prediction time | [Release guard and rolling fits](public-demo/engine.js) | [Future-perturbation and boundary tests](tools/test_public_demo.mjs) |
-| Model behavior across series and time | [Error diagnostics](docs/ERROR_ANALYSIS.md) | Counts, matched RMSE and signed bias recomputed from each forecast |
-| Reproduction from an exported run | [Replay engine](tools/replay_public_demo.mjs) | [Source, artifact and tamper checks](tools/test_replay_public_demo.mjs) |
-| Research decisions and recovery | [Evaluation](src/commodity_prediction/studies/evaluation.py) · [Checkpoint storage](src/commodity_prediction/studies/storage.py) | [Frozen closeout ledger](reports/final_research_ledger.json) |
+| Later temporal replication, 355 dates | Candidate **0.289365** vs reference **0.276025** | Positive estimate; interval crossed zero; not promoted |
+| Locked historical assessment, 247 dates | Reference **0.190453** vs training-only mean **0.212085** | No demonstrated advantage; no post-assessment reselection |
+| Delayed-label replay | **134 scored dates**, including a **73-date** terminal segment | Selection remained training-only |
+
+The metric is mean daily cross-sectional rank correlation divided by its population standard deviation. It is **not annualized Sharpe, realized trading profit or a live investment strategy**. The original negative assessment and inconclusive comparison remain intact. [Original record](reports/portfolio_summary.json)
+
+![Locked historical comparison](reports/figures/portfolio_final.svg)
+
+## Maintained engineering
 
 ```mermaid
-flowchart TD
-  A["Observations and label release times"] --> B["Snapshot at forecast origin"]
-  B --> C["Training-only scaling and ridge fit"]
-  C --> D["Forward predictions"]
-  D --> E["Matched errors by series and time"]
-  B --> F["Availability receipt"]
-  D --> G["Export and independent replay"]
-  F --> G
+flowchart LR
+ A[Forecast origin] --> B[Only released labels]
+ B --> C[Training-only control or frozen prediction]
+ C --> D[Exact date and target alignment]
+ D --> E[Daily rank correlations]
+ E --> F[Fold-respecting paired uncertainty]
+ F --> G[Recorded retain or reject decision]
 ```
 
-## Try the point-in-time Forecast Lab
-
-[Open the public demo](https://alvaro-forecasting-lab.tartmacaw2.chatgpt.site) without installation. To run the same source locally, open `public-demo/index.html` from a checkout, or serve the checkout:
-
-```bash
-python -m http.server 8000
-```
-
-Visit `http://localhost:8000/public-demo/`. Change the forecast horizon, label-publication delay and training window. The browser refits a ridge model at each forecast origin using only labels already released, with training-only feature scaling. Compare it with released-label mean and zero baselines, inspect the eligibility ledger, and examine errors for each series and chronological half. Export the complete run for independent replay.
-
-The six signal series are authored synthetic data. RMSE, MAE and correlation are computed from the current demonstration; they are distinct from the historical research metric. No market feed, model download, account or private forecasting recipe is used.
-
-```bash
-node tools/test_public_demo.mjs
-```
-
-## Replay an exported result
-
-The browser export is now an executable review artifact. Recompute it with the actual public engine and verify its predictions, decisions, and source identity:
-
-```bash
-node tools/replay_public_demo.mjs --output /tmp/forecast-replay
-node tools/replay_public_demo.mjs --output /tmp/forecast-replay --check
-```
-
-The default command generates an authored reference run. Add `--input your-export.json` to verify your own browser download. Each bundle contains the export, a source/runtime receipt and a SHA-256 manifest. [Replay contract and failure tests](docs/DEMO_REPLAY.md).
-
-## Results and decisions
-
-Historical scores below are mean daily cross-sectional rank correlation divided by its population standard deviation, without annualization. Compare models within each row; the dates differ between rows.
-
-| Evaluation | Matched results | Decision |
+| Concern | Actual public implementation | What it demonstrates |
 |---|---|---|
-| Market-path development, 535 dates | **0.309709** | Development result; distinct from later chronological and locked assessments |
-| Chronological replication, 355 dates | Candidate **0.289365** vs incumbent **0.276025** | Not promoted: paired 95% interval **[−0.009061, +0.035750]** crosses zero |
-| Locked assessment, 247 dates | Incumbent **0.190453** vs training-only mean **0.212085** | No demonstrated advantage; preserved without reselection |
-| Delayed-label replay, 134 dates | Training-only selection; separate 73-day terminal segment | Recorded regime shift; no final-period retuning |
+| Delayed information | [Release calendar](examples/delayed_label_demo.py) | Future labels cannot enter an earlier snapshot |
+| Metric fidelity | [Rank metric](src/commodity_prediction/metrics.py) | Ordered identities, missing targets, tied ranks and population standard deviation |
+| Fair comparison | [Evaluation and paired blocks](src/commodity_prediction/studies/evaluation.py) | Fixed target populations and blocks contained within fitted folds |
+| Interactive fitted control | [Browser engine](public-demo/engine.js) | Rolling, train-only fitting on authored synthetic series |
+| Independent replay | [Replay verifier](tools/replay_public_demo.mjs) | Recompute actual browser outputs and reject modified exports |
 
-## Engineering decisions worth reviewing
+## Run from a clone
 
-- **Release-time correctness.** Horizon-aware label availability, chronological preprocessing and explicit future-access rejection.
-- **Zero-fit debugging.** A reconciliation found exact prediction parity for all **37 shared targets**; target composition explained an apparent regression.
-- **Controlled research.** A ledger of **20 families**, including tree ensembles, sequence models, Transformers, graph features, covariance methods and online adaptation.
-- **Recoverable execution.** Atomic checkpoints, source/config hashes, process-conflict guards and success/failure returns preserved completed work.
-
-[Technical case study](docs/PORTFOLIO_CASE_STUDY.md) · [Executed closeout notebook](notebooks/28_final_research_closeout.ipynb) · [Research ledger](reports/final_research_ledger.json)
-
-## Run the Python evidence checks
-
-Python 3.12; no dependencies or cloud account needed for these commands:
+No private data or cloud account is required:
 
 ```bash
-python3 scripts/verify_portfolio.py
-python3 examples/delayed_label_demo.py
+python3 -S scripts/verify_portfolio.py
+python3 -S examples/delayed_label_demo.py
+python3 -S review/run.py --output /tmp/commodity-review --with-node
+python3 -S review/run.py --output /tmp/commodity-review --with-node --check
 ```
 
-For the locked environment and full public source checks:
+Use Python 3.12; Node.js 22 or 24 enables actual browser and export-replay checks. With the locked Python environment, run `uv sync --frozen --extra dev`, then `uv run --frozen --extra dev python scripts/quality.py` and `uv run --frozen python scripts/execute_public_closeout.py`.
 
-```bash
-uv sync --frozen --extra dev
-uv run --frozen --extra dev python scripts/quality.py
-```
+The [canonical executed review](notebooks/28_final_research_closeout.ipynb) replays public aggregate evidence. Forecasting Lab fits a reference on synthetic data and exposes label eligibility at every origin; it does not execute the private tree ensemble or reproduce its historical score.
 
-[Reproducibility](docs/REPRODUCIBILITY.md) documents the notebook and test scope.
+## Publication boundary
 
-## Completed scope
+The maintained tree contains final evaluation arithmetic, release-time contracts, the fitted public control, replay tests and compact original evidence. Superseded feature campaigns, unused model implementations, operator launchers and duplicate notebooks are removed. The compact historical selection ledger is retained for accountability, not advertised as a catalog of runnable model families.
 
-The research cycle is complete and frozen. The public demo adds an executable way to inspect information timing; it does not revise the historical forecasting findings or establish trading profitability.
-
-Public code, aggregate evidence, notebooks and synthetic examples are retained. This is not a release of the latest private forecasting implementation. Restricted data, private prediction matrices, fitted weights, credentials and complete private orchestration remain excluded. [Closeout](docs/FINAL_RESEARCH_CLOSEOUT.md) · [Publication scope and source credits](docs/PUBLICATION_SCOPE.md)
+Raw competition inputs, model weights, current feature identities and private routing recipes are excluded. No production deployment, unbiased future alpha or investment suitability is claimed. [Scope](docs/PUBLICATION_SCOPE.md) · [Source map](docs/REPOSITORY_GUIDE.md)
