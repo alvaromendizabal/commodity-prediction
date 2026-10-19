@@ -1,39 +1,46 @@
-# Forecast only with information that has arrived.
+# Point-in-time forecasting: verified public review
 
-**Alvaro Mendizabal · Time-series ML / point-in-time data / experiment design**
-
-A commodity-forecasting research system built around delayed-label availability, chronological evaluation, controlled feature studies, and recoverable execution. The strongest lesson is knowing when a promising development result does not transfer.
-
-[Project overview](../README.md) · [Printable technical brief](index.html) · [Review configuration](project.json)
-
-## Follow an engineering decision to its evidence
-
-| Focus | Engineering decision | Inspect |
-|---|---|---|
-| Data science | **Treat publication time as part of the feature contract.** Reject labels whose release time lies after the forecast origin instead of relying only on observation dates. | [Implementation](../examples/delayed_label_demo.py) · [Tests](../tests/test_delayed_label_demo.py) · [Evidence](../docs/PORTFOLIO_CASE_STUDY.md) |
-| ML engineering | **Preserve checkpoint identity across interruptions.** Bind persistent research state to input and configuration identities rather than assuming a file is reusable because it exists. | [Implementation](../src/commodity_prediction/studies/storage.py) · [Tests](../tests/test_study_storage.py) · [Evidence](../reports/execution_recovery.json) |
-| Data science | **Inspect where pooled accuracy breaks down.** Recompute errors by series and chronological half, retaining sample counts, bias and matched baseline errors. | [Implementation](../public-demo/engine.js) · [Tests](../tools/test_public_demo.mjs) · [Evidence](../docs/ERROR_ANALYSIS.md) |
-| Data science | **Compare models on the same target population.** Use target-composition and prediction-parity checks before interpreting an apparent metric regression. | [Implementation](../src/commodity_prediction/studies/evaluation.py) · [Tests](../tests/test_feature_study.py) · [Evidence](../reports/portfolio_summary.json) |
-| Data science | **Publish a defensible negative conclusion.** Retain the locked assessment where the incumbent did not demonstrate an advantage over a training-only mean. | [Implementation](../scripts/verify_portfolio.py) · [Tests](../tests/test_portfolio_evidence.py) · [Evidence](../reports/final_research_ledger.json) |
-| ML engineering | **Turn an exported result into a replayable artifact.** Regenerate the synthetic environment, recompute the output with the actual public engine, and reject stale source or altered evidence. | [Implementation](../tools/replay_public_demo.mjs) · [Tests](../tools/test_replay_public_demo.mjs) · [Evidence](../docs/DEMO_REPLAY.md) |
+This review checks delayed-label access, paired evaluation, forecast diagnostics and independent browser-export replay.
+[Project and results](../README.md) · [Inspection brief](index.html) · [Exact check configuration](project.json)
 
 ## One command, an inspectable result
 
-From a checkout with Python 3.11 or newer and Node.js 24.19.0:
+From the repository root, with Python 3.11+ and Node.js:
 
 ```bash
-python3 -S review/run.py --output /tmp/ml-review --with-node
-python3 -S review/run.py --output /tmp/ml-review --with-node --check
+python3 -B -S review/run.py --output /tmp/project-review --with-node
+python3 -B -S review/run.py --output /tmp/project-review --with-node --check
 ```
 
-Open `/tmp/ml-review/index.html` for the rendered brief. Logs, `receipt.json` and `manifest.json` record the actual checks, source identities and output hashes. On Windows, choose a writable directory outside the checkout. Repeating the command reuses a verified result; changed sources or damaged evidence fail explicitly.
+Use a writable directory outside the checkout; on Windows replace `/tmp/project-review`
+with an appropriate local path. Open the generated `index.html`. The bundle includes
+actual command logs, `receipt.json`, `manifest.json`, and the configured diagnostic
+outputs. No AWS account, private dataset or private weights are required.
 
-Omit `--with-node` to run only the Python checks; omitted browser checks are never reported as passed. CI runs both runtimes on Python 3.11 and 3.13.
+Omit `--with-node` for Python-only checks. Omitted browser tests are never reported
+as passed. The [configuration](project.json) lists the exact commands, source files,
+evidence and browser assets covered; it is not a claim of whole-system private replay.
 
-## Verification scope
+## Verify rather than silently overwrite
 
-The public commands recompute aggregate evidence and execute a synthetic delayed-label access contract. Optional browser tests exercise an online ridge demonstration using released labels only. These checks do not establish trading profitability.
+An unchanged rerun checks the saved bundle before reuse. `--check` only verifies.
+Changed source, damaged artifacts, mismatched modes and failed commands cause a
+nonzero exit. After an intentional source change, use a **new output directory**.
+The default per-command deadline is 90 seconds; `--timeout` changes it explicitly.
 
-Restricted market data, private prediction matrices, fitted research weights, current feature recipes, full orchestration, and operational cloud state remain excluded. Historical source credits and results are retained.
+The receipt records runtime versions, UTC times, elapsed checks and inspected hashes.
+Checksums establish consistency, not independent authentication of historical model
+scores. The committed inspection page is a guide, **not an execution receipt**.
+Public examples and aggregate replay are distinct from training or running the
+withheld competitive model; see the project README for that boundary.
 
-[Case study](../docs/PORTFOLIO_CASE_STUDY.md) · [Reproduction guide](../docs/REPRODUCIBILITY.md) · [Publication scope](../docs/PUBLICATION_SCOPE.md) · [Repository map](../docs/REPOSITORY_GUIDE.md)
+## Maintain this review
+
+```bash
+python3 -B -S -m unittest discover -s review -p test_run.py -q
+python3 -B -S review/run.py --check-page
+```
+
+After changing the configuration or template, regenerate the inspection page with
+`python3 -B -S review/run.py --render`, inspect it, and rerun both checks. Full package
+training and notebook requirements remain in the project's main reproduction guide.
